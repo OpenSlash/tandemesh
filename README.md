@@ -1,4 +1,7 @@
-# Orca
+# Tandemesh
+
+> **Internal codename: Orca.** The repository, Go module and public product name are Tandemesh.
+> Existing binaries, environment variables and older docs still use the Orca codename until the branding pass is complete.
 
 **An agent execution plane.** Route work from Jira, Linear and GitHub to agents running on
 many machines, and write the results back to the tools your team already uses.
