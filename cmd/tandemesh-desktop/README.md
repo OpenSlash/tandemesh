@@ -1,4 +1,4 @@
-# Orca desktop (Wails v3)
+# Tandemesh desktop (Wails v3)
 
 This directory holds the Wails v3 shell. It is **build-tagged** so the default
 `go build ./...` does not pull Wails or require a webview.
@@ -48,7 +48,7 @@ not call the HTTP API; it uses the store and registry in process.
 ## Next steps
 
 1. Add tray icon with pending-approval count.
-2. Register `orca://run/<id>` deep links and single-instance focus.
+2. Register `tandemesh://run/<id>` deep links and single-instance focus.
 3. Package with `wails build` and wire the update feed.
 
 Wails v3 is alpha: the `application.Options` / `Service` API may change between

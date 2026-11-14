@@ -12,25 +12,25 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - orca-data:/data
+      - tandemesh-data:/data
     restart: unless-stopped
 
   # Optional Postgres for team deployments:
   #   docker compose --profile postgres up
-  #   TANDEMESH_DB_PATH=postgres://orca:orca@postgres:5432/orca?sslmode=disable
+  #   TANDEMESH_DB_PATH=postgres://tandemesh:tandemesh@postgres:5432/tandemesh?sslmode=disable
   postgres:
     image: postgres:17-alpine
     profiles: ["postgres"]
     environment:
-      POSTGRES_USER: orca
-      POSTGRES_PASSWORD: orca
-      POSTGRES_DB: orca
+      POSTGRES_USER: tandemesh
+      POSTGRES_PASSWORD: tandemesh
+      POSTGRES_DB: tandemesh
     ports:
       - "5432:5432"
     volumes:
-      - orca-pg:/var/lib/postgresql/data
+      - tandemesh-pg:/var/lib/postgresql/data
     restart: unless-stopped
 
 volumes:
-  orca-data:
-  orca-pg:
+  tandemesh-data:
+  tandemesh-pg:

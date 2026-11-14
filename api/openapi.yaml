@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
-  title: Orca Control Plane API
+  title: Tandemesh Control Plane API
   version: 0.1.0
   description: |
-    Orca is an agent execution plane. External systems (Jira, Linear, GitHub,
-    Notion, Slack) remain the source of truth; Orca stores only execution facts.
+    Tandemesh is an agent execution plane. External systems (Jira, Linear, GitHub,
+    Notion, Slack) remain the source of truth; Tandemesh stores only execution facts.
 servers:
   - url: http://localhost:8080
 paths:

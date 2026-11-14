@@ -40,7 +40,7 @@ func main() {
 
 	service := desktop.New(core.Store, core.Registry, "0.1.0-dev")
 	wailsApp := application.New(application.Options{
-		Name: "Orca",
+		Name: "Tandemesh",
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},

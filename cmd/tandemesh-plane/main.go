@@ -1,4 +1,4 @@
-// Command tandemesh-plane runs the Orca control plane.
+// Command tandemesh-plane runs the Tandemesh control plane.
 package main
 
 import (
@@ -35,7 +35,7 @@ func main() {
 	}
 
 	go func() {
-		log.Info("orca plane listening", "addr", cfg.Listen, "db", cfg.DBPath)
+		log.Info("tandemesh plane listening", "addr", cfg.Listen, "db", cfg.DBPath)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("listen", "err", err)
 			stop()
@@ -46,5 +46,5 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_ = srv.Shutdown(shutdownCtx)
-	log.Info("orca plane stopped")
+	log.Info("tandemesh plane stopped")
 }

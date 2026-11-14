@@ -1,4 +1,4 @@
-// Command orca is the thin CLI over the Orca control-plane HTTP API.
+// Command tandemesh is the thin CLI over the Tandemesh control-plane HTTP API.
 package main
 
 import (
@@ -41,7 +41,7 @@ func main() {
 
 	switch args[0] {
 	case "version":
-		fmt.Println("orca", version)
+		fmt.Println("tandemesh", version)
 	case "runs":
 		listRuns(server)
 	case "machines":
@@ -64,23 +64,23 @@ func main() {
 }
 
 func usage() {
-	fmt.Print(`orca - Agent execution plane CLI
+	fmt.Print(`tandemesh - Agent execution plane CLI
 
 Usage:
-  orca version
-  orca runs [--status=queued]
-  orca machines
-  orca run --repo=acme/api --prompt="fix the flaky test" [--agent=claude] [--work-url=...]
-  orca skills list [--workspace=ws_default]
-  orca skills get --name=<name> | --id=<id>
-  orca skills install --file=<path> | --url=<url> [--name=]
-  orca skills export --dir=./skills
-  orca session list [--workspace=ws_default]
-  orca session new --title="Refactor" [--agent=claude] [--mode=chat] [--task=<id>]
-  orca session send --session=<id> --prompt="..."
-  orca session close --session=<id>
-  orca worktree current --run=<runId> [--json]
-  orca worktree set --run=<runId> --comment="..." [--workspace-status=in-progress]
+  tandemesh version
+  tandemesh runs [--status=queued]
+  tandemesh machines
+  tandemesh run --repo=acme/api --prompt="fix the flaky test" [--agent=claude] [--work-url=...]
+  tandemesh skills list [--workspace=ws_default]
+  tandemesh skills get --name=<name> | --id=<id>
+  tandemesh skills install --file=<path> | --url=<url> [--name=]
+  tandemesh skills export --dir=./skills
+  tandemesh session list [--workspace=ws_default]
+  tandemesh session new --title="Refactor" [--agent=claude] [--mode=chat] [--task=<id>]
+  tandemesh session send --session=<id> --prompt="..."
+  tandemesh session close --session=<id>
+  tandemesh worktree current --run=<runId> [--json]
+  tandemesh worktree set --run=<runId> --comment="..." [--workspace-status=in-progress]
 
 Environment:
   TANDEMESH_BASE_URL   control plane URL (default http://127.0.0.1:8080)
@@ -194,7 +194,7 @@ type cliWorktree struct {
 
 func worktreeCommand(server string, args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: orca worktree current|set --run=<runId>")
+		fmt.Fprintln(os.Stderr, "usage: tandemesh worktree current|set --run=<runId>")
 		os.Exit(2)
 	}
 	runID := ""
@@ -264,7 +264,7 @@ type cliSkill struct {
 
 func skillsCommand(server string, args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: orca skills list|get|install|export")
+		fmt.Fprintln(os.Stderr, "usage: tandemesh skills list|get|install|export")
 		os.Exit(2)
 	}
 	opts := map[string]string{}
@@ -382,7 +382,7 @@ type cliSession struct {
 
 func sessionCommand(server string, args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: orca session list|new|send|close")
+		fmt.Fprintln(os.Stderr, "usage: tandemesh session list|new|send|close")
 		os.Exit(2)
 	}
 	opts := map[string]string{}

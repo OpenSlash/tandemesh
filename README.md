@@ -74,7 +74,7 @@ Linear-inspired layout.
 cmd/
   tandemesh-plane/     control plane
   tandemesh-agentd/    machine daemon
-  orca/           CLI
+  tandemesh/      CLI
 internal/
   domain/         types and invariants
   config/         environment configuration
@@ -116,7 +116,7 @@ go vet ./...
 Verified locally:
 
 - `go test ./...` passes (webhook signature and normalization tests)
-- End to end: `tandemesh-plane` + `tandemesh-agentd` + `orca run` moves a run from `queued` to
+- End to end: `tandemesh-plane` + `tandemesh-agentd` + `tandemesh run` moves a run from `queued` to
   `succeeded` in about two seconds
 - `web`: `pnpm build` succeeds (about 225 KB JS / 2 KB CSS)
 

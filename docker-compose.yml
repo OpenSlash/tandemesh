@@ -13,7 +13,7 @@ services:
       TANDEMESH_MAX_ACTIVE_PER_WORKSPACE: "${TANDEMESH_MAX_ACTIVE_PER_WORKSPACE:-0}"
       TANDEMESH_MAX_ACTIVE_PER_AGENT: "${TANDEMESH_MAX_ACTIVE_PER_AGENT:-0}"
     volumes:
-      - orca-data:/data
+      - tandemesh-data:/data
     ports:
       - "8080:8080"
     healthcheck:
@@ -32,4 +32,4 @@ services:
       - "8081:80"
 
 volumes:
-  orca-data:
+  tandemesh-data:
