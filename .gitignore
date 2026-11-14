@@ -7,7 +7,7 @@ bin/
 .env
 web/node_modules/
 web/dist/
-cmd/orca-desktop/frontend/
+cmd/tandemesh-desktop/frontend/
 .DS_Store
 
 # Design docs are not published yet.
