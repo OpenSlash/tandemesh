@@ -3,7 +3,7 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' }
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers)
   const workspace = localStorage.getItem('orca.workspace')
-  if (workspace) headers.set('X-Orca-Workspace', workspace)
+  if (workspace) headers.set('X-Tandemesh-Workspace', workspace)
   const resp = await fetch(url, { ...init, headers })
   if (!resp.ok) {
     const text = await resp.text()

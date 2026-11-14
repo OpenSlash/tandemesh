@@ -228,7 +228,7 @@ export default function Layout() {
           <div className="flex h-5 w-5 items-center justify-center rounded bg-fg text-[11px] font-bold text-bg">
             O
           </div>
-          <span className="truncate text-[13px] font-semibold tracking-tight">Orca</span>
+          <span className="truncate text-[13px] font-semibold tracking-tight">Tandemesh</span>
           <span className="ml-auto rounded border border-line2 px-1 text-[10px] text-muted">
             {t('shell.dev')}
           </span>
@@ -376,7 +376,7 @@ export default function Layout() {
           <button onClick={() => setMobileNav(true)} className="text-muted hover:text-fg" aria-label="Open navigation">
             <Menu className="h-5 w-5" />
           </button>
-          <span className="text-[13px] font-semibold tracking-tight">Orca</span>
+          <span className="text-[13px] font-semibold tracking-tight">Tandemesh</span>
         </div>
         <Outlet />
       </main>

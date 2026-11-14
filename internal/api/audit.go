@@ -24,7 +24,7 @@ func (s *Server) auditRequests(next http.Handler) http.Handler {
 			workspaceID = r.URL.Query().Get("workspace")
 		}
 		if workspaceID == "" {
-			workspaceID = r.Header.Get("X-Orca-Workspace")
+			workspaceID = headerWithLegacy(r, "X-Tandemesh-Workspace", "X-Orca-Workspace")
 		}
 		if workspaceID == "" {
 			return

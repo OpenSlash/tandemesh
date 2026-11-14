@@ -5,8 +5,15 @@ import (
 	"net/http"
 )
 
+func headerWithLegacy(r *http.Request, name, legacy string) string {
+	if value := r.Header.Get(name); value != "" {
+		return value
+	}
+	return r.Header.Get(legacy)
+}
+
 func (s *Server) identityUser(r *http.Request) string {
-	if user := r.Header.Get("X-Orca-User"); user != "" {
+	if user := headerWithLegacy(r, "X-Tandemesh-User", "X-Orca-User"); user != "" {
 		return user
 	}
 	if s.cfg.User != "" {

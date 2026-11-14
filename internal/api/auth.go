@@ -85,7 +85,7 @@ func (s *Server) enforceViewer(next http.Handler) http.Handler {
 			workspaceID = r.URL.Query().Get("workspace")
 		}
 		if workspaceID == "" {
-			workspaceID = r.Header.Get("X-Orca-Workspace")
+			workspaceID = headerWithLegacy(r, "X-Tandemesh-Workspace", "X-Orca-Workspace")
 		}
 		if workspaceID != "" && s.workspaceRole(r.Context(), workspaceID) == "viewer" {
 			writeErr(w, http.StatusForbidden, "E_FORBIDDEN", "viewer role is read-only")
