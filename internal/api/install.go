@@ -27,7 +27,7 @@ func (s *Server) downloadAgentd(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "E_NOT_FOUND", "unsupported architecture")
 		return
 	}
-	name := fmt.Sprintf("orca-agentd-%s-%s", osName, arch)
+	name := fmt.Sprintf("tandemesh-agentd-%s-%s", osName, arch)
 	if osName == "windows" {
 		name += ".exe"
 	}
@@ -60,12 +60,12 @@ case "$ARCH" in
   arm64|aarch64) ARCH=arm64 ;;
   *) echo "unsupported architecture: $ARCH" >&2; exit 1 ;;
 esac
-DEST="$HOME/.local/bin/orca-agentd"
+DEST="$HOME/.local/bin/tandemesh-agentd"
 mkdir -p "$(dirname "$DEST")"
-echo "Downloading orca-agentd for $OS/$ARCH..."
+echo "Downloading tandemesh-agentd for $OS/$ARCH..."
 curl -fsSL %s/download/agentd/$OS/$ARCH -o "$DEST"
 chmod +x "$DEST"
-echo "Starting orca-agentd..."
+echo "Starting tandemesh-agentd..."
 exec "$DEST" -plane %s -token %s -name "$(hostname)" -labels "os=$OS,arch=$ARCH"
 `, shellQuote(base), shellQuote(base), shellQuote(token))
 	w.Header().Set("Content-Type", "text/x-shellscript; charset=utf-8")
@@ -80,11 +80,11 @@ func (s *Server) installAgentdPowerShell(w http.ResponseWriter, r *http.Request)
 	}
 	base := publicBase(s, r)
 	script := fmt.Sprintf(`$ErrorActionPreference = 'Stop'
-$dest = Join-Path $env:LOCALAPPDATA 'Orca\orca-agentd.exe'
+$dest = Join-Path $env:LOCALAPPDATA 'Orca\tandemesh-agentd.exe'
 New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
-Write-Host "Downloading orca-agentd for windows/amd64..."
+Write-Host "Downloading tandemesh-agentd for windows/amd64..."
 Invoke-WebRequest -UseBasicParsing '%s/download/agentd/windows/amd64' -OutFile $dest
-Write-Host "Starting orca-agentd..."
+Write-Host "Starting tandemesh-agentd..."
 & $dest -plane '%s' -token '%s' -name $env:COMPUTERNAME -labels 'os=windows,arch=amd64'
 `, powerShellQuote(base), powerShellQuote(base), powerShellQuote(token))
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")

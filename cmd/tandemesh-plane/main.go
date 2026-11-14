@@ -1,4 +1,4 @@
-// Command orca-plane runs the Orca control plane.
+// Command tandemesh-plane runs the Orca control plane.
 package main
 
 import (

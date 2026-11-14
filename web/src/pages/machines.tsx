@@ -151,7 +151,7 @@ export default function MachinesPage() {
             <p className="text-[12.5px] font-medium">{t('machines.empty')}</p>
             <p className="mt-1 text-[11.5px] text-muted">{t('machines.emptyHint')}</p>
             <code className="mt-3 inline-block rounded bg-panel2 px-2 py-1 font-mono text-[11px] text-muted">
-              orca-agentd -plane http://127.0.0.1:8080
+              tandemesh-agentd -plane http://127.0.0.1:8080
             </code>
             <div className="mt-3 flex justify-center">
               <ConnectMachineDialog />

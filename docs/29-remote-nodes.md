@@ -7,7 +7,7 @@
 执行机注册时的 `labels`（AgentDaemon `--labels`）是调度标签：
 
 ```bash
-orca-agentd --labels=os=linux,gpu,zone=cn
+tandemesh-agentd --labels=os=linux,gpu,zone=cn
 ```
 
 Agent 的 `capabilities` 中带 `node:` 前缀的项被解释为**必需节点标签**：

@@ -44,14 +44,20 @@ type Manager struct {
 }
 
 // New creates a manager. Empty git defaults to "git"; empty root defaults to
-// ~/.orca; zero retain defaults to 168h (7 days).
+// ~/.tandemesh (or legacy ~/.orca); zero retain defaults to 168h (7 days).
 func New(root, git string, retain time.Duration, log *slog.Logger) *Manager {
 	if root == "" {
 		home, err := os.UserHomeDir()
 		if err == nil {
-			root = filepath.Join(home, ".orca")
+			root = filepath.Join(home, ".tandemesh")
+			if _, err := os.Stat(root); os.IsNotExist(err) {
+				legacy := filepath.Join(home, ".orca")
+				if _, err := os.Stat(legacy); err == nil {
+					root = legacy
+				}
+			}
 		} else {
-			root = ".orca"
+			root = ".tandemesh"
 		}
 	}
 	if git == "" {

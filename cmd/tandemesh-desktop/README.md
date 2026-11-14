@@ -16,15 +16,15 @@ This directory holds the Wails v3 shell. It is **build-tagged** so the default
 cd web && pnpm install && pnpm build
 
 # 2) stage assets next to the shell (embedded at build time)
-mkdir -p ../cmd/orca-desktop/frontend
-cp -r dist ../cmd/orca-desktop/frontend/dist
+mkdir -p ../cmd/tandemesh-desktop/frontend
+cp -r dist ../cmd/tandemesh-desktop/frontend/dist
 
 # 3) fetch Wails v3 (alpha; pin a version for reproducibility)
 cd .. && go get github.com/wailsapp/wails/v3@latest
 
 # 4) build and run
-go build -tags wails -o orca-desktop ./cmd/orca-desktop
-./orca-desktop
+go build -tags wails -o tandemesh-desktop ./cmd/tandemesh-desktop
+./tandemesh-desktop
 ```
 
 Platform notes:

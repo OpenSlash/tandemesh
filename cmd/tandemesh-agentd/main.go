@@ -1,4 +1,4 @@
-// Command orca-agentd runs on each execution machine.
+// Command tandemesh-agentd runs on each execution machine.
 //
 // M0 keeps the transport deliberately simple: the daemon registers over HTTP,
 // heartbeats, long-polls for a lease and reports events. The WSS transport and

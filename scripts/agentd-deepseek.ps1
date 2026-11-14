@@ -1,4 +1,4 @@
-# Starts orca-agentd with Claude Code pointed at DeepSeek's Anthropic API.
+# Starts tandemesh-agentd with Claude Code pointed at DeepSeek's Anthropic API.
 #
 # Usage:
 #   $env:DEEPSEEK_API_KEY = "sk-..."      # or write the key to .tmp\deepseek.key
@@ -47,9 +47,9 @@ foreach ($dir in @($nodeDir, $cliBin)) {
   if ((Test-Path $dir) -and ($env:PATH -notlike "*$dir*")) { $env:PATH = "$dir;$env:PATH" }
 }
 
-$agentd = Join-Path $root "bin\orca-agentd.exe"
+$agentd = Join-Path $root "bin\tandemesh-agentd.exe"
 if (-not (Test-Path $agentd)) {
-  go build -o $agentd ./cmd/orca-agentd
+  go build -o $agentd ./cmd/tandemesh-agentd
 }
 
 $agentdArgs = @(

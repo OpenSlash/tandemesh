@@ -4,11 +4,11 @@ $out = Join-Path $root 'bin\agents'
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 
 $targets = @(
-    @{ os = 'windows'; arch = 'amd64'; file = 'orca-agentd-windows-amd64.exe' },
-    @{ os = 'linux';   arch = 'amd64'; file = 'orca-agentd-linux-amd64' },
-    @{ os = 'linux';   arch = 'arm64'; file = 'orca-agentd-linux-arm64' },
-    @{ os = 'darwin';  arch = 'amd64'; file = 'orca-agentd-darwin-amd64' },
-    @{ os = 'darwin';  arch = 'arm64'; file = 'orca-agentd-darwin-arm64' }
+    @{ os = 'windows'; arch = 'amd64'; file = 'tandemesh-agentd-windows-amd64.exe' },
+    @{ os = 'linux';   arch = 'amd64'; file = 'tandemesh-agentd-linux-amd64' },
+    @{ os = 'linux';   arch = 'arm64'; file = 'tandemesh-agentd-linux-arm64' },
+    @{ os = 'darwin';  arch = 'amd64'; file = 'tandemesh-agentd-darwin-amd64' },
+    @{ os = 'darwin';  arch = 'arm64'; file = 'tandemesh-agentd-darwin-arm64' }
 )
 
 Push-Location $root
@@ -19,7 +19,7 @@ try {
         $env:CGO_ENABLED = '0'
         $dest = Join-Path $out $target.file
         Write-Host "Building $($target.os)/$($target.arch) -> $dest"
-        & go build -trimpath -ldflags '-s -w' -o $dest ./cmd/orca-agentd
+        & go build -trimpath -ldflags '-s -w' -o $dest ./cmd/tandemesh-agentd
         if ($LASTEXITCODE -ne 0) {
             throw "build failed for $($target.os)/$($target.arch)"
         }

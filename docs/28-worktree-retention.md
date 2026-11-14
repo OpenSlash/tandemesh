@@ -71,7 +71,7 @@ AgentDaemon 启动时执行一次 `workspace.Manager.GC`，之后每 6 小时执
 命令行：
 
 ```bash
-orca-agentd --workspace --retain=168h --data-dir=~/.orca
+tandemesh-agentd --workspace --retain=168h --data-dir=~/.orca
 ```
 
 ## 前端

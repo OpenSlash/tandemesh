@@ -60,7 +60,7 @@ async function createAndWaitRun() {
     }
     await sleep(500)
   }
-  throw new Error(`run ${run.id} did not finish; is orca-agentd running?`)
+  throw new Error(`run ${run.id} did not finish; is tandemesh-agentd running?`)
 }
 
 const vite = spawn(process.execPath, [

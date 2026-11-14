@@ -2,17 +2,17 @@
 
 Guidance for AI coding agents and human contributors working in this repository.
 
-## What Orca is
+## What Tandemesh is
 
-Orca is an **agent execution plane**. External systems (Jira, Linear, GitHub, Notion,
+Tandemesh is an **agent execution plane**. External systems (Jira, Linear, GitHub, Notion,
 Outlook, Slack) remain the source of truth for tasks, documents and conversations.
-Orca only stores execution facts: runs, events, machines, agents, approvals and
+Tandemesh only stores execution facts: runs, events, machines, agents, approvals and
 artifacts.
 
 Hard boundaries — do not cross them:
 
 - No `tasks`, `documents` or `messages` tables. Ever.
-- No auto-merge. Orca opens draft PRs; humans merge.
+- No auto-merge. Tandemesh opens draft PRs; humans merge.
 - No model gateway, billing or seat management.
 - No cloud-only features in the self-hosted core.
 
@@ -21,9 +21,9 @@ If a change needs one of these, stop and open a design discussion first.
 ## Repository layout
 
 ```
-cmd/orca-plane      control plane (API, scheduler, webhooks)
-cmd/orca-agentd     machine daemon (register, lease, execute)
-cmd/orca            thin CLI over the control-plane API
+cmd/tandemesh-plane      control plane (API, scheduler, webhooks)
+cmd/tandemesh-agentd     machine daemon (register, lease, execute)
+cmd/tandemesh            thin CLI over the control-plane API
 internal/domain     types and invariants; no dependencies
 internal/agent      runner seam (mock today, ACP in M1)
 internal/workspace  repository cache and per-run git worktrees
@@ -50,9 +50,9 @@ go test ./...
 go vet ./...
 
 # local run
-go run ./cmd/orca-plane
-go run ./cmd/orca-agentd -name dev-1
-go run ./cmd/orca run --repo=acme/api --prompt="fix the flaky test"
+go run ./cmd/tandemesh-plane
+go run ./cmd/tandemesh-agentd -name dev-1
+go run ./cmd/tandemesh run --repo=acme/api --prompt="fix the flaky test"
 
 # web
 cd web && pnpm install && pnpm dev

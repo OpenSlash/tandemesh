@@ -5,15 +5,15 @@ BIN := bin
 
 build:
 	mkdir -p $(BIN)
-	$(GO) build -o $(BIN)/orca-plane ./cmd/orca-plane
-	$(GO) build -o $(BIN)/orca-agentd ./cmd/orca-agentd
-	$(GO) build -o $(BIN)/orca ./cmd/orca
+	$(GO) build -o $(BIN)/tandemesh-plane ./cmd/tandemesh-plane
+	$(GO) build -o $(BIN)/tandemesh-agentd ./cmd/tandemesh-agentd
+	$(GO) build -o $(BIN)/tandemesh ./cmd/tandemesh
 
 run: build
-	$(BIN)/orca-plane
+	$(BIN)/tandemesh-plane
 
 agentd: build
-	$(BIN)/orca-agentd -name dev-1
+	$(BIN)/tandemesh-agentd -name dev-1
 
 test:
 	$(GO) test ./...

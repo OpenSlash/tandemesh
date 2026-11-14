@@ -6,8 +6,8 @@
 **An agent execution plane.** Route work from Jira, Linear and GitHub to agents running on
 many machines, and write the results back to the tools your team already uses.
 
-> Orca does not own tasks, documents or chat. External systems remain the source of truth;
-> Orca stores only execution facts: runs, events, machines, approvals and artifacts.
+> Tandemesh does not own tasks, documents or chat. External systems remain the source of truth;
+> Tandemesh stores only execution facts: runs, events, machines, approvals and artifacts.
 
 ## Status (M0 skeleton)
 
@@ -15,10 +15,10 @@ See [ROADMAP.md](ROADMAP.md) for the full plan and current progress.
 
 Working today:
 
-- `orca-plane`: SQLite or Postgres storage, run lifecycle, GitHub webhook verification/normalization/
+- `tandemesh-plane`: SQLite or Postgres storage, run lifecycle, GitHub webhook verification/normalization/
   idempotency, machine registry, lease scheduling, SSE event stream, audit log
-- `orca-agentd`: registration, heartbeat, lease long-poll, mock execution, event reporting
-- `orca` CLI: `runs`, `machines`, `run`
+- `tandemesh-agentd`: registration, heartbeat, lease long-poll, mock execution, event reporting
+- `tandemesh` CLI: `runs`, `machines`, `run`
 - `web`: Vite + React run board
 
 Not implemented yet (M1/M2): real ACP execution, WSS transport, approvals, write-back
@@ -30,25 +30,25 @@ Requires Go 1.24+ (verified with 1.27.3). Node 20+ for the web UI.
 
 ```bash
 # terminal 1 - control plane
-go run ./cmd/orca-plane
+go run ./cmd/tandemesh-plane
 
 # terminal 2 - machine daemon (mock agent)
-go run ./cmd/orca-agentd -name dev-1 -agents claude,codex
+go run ./cmd/tandemesh-agentd -name dev-1 -agents claude,codex
 
 # terminal 2 (alternative) - real ACP agent
-go run ./cmd/orca-agentd -name dev-1 -runner acp \
+go run ./cmd/tandemesh-agentd -name dev-1 -runner acp \
   -acp-command claude-code-acp -workdir /path/to/repo
 
 # terminal 2 (recommended) - isolated git worktree per run
-go run ./cmd/orca-agentd -name dev-1 -workspace \
-  -data-dir ~/.orca -git git
+go run ./cmd/tandemesh-agentd -name dev-1 -workspace \
+  -data-dir ~/.tandemesh -git git
 
 # terminal 2 (push transport) - leases arrive over WebSocket
-go run ./cmd/orca-agentd -name dev-1 -transport ws
+go run ./cmd/tandemesh-agentd -name dev-1 -transport ws
 
 # terminal 3 - create and observe
-go run ./cmd/orca run --repo=acme/api --prompt="fix the flaky test"
-go run ./cmd/orca runs
+go run ./cmd/tandemesh run --repo=acme/api --prompt="fix the flaky test"
+go run ./cmd/tandemesh runs
 ```
 
 Web board:
@@ -72,8 +72,8 @@ Linear-inspired layout.
 
 ```
 cmd/
-  orca-plane/     control plane
-  orca-agentd/    machine daemon
+  tandemesh-plane/     control plane
+  tandemesh-agentd/    machine daemon
   orca/           CLI
 internal/
   domain/         types and invariants
@@ -102,7 +102,7 @@ See [.env.example](.env.example). Core variables:
 | `ORCA_LEASE_TTL` | `30s` | lease duration |
 | `ORCA_MAX_ATTEMPTS` | `3` | max reschedules after lease loss |
 | `ORCA_WORKSPACE` | `off` | set to `on` to prepare a worktree per run |
-| `ORCA_DATA_DIR` | `~/.orca` | repository cache and run workspaces |
+| `ORCA_DATA_DIR` | `~/.tandemesh` | repository cache and run workspaces |
 | `ORCA_TRANSPORT` | `http` | `ws` pushes leases over WebSocket; falls back to HTTP |
 
 ## Verification
@@ -116,7 +116,7 @@ go vet ./...
 Verified locally:
 
 - `go test ./...` passes (webhook signature and normalization tests)
-- End to end: `orca-plane` + `orca-agentd` + `orca run` moves a run from `queued` to
+- End to end: `tandemesh-plane` + `tandemesh-agentd` + `orca run` moves a run from `queued` to
   `succeeded` in about two seconds
 - `web`: `pnpm build` succeeds (about 225 KB JS / 2 KB CSS)
 

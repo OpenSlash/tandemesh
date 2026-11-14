@@ -7,16 +7,16 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $bin = Join-Path $root 'bin'
-$planeExe = Join-Path $bin 'orca-plane.exe'
-$agentExe = Join-Path $bin 'orca-agentd.exe'
+$planeExe = Join-Path $bin 'tandemesh-plane.exe'
+$agentExe = Join-Path $bin 'tandemesh-agentd.exe'
 
 if ($Build -or -not (Test-Path $planeExe) -or -not (Test-Path $agentExe)) {
     Push-Location $root
     try {
-        & go build -o $planeExe ./cmd/orca-plane
-        if ($LASTEXITCODE -ne 0) { throw 'build orca-plane failed' }
-        & go build -o $agentExe ./cmd/orca-agentd
-        if ($LASTEXITCODE -ne 0) { throw 'build orca-agentd failed' }
+        & go build -o $planeExe ./cmd/tandemesh-plane
+        if ($LASTEXITCODE -ne 0) { throw 'build tandemesh-plane failed' }
+        & go build -o $agentExe ./cmd/tandemesh-agentd
+        if ($LASTEXITCODE -ne 0) { throw 'build tandemesh-agentd failed' }
     } finally {
         Pop-Location
     }

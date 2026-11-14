@@ -28,10 +28,10 @@ Prerequisites:
 
 ```bash
 # terminal 1
-D:\project\orca\bin\orca-plane.exe
+D:\project\orca\bin\tandemesh-plane.exe
 
 # terminal 2
-D:\project\orca\bin\orca-agentd.exe -name e2e-1 -agents claude -runner mock
+D:\project\orca\bin\tandemesh-agentd.exe -name e2e-1 -agents claude -runner mock
 ```
 
 Run:

@@ -1,14 +1,14 @@
 //go:build wails
 
-// Command orca-desktop is the Wails v3 shell.
+// Command tandemesh-desktop is the Wails v3 shell.
 //
 // It is excluded from the default build because Wails v3 is still alpha and
 // pulls a large dependency tree. To build it:
 //
 //	go get github.com/wailsapp/wails/v3@latest
-//	mkdir -p cmd/orca-desktop/frontend
-//	cp -r web/dist cmd/orca-desktop/frontend/dist
-//	go build -tags wails -o orca-desktop ./cmd/orca-desktop
+//	mkdir -p cmd/tandemesh-desktop/frontend
+//	cp -r web/dist cmd/tandemesh-desktop/frontend/dist
+//	go build -tags wails -o tandemesh-desktop ./cmd/tandemesh-desktop
 package main
 
 import (
