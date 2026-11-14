@@ -46,7 +46,7 @@ func TestCompleteMemberOAuth(t *testing.T) {
 		_, _ = w.Write([]byte(`{"id":42,"login":"alice","email":"alice@example.com"}`))
 	}))
 	defer apiSrv.Close()
-	t.Setenv("ORCA_GITHUB_API_URL", apiSrv.URL)
+	t.Setenv("TANDEMESH_GITHUB_API_URL", apiSrv.URL)
 	st, err := store.Open(filepath.Join(t.TempDir(), "member-oauth.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -93,7 +93,7 @@ func TestCompleteJiraMemberOAuth(t *testing.T) {
 		_, _ = w.Write([]byte(`{"account_id":"acc-1","name":"alice","email":"alice@example.com"}`))
 	}))
 	defer apiSrv.Close()
-	t.Setenv("ORCA_JIRA_API_URL", apiSrv.URL)
+	t.Setenv("TANDEMESH_JIRA_API_URL", apiSrv.URL)
 	st, err := store.Open(filepath.Join(t.TempDir(), "member-jira.db"))
 	if err != nil {
 		t.Fatal(err)

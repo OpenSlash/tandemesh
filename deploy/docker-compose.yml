@@ -4,11 +4,11 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile
     environment:
-      ORCA_LISTEN: ":8080"
-      ORCA_DB_PATH: ${ORCA_DB_PATH:-/data/orca.db}
-      ORCA_JOIN_TOKEN: ${ORCA_JOIN_TOKEN:-dev-join-token}
-      ORCA_GITHUB_SECRET: ${ORCA_GITHUB_SECRET:-}
-      ORCA_LEASE_TTL: 30s
+      TANDEMESH_LISTEN: ":8080"
+      TANDEMESH_DB_PATH: ${TANDEMESH_DB_PATH:-/data/tandemesh.db}
+      TANDEMESH_JOIN_TOKEN: ${TANDEMESH_JOIN_TOKEN:-dev-join-token}
+      TANDEMESH_GITHUB_SECRET: ${TANDEMESH_GITHUB_SECRET:-}
+      TANDEMESH_LEASE_TTL: 30s
     ports:
       - "8080:8080"
     volumes:
@@ -17,7 +17,7 @@ services:
 
   # Optional Postgres for team deployments:
   #   docker compose --profile postgres up
-  #   ORCA_DB_PATH=postgres://orca:orca@postgres:5432/orca?sslmode=disable
+  #   TANDEMESH_DB_PATH=postgres://orca:orca@postgres:5432/orca?sslmode=disable
   postgres:
     image: postgres:17-alpine
     profiles: ["postgres"]

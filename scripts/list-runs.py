@@ -7,7 +7,7 @@ import urllib.request
 
 
 def main() -> int:
-    base = os.environ.get("ORCA_BASE_URL", "http://127.0.0.1:8080")
+    base = os.environ.get("TANDEMESH_BASE_URL", "http://127.0.0.1:8080")
     with urllib.request.urlopen(base + "/api/v1/runs") as resp:
         data = json.load(resp)
     items = data.get("items") or []

@@ -11,11 +11,11 @@ import (
 
 // TestPostgresStore runs only when a disposable database is provided:
 //
-//	ORCA_TEST_POSTGRES=postgres://orca:orca@localhost:5432/orca_test?sslmode=disable go test ./internal/store
+//	TANDEMESH_TEST_POSTGRES=postgres://orca:orca@localhost:5432/orca_test?sslmode=disable go test ./internal/store
 func TestPostgresStore(t *testing.T) {
-	dsn := os.Getenv("ORCA_TEST_POSTGRES")
+	dsn := os.Getenv("TANDEMESH_TEST_POSTGRES")
 	if dsn == "" {
-		t.Skip("ORCA_TEST_POSTGRES is not set")
+		t.Skip("TANDEMESH_TEST_POSTGRES is not set")
 	}
 	st, err := Open(dsn)
 	if err != nil {

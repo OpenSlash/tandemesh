@@ -15,7 +15,7 @@ import (
 )
 
 func (s *Server) attachmentDir() string {
-	if dir := os.Getenv("ORCA_ATTACHMENT_DIR"); dir != "" {
+	if dir := os.Getenv("TANDEMESH_ATTACHMENT_DIR"); dir != "" {
 		return dir
 	}
 	return filepath.Join(filepath.Dir(s.cfg.DBPath), "attachments")

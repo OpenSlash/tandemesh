@@ -56,7 +56,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger) (*App, error)
 		_ = st.Close()
 		return nil, err
 	}
-	if os.Getenv("ORCA_LOCAL_REBUILD") == "1" {
+	if os.Getenv("TANDEMESH_LOCAL_REBUILD") == "1" {
 		if err := st.RebuildLocalOnly(ctx); err != nil {
 			return nil, err
 		}
@@ -85,7 +85,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger) (*App, error)
 		github.New(cfg.GitHubSecret),
 		plane.New(),
 		linear.New(cfg.LinearSecret),
-		gitlab.New(os.Getenv("ORCA_GITLAB_WEBHOOK_SECRET")),
+		gitlab.New(os.Getenv("TANDEMESH_GITLAB_WEBHOOK_SECRET")),
 		jira.New(cfg.JiraSecret),
 		feishu.New(cfg.FeishuWebhook),
 		notion.New(cfg.NotionToken),
@@ -100,7 +100,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger) (*App, error)
 	}
 
 	runCtx, cancel := context.WithCancel(ctx)
-	ghapp := githubapp.New(cfg.GitHubAppID, cfg.GitHubAppSlug, cfg.GitHubAppPrivateKey, os.Getenv("ORCA_GITHUB_API_URL"))
+	ghapp := githubapp.New(cfg.GitHubAppID, cfg.GitHubAppSlug, cfg.GitHubAppPrivateKey, os.Getenv("TANDEMESH_GITHUB_API_URL"))
 	creds := func(provider, connectionID, accountID string) integration.Credential {
 		if provider == "github" && connectionID != "" && ghapp.Enabled() {
 			if conn, err := st.GetConnection(context.Background(), connectionID); err == nil && conn != nil && conn.AuthMethod == "github_app" {

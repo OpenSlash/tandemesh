@@ -8,7 +8,7 @@ import { chromium } from 'playwright-core'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const webRoot = path.resolve(here, '..')
-const planeURL = process.env.ORCA_BASE_URL || 'http://127.0.0.1:8080'
+const planeURL = process.env.TANDEMESH_BASE_URL || 'http://127.0.0.1:8080'
 const port = 5175
 const baseURL = `http://127.0.0.1:${port}`
 const stamp = Date.now().toString(36)

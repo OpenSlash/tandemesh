@@ -279,7 +279,7 @@ func reasoningEnv(backend, level string) []string {
 	if level == "" {
 		return nil
 	}
-	env := []string{"ORCA_REASONING=" + level}
+	env := []string{"TANDEMESH_REASONING=" + level}
 	switch strings.ToLower(backend) {
 	case "claude":
 		tokens := map[string]string{"low": "1024", "medium": "4096", "high": "8192"}[level]

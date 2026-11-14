@@ -39,17 +39,17 @@ type Status struct {
 	Commits    []Commit `json:"commits"`
 }
 
-// New resolves the git executable from ORCA_GIT or PATH.
+// New resolves the git executable from TANDEMESH_GIT or PATH.
 func New() *Service {
-	git := os.Getenv("ORCA_GIT")
+	git := os.Getenv("TANDEMESH_GIT")
 	if git == "" {
 		git = "git"
 	}
-	gh := os.Getenv("ORCA_GH")
+	gh := os.Getenv("TANDEMESH_GH")
 	if gh == "" {
 		gh = "gh"
 	}
-	glab := os.Getenv("ORCA_GLAB")
+	glab := os.Getenv("TANDEMESH_GLAB")
 	if glab == "" {
 		glab = "glab"
 	}

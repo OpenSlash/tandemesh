@@ -158,7 +158,7 @@ func (s *Server) backlinkTaskPullRequest(ctx context.Context, task *domain.Task,
 	cred := s.providerCredential(ctx, task.Provider, binding.ConnectionID)
 	cred = s.accountCredential(ctx, task.Provider, binding.AccountID, cred)
 	ref := domain.WorkRef{Provider: task.Provider, Instance: pr.Repo, Type: "pr", ID: strconv.Itoa(pr.Number), URL: pr.URL}
-	body := "Orca task: [" + task.Title + "](" + task.URL + ")"
+	body := "Tandemesh task: [" + task.Title + "](" + task.URL + ")"
 	if _, err := ad.Work.Comment(ctx, ref, cred, body); err != nil {
 		s.log.Warn("pr backlink", "task", task.ID, "pr", pr.URL, "err", err)
 		return

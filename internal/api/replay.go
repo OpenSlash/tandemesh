@@ -51,7 +51,7 @@ func (s *Server) replayDelivery(ctx context.Context, d *domain.WebhookDelivery) 
 	ctx = context.WithValue(ctx, chi.RouteCtxKey, routeCtx)
 	ctx = context.WithValue(ctx, replayContextKey{}, true)
 	req = req.WithContext(ctx)
-	req.Header.Set("X-Orca-Replay", d.ID)
+	req.Header.Set("X-Tandemesh-Replay", d.ID)
 
 	rec := httptest.NewRecorder()
 	s.webhook(rec, req)

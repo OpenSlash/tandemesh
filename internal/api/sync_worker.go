@@ -22,7 +22,7 @@ func syncOwner() string {
 // SyncLoop periodically pulls connected task sources as a webhook fallback.
 func (s *Server) SyncLoop(ctx context.Context) {
 	interval := 5 * time.Minute
-	if raw := os.Getenv("ORCA_SYNC_INTERVAL"); raw != "" {
+	if raw := os.Getenv("TANDEMESH_SYNC_INTERVAL"); raw != "" {
 		if d, err := time.ParseDuration(raw); err == nil && d >= 30*time.Second {
 			interval = d
 		}
@@ -188,7 +188,7 @@ func (s *Server) SyncConnections(ctx context.Context) int {
 		}
 	}
 	if synced > 0 {
-		s.log.Info("task sync", "items", synced, "connections", len(conns), "interval", os.Getenv("ORCA_SYNC_INTERVAL"))
+		s.log.Info("task sync", "items", synced, "connections", len(conns), "interval", os.Getenv("TANDEMESH_SYNC_INTERVAL"))
 	}
 	return synced
 }

@@ -178,7 +178,7 @@ func TestPromptContentImages(t *testing.T) {
 
 func TestReasoningEnv(t *testing.T) {
 	env := reasoningEnv("claude", "high")
-	if !contains(env, "MAX_THINKING_TOKENS=8192") || !contains(env, "ORCA_REASONING=high") {
+	if !contains(env, "MAX_THINKING_TOKENS=8192") || !contains(env, "TANDEMESH_REASONING=high") {
 		t.Fatalf("claude env = %v", env)
 	}
 	env = reasoningEnv("codex", "low")

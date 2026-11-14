@@ -1,7 +1,7 @@
 # Tandemesh
 
 > **Internal codename: Orca.** The repository, Go module and public product name are Tandemesh.
-> Existing binaries, environment variables and older docs still use the Orca codename until the branding pass is complete.
+> Orca remains only as an internal codename and as a compatibility fallback for legacy environment variables and headers.
 
 **An agent execution plane.** Route work from Jira, Linear and GitHub to agents running on
 many machines, and write the results back to the tools your team already uses.
@@ -95,15 +95,15 @@ See [.env.example](.env.example). Core variables:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `ORCA_LISTEN` | `:8080` | HTTP listen address |
-| `ORCA_DB_PATH` | `orca.db` | SQLite file or `postgres://` DSN |
-| `ORCA_JOIN_TOKEN` | `dev-join-token` | machine registration token (**change in production**) |
-| `ORCA_GITHUB_SECRET` | empty | GitHub webhook secret; empty disables verification (dev only) |
-| `ORCA_LEASE_TTL` | `30s` | lease duration |
-| `ORCA_MAX_ATTEMPTS` | `3` | max reschedules after lease loss |
-| `ORCA_WORKSPACE` | `off` | set to `on` to prepare a worktree per run |
-| `ORCA_DATA_DIR` | `~/.tandemesh` | repository cache and run workspaces |
-| `ORCA_TRANSPORT` | `http` | `ws` pushes leases over WebSocket; falls back to HTTP |
+| `TANDEMESH_LISTEN` | `:8080` | HTTP listen address |
+| `TANDEMESH_DB_PATH` | `tandemesh.db` | SQLite file or `postgres://` DSN |
+| `TANDEMESH_JOIN_TOKEN` | `dev-join-token` | machine registration token (**change in production**) |
+| `TANDEMESH_GITHUB_SECRET` | empty | GitHub webhook secret; empty disables verification (dev only) |
+| `TANDEMESH_LEASE_TTL` | `30s` | lease duration |
+| `TANDEMESH_MAX_ATTEMPTS` | `3` | max reschedules after lease loss |
+| `TANDEMESH_WORKSPACE` | `off` | set to `on` to prepare a worktree per run |
+| `TANDEMESH_DATA_DIR` | `~/.tandemesh` | repository cache and run workspaces |
+| `TANDEMESH_TRANSPORT` | `http` | `ws` pushes leases over WebSocket; falls back to HTTP |
 
 ## Verification
 
@@ -132,7 +132,7 @@ go test -c -o bin/agent.test.exe ./internal/agent
 
 - Go for the control plane, daemon and CLI: single binary, cross-platform process and PTY
   control, simple deployment.
-- SQLite by default; set `ORCA_DB_PATH=postgres://...` for team deployments.
+- SQLite by default; set `TANDEMESH_DB_PATH=postgres://...` for team deployments.
 - ACP for agent backends: one adapter covers Claude Code, Codex, OpenCode and others.
 - SSE for the browser, outbound WSS for daemons (M1).
 - Apache-2.0.

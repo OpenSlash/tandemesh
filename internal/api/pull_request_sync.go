@@ -15,7 +15,7 @@ import (
 // PullRequestSyncLoop periodically links PRs and commits to task projections.
 func (s *Server) PullRequestSyncLoop(ctx context.Context) {
 	interval := 10 * time.Minute
-	if raw := os.Getenv("ORCA_PR_SYNC_INTERVAL"); raw != "" {
+	if raw := os.Getenv("TANDEMESH_PR_SYNC_INTERVAL"); raw != "" {
 		if parsed, err := time.ParseDuration(raw); err == nil && parsed >= time.Minute {
 			interval = parsed
 		}

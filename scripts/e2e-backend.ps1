@@ -29,11 +29,11 @@ $planeErr = Join-Path $bin "e2e-$stamp-plane.err"
 $agentLog = Join-Path $bin "e2e-$stamp-agent.log"
 $agentErr = Join-Path $bin "e2e-$stamp-agent.err"
 
-$env:ORCA_LISTEN = ":$Port"
-$env:ORCA_DB_PATH = $db
-$env:ORCA_JOIN_TOKEN = 'e2e-token'
-$env:ORCA_RUN_TIMEOUT = '3m'
-$env:ORCA_TELEMETRY = 'off'
+$env:TANDEMESH_LISTEN = ":$Port"
+$env:TANDEMESH_DB_PATH = $db
+$env:TANDEMESH_JOIN_TOKEN = 'e2e-token'
+$env:TANDEMESH_RUN_TIMEOUT = '3m'
+$env:TANDEMESH_TELEMETRY = 'off'
 
 $base = "http://127.0.0.1:$Port"
 $plane = $null

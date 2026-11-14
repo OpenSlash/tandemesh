@@ -529,9 +529,9 @@ pnpm --filter @orca/mobile build:harmony
 
 构建时注入：
 
-- `ORCA_API_URL`
-- `ORCA_OIDC_CLIENT_ID`
-- `ORCA_DEEP_LINK_SCHEME`
+- `TANDEMESH_API_URL`
+- `TANDEMESH_OIDC_CLIENT_ID`
+- `TANDEMESH_DEEP_LINK_SCHEME`
 
 ### 10.4 发布
 

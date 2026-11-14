@@ -91,7 +91,7 @@ the design specification are met and covered by a test or a documented manual ch
 | 5 | MCP configuration injection | ✅ | `internal/agent` session/new, scheduler |
 | 6 | gRPC plugin protocol | ✅ | `internal/plugin`, `pkg/plugin` |
 | 7 | Slack chat + approval cards | ✅ | `internal/integration/slack`, signed links |
-| 8 | Postgres adapter | ✅ | `internal/store/pgdriver`, `ORCA_DB_PATH=postgres://` |
+| 8 | Postgres adapter | ✅ | `internal/store/pgdriver`, `TANDEMESH_DB_PATH=postgres://` |
 | 9 | Feishu notifier + approval cards | ✅ | `internal/integration/feishu` |
 | 10 | Cron automations | ✅ | `internal/automation`, `/automations` |
 | 11 | Outline wiki source + email kind | ✅ | `internal/integration/outline` |

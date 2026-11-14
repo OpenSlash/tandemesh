@@ -25,16 +25,16 @@ type Adapter struct {
 
 // New builds the Plane integration.
 func New() *integration.Integration {
-	base := os.Getenv("ORCA_PLANE_API_URL")
+	base := os.Getenv("TANDEMESH_PLANE_API_URL")
 	if base == "" {
 		base = "https://api.plane.so"
 	}
-	app := os.Getenv("ORCA_PLANE_APP_URL")
+	app := os.Getenv("TANDEMESH_PLANE_APP_URL")
 	if app == "" {
 		app = "https://app.plane.so"
 	}
 	a := &Adapter{
-		Secret:     os.Getenv("ORCA_PLANE_WEBHOOK_SECRET"),
+		Secret:     os.Getenv("TANDEMESH_PLANE_WEBHOOK_SECRET"),
 		HTTPClient: &http.Client{Timeout: 20 * time.Second},
 		BaseURL:    strings.TrimRight(base, "/"),
 		AppURL:     strings.TrimRight(app, "/"),

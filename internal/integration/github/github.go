@@ -28,7 +28,7 @@ type Adapter struct {
 
 // New builds the GitHub integration.
 func New(secret string) *integration.Integration {
-	base := os.Getenv("ORCA_GITHUB_API_URL")
+	base := os.Getenv("TANDEMESH_GITHUB_API_URL")
 	if base == "" {
 		base = "https://api.github.com"
 	}

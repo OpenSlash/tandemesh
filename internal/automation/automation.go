@@ -124,7 +124,7 @@ func RunPrecheck(ctx context.Context, a *domain.Automation) error {
 	} else {
 		cmd = exec.CommandContext(runCtx, "sh", "-c", script)
 	}
-	cmd.Env = append(os.Environ(), "ORCA_AUTOMATION_ID="+a.ID, "ORCA_AUTOMATION_NAME="+a.Name)
+	cmd.Env = append(os.Environ(), "TANDEMESH_AUTOMATION_ID="+a.ID, "TANDEMESH_AUTOMATION_NAME="+a.Name)
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		return nil

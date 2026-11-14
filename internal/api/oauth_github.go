@@ -287,7 +287,7 @@ func (s *Server) completeMemberOAuth(ctx context.Context, provider, workspaceID,
 }
 
 func (s *Server) completeGitHubMember(ctx context.Context, workspaceID, memberID, accessToken string) error {
-	base := os.Getenv("ORCA_GITHUB_API_URL")
+	base := os.Getenv("TANDEMESH_GITHUB_API_URL")
 	if base == "" {
 		base = "https://api.github.com"
 	}
@@ -345,7 +345,7 @@ func (s *Server) completeGitLabMember(ctx context.Context, workspaceID, memberID
 }
 
 func (s *Server) completeJiraMember(ctx context.Context, workspaceID, memberID, accessToken string) error {
-	base := os.Getenv("ORCA_JIRA_API_URL")
+	base := os.Getenv("TANDEMESH_JIRA_API_URL")
 	if base == "" {
 		base = "https://api.atlassian.com"
 	}

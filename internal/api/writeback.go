@@ -110,7 +110,7 @@ func (s *Server) enqueueWritebacks(ctx context.Context, run *domain.Run) {
 
 func summaryMarkdown(run *domain.Run, runURL string) string {
 	markdown := fmt.Sprintf(
-		"Orca run `%s` finished with status **%s**.\n\nRepository: `%s`  \nBranch: `%s`  \n[Open run](%s)",
+		"Tandemesh run `%s` finished with status **%s**.\n\nRepository: `%s`  \nBranch: `%s`  \n[Open run](%s)",
 		run.ID, run.Status, run.Repo, run.Branch, runURL,
 	)
 	if run.ErrorCode != "" {

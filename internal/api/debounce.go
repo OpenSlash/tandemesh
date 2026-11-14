@@ -14,7 +14,7 @@ type debounceState struct {
 }
 
 func debounceWindow() time.Duration {
-	if raw := os.Getenv("ORCA_WEBHOOK_DEBOUNCE"); raw != "" {
+	if raw := os.Getenv("TANDEMESH_WEBHOOK_DEBOUNCE"); raw != "" {
 		if d, err := time.ParseDuration(raw); err == nil && d >= 0 {
 			return d
 		}

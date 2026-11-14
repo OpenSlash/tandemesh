@@ -11,7 +11,7 @@ RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /data
 COPY --from=build /out/tandemesh-plane /usr/local/bin/tandemesh-plane
 COPY --from=build /out/tandemesh /usr/local/bin/tandemesh
-ENV ORCA_LISTEN=:8080 ORCA_DB_PATH=/data/orca.db
+ENV TANDEMESH_LISTEN=:8080 TANDEMESH_DB_PATH=/data/tandemesh.db
 EXPOSE 8080
 VOLUME ["/data"]
 ENTRYPOINT ["tandemesh-plane"]

@@ -12,12 +12,12 @@ import (
 
 func gitBin(t *testing.T) string {
 	t.Helper()
-	if p := os.Getenv("ORCA_GIT"); p != "" {
+	if p := os.Getenv("TANDEMESH_GIT"); p != "" {
 		return p
 	}
 	p, err := exec.LookPath("git")
 	if err != nil {
-		t.Skip("git not available; set ORCA_GIT to run this test")
+		t.Skip("git not available; set TANDEMESH_GIT to run this test")
 	}
 	return p
 }

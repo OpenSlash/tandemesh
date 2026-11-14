@@ -28,7 +28,7 @@ Automation 是按 Cron 计划启动 Run 的无事件触发器。增强后支持�
 行为：
 
 - 60 秒超时
-- 注入 `ORCA_AUTOMATION_ID` / `ORCA_AUTOMATION_NAME`
+- 注入 `TANDEMESH_AUTOMATION_ID` / `TANDEMESH_AUTOMATION_NAME`
 - 非 0 退出码：不创建 Run，记录 `precheck_failed`，并推进到下一周期
 - 输出最多保留 2000 字符写入 `last_error`
 

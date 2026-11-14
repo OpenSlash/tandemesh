@@ -1,4 +1,4 @@
-// Package api exposes the Orca control-plane HTTP API.
+// Package api exposes the Tandemesh control-plane HTTP API.
 package api
 
 import (
@@ -61,7 +61,7 @@ func (s *Server) ConfigureGitHubApp(app *githubapp.Client) { s.githubApp = app }
 // New creates the API server.
 func New(cfg config.Config, st *store.Store, sch *scheduler.Scheduler, h *hub.Hub, reg *integration.Registry, vault *credentials.Vault, log *slog.Logger) *Server {
 	slots := 2
-	if raw := os.Getenv("ORCA_IMPORT_CONCURRENCY"); raw != "" {
+	if raw := os.Getenv("TANDEMESH_IMPORT_CONCURRENCY"); raw != "" {
 		if parsed, err := strconv.Atoi(raw); err == nil {
 			slots = parsed
 		}
@@ -1105,7 +1105,7 @@ func (s *Server) webhook(w http.ResponseWriter, r *http.Request) {
 	if delivery == "" {
 		delivery = ev.Delivery
 	}
-	if replayID := r.Header.Get("X-Orca-Replay"); replayID != "" {
+	if replayID := headerWithLegacy(r, "X-Tandemesh-Replay", "X-Orca-Replay"); replayID != "" {
 		delivery = "replay:" + replayID + ":" + ulid.Make().String()
 	}
 	deliveryID := "whd_" + ulid.Make().String()

@@ -33,7 +33,7 @@ func main() {
 		usage()
 		return
 	}
-	server := env("ORCA_BASE_URL", "http://127.0.0.1:8080")
+	server := env("TANDEMESH_BASE_URL", "http://127.0.0.1:8080")
 	if strings.HasPrefix(args[0], "-server=") {
 		server = strings.TrimPrefix(args[0], "-server=")
 		args = args[1:]
@@ -83,8 +83,8 @@ Usage:
   orca worktree set --run=<runId> --comment="..." [--workspace-status=in-progress]
 
 Environment:
-  ORCA_BASE_URL   control plane URL (default http://127.0.0.1:8080)
-  ORCA_TOKEN      API token (reserved for M1)
+  TANDEMESH_BASE_URL   control plane URL (default http://127.0.0.1:8080)
+  TANDEMESH_TOKEN      API token (reserved for M1)
 `)
 }
 
