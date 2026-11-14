@@ -1,0 +1,231 @@
+openapi: 3.1.0
+info:
+  title: Orca Control Plane API
+  version: 0.1.0
+  description: |
+    Orca is an agent execution plane. External systems (Jira, Linear, GitHub,
+    Notion, Slack) remain the source of truth; Orca stores only execution facts.
+servers:
+  - url: http://localhost:8080
+paths:
+  /healthz:
+    get:
+      summary: Liveness probe
+      responses:
+        "200": { description: OK }
+  /readyz:
+    get:
+      summary: Readiness probe
+      responses:
+        "200": { description: Ready }
+        "503": { description: Database unavailable }
+  /api/v1/runs:
+    get:
+      summary: List runs
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 100 }
+      responses:
+        "200":
+          description: Runs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Run" }
+    post:
+      summary: Create a run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateRunRequest" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Run" }
+  /api/v1/runs/{id}:
+    get:
+      summary: Get a run
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Run
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Run" }
+        "404": { description: Not found }
+  /api/v1/runs/{id}/cancel:
+    post:
+      summary: Cancel a run
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Cancelled }
+        "409": { description: Not cancellable }
+  /api/v1/runs/{id}/events:
+    get:
+      summary: Stream run events (SSE)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: after
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: text/event-stream
+          content:
+            text/event-stream:
+              schema: { type: string }
+  /api/v1/machines:
+    get:
+      summary: List machines
+      responses:
+        "200":
+          description: Machines
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Machine" }
+  /api/v1/machines/register:
+    post:
+      summary: Register a machine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterMachineRequest" }
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Machine" }
+        "401": { description: Invalid join token }
+  /webhooks/github/{binding}:
+    post:
+      summary: GitHub issue webhook
+      parameters:
+        - name: binding
+          in: path
+          required: true
+          schema: { type: string }
+        - name: X-Hub-Signature-256
+          in: header
+          schema: { type: string }
+        - name: X-GitHub-Delivery
+          in: header
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "202": { description: Run created }
+        "200": { description: Skipped or deduplicated }
+        "401": { description: Bad signature }
+components:
+  schemas:
+    WorkRef:
+      type: object
+      required: [provider, id]
+      properties:
+        provider: { type: string }
+        instance: { type: string }
+        type: { type: string }
+        id: { type: string }
+        url: { type: string }
+        revision: { type: string }
+    Snapshot:
+      type: object
+      properties:
+        title: { type: string }
+        bodyHash: { type: string }
+        labels:
+          type: array
+          items: { type: string }
+        author: { type: string }
+    Run:
+      type: object
+      properties:
+        id: { type: string }
+        work: { $ref: "#/components/schemas/WorkRef" }
+        snapshot: { $ref: "#/components/schemas/Snapshot" }
+        agentId: { type: string }
+        machineId: { type: string }
+        status:
+          type: string
+          enum: [queued, leased, preparing, running, waiting_approval, finalizing, succeeded, failed, cancelled]
+        priority: { type: integer }
+        attempt: { type: integer }
+        fence: { type: integer }
+        repo: { type: string }
+        base: { type: string }
+        branch: { type: string }
+        prompt: { type: string }
+        createdAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time, nullable: true }
+        endedAt: { type: string, format: date-time, nullable: true }
+    CreateRunRequest:
+      type: object
+      required: [work]
+      properties:
+        work: { $ref: "#/components/schemas/WorkRef" }
+        agentId: { type: string, default: claude }
+        repo: { type: string }
+        base: { type: string, default: main }
+        branch: { type: string }
+        prompt: { type: string }
+        priority: { type: integer }
+    Machine:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        labels:
+          type: array
+          items: { type: string }
+        agents:
+          type: array
+          items: { type: string }
+        concurrency: { type: integer }
+        status: { type: string }
+        lastSeen: { type: string, format: date-time }
+    RegisterMachineRequest:
+      type: object
+      required: [token, name]
+      properties:
+        token: { type: string }
+        name: { type: string }
+        labels:
+          type: array
+          items: { type: string }
+        agents:
+          type: array
+          items: { type: string }
+        concurrency: { type: integer }
+        version: { type: string }

@@ -1,0 +1,15 @@
+bin/
+.tmp/
+*.db
+*.db-shm
+*.db-wal
+*.exe
+.env
+web/node_modules/
+web/dist/
+cmd/orca-desktop/frontend/
+.DS_Store
+
+# Design docs are not published yet.
+docs/
+go-test.json

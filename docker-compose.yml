@@ -1,0 +1,35 @@
+services:
+  plane:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ORCA_LISTEN: ":8080"
+      ORCA_DB_PATH: "/data/orca.db"
+      ORCA_BASE_URL: "http://localhost:8080"
+      ORCA_MASTER_KEY: "${ORCA_MASTER_KEY:?set ORCA_MASTER_KEY}"
+      ORCA_JOIN_TOKEN: "${ORCA_JOIN_TOKEN:?set ORCA_JOIN_TOKEN}"
+      ORCA_USER: "${ORCA_USER:-alice}"
+      ORCA_MAX_ACTIVE_PER_WORKSPACE: "${ORCA_MAX_ACTIVE_PER_WORKSPACE:-0}"
+      ORCA_MAX_ACTIVE_PER_AGENT: "${ORCA_MAX_ACTIVE_PER_AGENT:-0}"
+    volumes:
+      - orca-data:/data
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    depends_on:
+      - plane
+    ports:
+      - "8081:80"
+
+volumes:
+  orca-data:
