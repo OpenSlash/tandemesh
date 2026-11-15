@@ -87,7 +87,7 @@ func (s *Server) oauthStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) oauthRedirectURI(provider string) string {
-	return strings.TrimRight(s.cfg.BaseURL, "/") + "/api/v1/integrations/" + provider + "/oauth/callback"
+	return strings.TrimRight(s.oauthBaseURL(), "/") + "/api/v1/integrations/" + provider + "/oauth/callback"
 }
 
 func (s *Server) oauthStart(w http.ResponseWriter, r *http.Request) {
@@ -301,7 +301,7 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if ad.Registrar != nil {
-			hookURL := strings.TrimRight(s.cfg.BaseURL, "/") + "/webhooks/" + provider + "/" + automation.ID
+			hookURL := strings.TrimRight(s.publicBaseURL(), "/") + "/webhooks/" + provider + "/" + automation.ID
 			if _, err := ad.Registrar.RegisterWebhook(r.Context(), cred, state.Instance, hookURL, ""); err != nil {
 				s.log.Warn("oauth auto-register webhook", "provider", provider, "err", err)
 			}

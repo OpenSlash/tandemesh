@@ -82,6 +82,7 @@ func (s *Server) Router() http.Handler {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
+	r.Use(s.publicAuth)
 	r.Use(s.identify)
 	r.Use(s.enforceViewer)
 	r.Use(s.accessLog)
@@ -111,6 +112,7 @@ func (s *Server) Router() http.Handler {
 		})
 	})
 
+	r.Get("/api/v1/capabilities", s.capabilities)
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/usage/trend", s.usageTrend)
 		r.Get("/version", func(w http.ResponseWriter, r *http.Request) {

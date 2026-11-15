@@ -6,10 +6,12 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/OpenSlash/tandemesh/internal/api"
 	"github.com/OpenSlash/tandemesh/internal/automation"
@@ -48,6 +50,18 @@ type App struct {
 
 // New builds and starts the control plane.
 func New(ctx context.Context, cfg config.Config, log *slog.Logger) (*App, error) {
+	profile := strings.ToLower(cfg.Profile)
+	if profile == "public" {
+		if !strings.EqualFold(cfg.AuthMode, "basic") || cfg.AdminPassword == "" {
+			return nil, fmt.Errorf("public profile requires TANDEMESH_AUTH=basic and TANDEMESH_ADMIN_PASSWORD")
+		}
+		if cfg.PublicURL == "" {
+			return nil, fmt.Errorf("public profile requires TANDEMESH_PUBLIC_URL")
+		}
+		if !strings.HasPrefix(cfg.PublicURL, "https://") && os.Getenv("TANDEMESH_ALLOW_INSECURE") != "1" {
+			return nil, fmt.Errorf("public profile requires an https TANDEMESH_PUBLIC_URL")
+		}
+	}
 	st, err := store.Open(cfg.DBPath)
 	if err != nil {
 		return nil, err

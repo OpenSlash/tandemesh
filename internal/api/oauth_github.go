@@ -141,7 +141,7 @@ func (s *Server) githubOAuthStart(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) redirectURI() string {
-	return strings.TrimRight(s.cfg.BaseURL, "/") + "/api/v1/integrations/github/oauth/callback"
+	return strings.TrimRight(s.oauthBaseURL(), "/") + "/api/v1/integrations/github/oauth/callback"
 }
 
 // githubOAuthCallback exchanges the code, stores the token and creates a binding.

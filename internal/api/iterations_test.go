@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/OpenSlash/tandemesh/internal/config"
 	"github.com/OpenSlash/tandemesh/internal/domain"
@@ -30,7 +31,7 @@ func TestIterations(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	it := postJSON[domain.Iteration](t, ts.URL+"/api/v1/workspaces/ws_default/iterations", map[string]string{
-		"name": "Sprint 1", "startDate": "2026-11-01", "endDate": "2026-11-14",
+		"name": "Sprint 1", "startDate": time.Now().AddDate(0, 0, -7).Format("2006-01-02"), "endDate": time.Now().AddDate(0, 0, 7).Format("2006-01-02"),
 	})
 	if it.ID == "" || it.Status != "planned" {
 		t.Fatalf("iteration = %+v", it)

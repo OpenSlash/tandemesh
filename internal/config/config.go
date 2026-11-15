@@ -13,6 +13,11 @@ import (
 // Config is the control-plane configuration.
 type Config struct {
 	Listen         string
+	Profile        string
+	PublicURL      string
+	OAuthRedirect  string
+	AuthMode       string
+	AdminPassword  string
 	BaseURL        string
 	WritebackState bool
 	DBPath         string
@@ -94,6 +99,11 @@ func Load() Config {
 	applyLegacyEnv()
 	return Config{
 		Listen:                 env("TANDEMESH_LISTEN", ":8080"),
+		Profile:                env("TANDEMESH_PROFILE", "local"),
+		PublicURL:              env("TANDEMESH_PUBLIC_URL", ""),
+		OAuthRedirect:          env("TANDEMESH_OAUTH_REDIRECT", "auto"),
+		AuthMode:               env("TANDEMESH_AUTH", "none"),
+		AdminPassword:          env("TANDEMESH_ADMIN_PASSWORD", ""),
 		BaseURL:                env("TANDEMESH_BASE_URL", "http://localhost:8080"),
 		WritebackState:         env("TANDEMESH_WRITEBACK_STATE", "") == "1",
 		DBPath:                 env("TANDEMESH_DB_PATH", defaultDBPath()),
