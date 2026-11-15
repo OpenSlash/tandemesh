@@ -84,14 +84,14 @@ func (s *Server) verifyOAuthState(value string) (githubOAuthState, bool) {
 
 // githubOAuthStatus reports whether OAuth is configured.
 func (s *Server) githubOAuthStatus(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]bool{
-		"enabled": s.cfg.GitHubClientID != "" && s.cfg.GitHubClientSecret != "",
-	})
+	_, _, ok := s.githubClientCredentials(r.Context())
+	writeJSON(w, http.StatusOK, map[string]bool{"enabled": ok})
 }
 
 // githubOAuthStart redirects the browser to GitHub's consent screen.
 func (s *Server) githubOAuthStart(w http.ResponseWriter, r *http.Request) {
-	if s.cfg.GitHubClientID == "" || s.cfg.GitHubClientSecret == "" {
+	clientID, _, ok := s.githubClientCredentials(r.Context())
+	if !ok {
 		writeErr(w, http.StatusBadRequest, "E_OAUTH", "GitHub OAuth is not configured")
 		return
 	}
@@ -132,7 +132,7 @@ func (s *Server) githubOAuthStart(w http.ResponseWriter, r *http.Request) {
 		scope = "read:user user:email"
 	}
 	redirect := s.cfg.GitHubAuthorizeURL + "?" + url.Values{
-		"client_id":    {s.cfg.GitHubClientID},
+		"client_id":    {clientID},
 		"redirect_uri": {s.redirectURI()},
 		"scope":        {scope},
 		"state":        {signed},
@@ -165,9 +165,14 @@ func (s *Server) githubOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "E_OAUTH", "missing code")
 		return
 	}
+	clientID, clientSecret, ok := s.githubClientCredentials(r.Context())
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "E_OAUTH", "GitHub OAuth is not configured")
+		return
+	}
 	form := url.Values{
-		"client_id":     {s.cfg.GitHubClientID},
-		"client_secret": {s.cfg.GitHubClientSecret},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
 		"code":          {code},
 		"redirect_uri":  {s.redirectURI()},
 	}

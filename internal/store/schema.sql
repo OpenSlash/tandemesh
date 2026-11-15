@@ -414,6 +414,12 @@ CREATE TABLE IF NOT EXISTS outbox (
 CREATE UNIQUE INDEX IF NOT EXISTS outbox_once ON outbox(run_id, action);
 CREATE INDEX IF NOT EXISTS outbox_due_idx ON outbox(done_at_ms, next_at_ms);
 
+CREATE TABLE IF NOT EXISTS oauth_apps (
+    provider      TEXT PRIMARY KEY,
+    client_id     TEXT NOT NULL,
+    updated_at_ms INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS credentials (
     provider      TEXT NOT NULL,
     subject       TEXT NOT NULL,

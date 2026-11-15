@@ -27,7 +27,7 @@ type oauthClientConfig struct {
 	BasicToken   bool
 }
 
-func (s *Server) oauthProviderConfig(provider string) (oauthClientConfig, bool) {
+func (s *Server) oauthProviderConfig(ctx context.Context, provider string) (oauthClientConfig, bool) {
 	var cfg oauthClientConfig
 	switch provider {
 	case "linear":
@@ -69,7 +69,7 @@ func (s *Server) oauthProviderConfig(provider string) (oauthClientConfig, bool) 
 	default:
 		return oauthClientConfig{}, false
 	}
-	if cfg.ClientID == "" || cfg.ClientSecret == "" {
+	if !s.applyStoredOAuth(ctx, &cfg, provider) {
 		return oauthClientConfig{}, false
 	}
 	return cfg, true
@@ -79,7 +79,7 @@ func (s *Server) oauthProviderConfig(provider string) (oauthClientConfig, bool) 
 func (s *Server) oauthStatus(w http.ResponseWriter, r *http.Request) {
 	providers := []string{}
 	for _, id := range []string{"linear", "jira", "outlook", "notion"} {
-		if _, ok := s.oauthProviderConfig(id); ok {
+		if _, ok := s.oauthProviderConfig(r.Context(), id); ok {
 			providers = append(providers, id)
 		}
 	}
@@ -92,7 +92,7 @@ func (s *Server) oauthRedirectURI(provider string) string {
 
 func (s *Server) oauthStart(w http.ResponseWriter, r *http.Request) {
 	provider := chi.URLParam(r, "provider")
-	cfg, ok := s.oauthProviderConfig(provider)
+	cfg, ok := s.oauthProviderConfig(r.Context(), provider)
 	if !ok {
 		writeErr(w, http.StatusBadRequest, "E_OAUTH", "OAuth is not configured for "+provider)
 		return
@@ -150,7 +150,7 @@ func (s *Server) oauthStart(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	provider := chi.URLParam(r, "provider")
-	cfg, ok := s.oauthProviderConfig(provider)
+	cfg, ok := s.oauthProviderConfig(r.Context(), provider)
 	if !ok {
 		writeErr(w, http.StatusBadRequest, "E_OAUTH", "OAuth is not configured for "+provider)
 		return

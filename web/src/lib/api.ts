@@ -1220,6 +1220,12 @@ export const api = {
     request<{ enabled: boolean }>('/api/v1/integrations/github/oauth/status'),
   oauthStatus: () =>
     request<{ providers: string[] }>('/api/v1/integrations/oauth/status'),
+  oauthApp: (provider: string) =>
+    request<{ provider: string; configured: boolean; clientId: string; clientSecret: string; callbackUrl: string }>('/api/v1/integrations/' + provider + '/oauth/config'),
+  saveOAuthApp: (provider: string, body: { clientId: string; clientSecret: string }) =>
+    request<{ provider: string; configured: boolean; clientId: string; callbackUrl: string }>('/api/v1/integrations/' + provider + '/oauth/config', { method: 'PUT', body: JSON.stringify(body) }),
+  deleteOAuthApp: (provider: string) =>
+    request<void>('/api/v1/integrations/' + provider + '/oauth/config', { method: 'DELETE' }),
   integrationStates: (body: {
     provider: string
     token: string

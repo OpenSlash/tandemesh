@@ -1,13 +1,14 @@
 import { useI18n } from '../lib/i18n'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Boxes, MessageSquare, FileText, Mail, Bot, Plug, Copy, RefreshCw, Trash2 } from 'lucide-react'
+import { Boxes, MessageSquare, FileText, Mail, Bot, Plug, Copy, RefreshCw, Trash2, KeyRound } from 'lucide-react'
 import { api, type Connection, type Provider } from '../lib/api'
 import { useWorkspace } from '../lib/workspace'
 import { Dialog, DialogContent } from '../components/ui/dialog'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { cn } from '../lib/utils'
+import { OAuthAppsDialog } from '../components/oauth-apps-dialog'
 
 const GROUPS: { kind: Provider['kind']; labelKey: string; icon: typeof Boxes }[] = [
   { kind: 'task', labelKey: 'providers.groupTask', icon: Boxes },
@@ -91,6 +92,7 @@ export default function ProvidersPage() {
   const [ruleAuto, setRuleAuto] = useState(false)
   const [results, setResults] = useState<Record<string, string>>({})
   const [connectFor, setConnectFor] = useState('')
+  const [oauthOpen, setOauthOpen] = useState(false)
   const [authKind, setAuthKind] = useState('token')
   const [fields, setFields] = useState<Record<string, string>>({})
   const [token, setToken] = useState('')
@@ -450,8 +452,15 @@ export default function ProvidersPage() {
 
   return (
     <div className="mx-auto max-w-[1180px] px-6 py-5">
-      <h1 className="text-[18px] font-semibold tracking-tight">{t('page.providers')}</h1>
-      <p className="mt-0.5 text-[12px] text-muted">{t('providers.subtitle')}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[18px] font-semibold tracking-tight">{t('page.providers')}</h1>
+          <p className="mt-0.5 text-[12px] text-muted">{t('providers.subtitle')}</p>
+        </div>
+        <Button variant="secondary" size="sm" onClick={() => setOauthOpen(true)}>
+          <KeyRound className="mr-1.5 h-3.5 w-3.5" /> OAuth Apps
+        </Button>
+      </div>
 
       {error && <p className="mt-4 text-[12px] text-err">{String(error.message)}</p>}
       {isLoading && <p className="mt-6 text-[12px] text-muted">{t('common.loading')}</p>}
@@ -1596,6 +1605,7 @@ export default function ProvidersPage() {
           </form>
         </DialogContent>
       </Dialog>
+      <OAuthAppsDialog open={oauthOpen} onOpenChange={setOauthOpen} />
     </div>
   )
 }
