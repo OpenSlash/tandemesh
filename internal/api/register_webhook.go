@@ -36,7 +36,7 @@ func (s *Server) connectionWebhookURL(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "E_AUTOMATION", "connection has no task automation")
 		return
 	}
-	url := strings.TrimRight(s.cfg.BaseURL, "/") + "/webhooks/" + conn.Provider + "/" + automationID
+	url := strings.TrimRight(s.publicBaseURL(), "/") + "/webhooks/" + conn.Provider + "/" + automationID
 	writeJSON(w, http.StatusOK, map[string]any{"url": url, "automationId": automationID})
 }
 
@@ -74,7 +74,7 @@ func (s *Server) registerConnectionWebhook(w http.ResponseWriter, r *http.Reques
 	if stored, ok, err := s.vault.Ensure(r.Context(), conn.Provider, "webhook:"+conn.ID); err == nil && ok {
 		secret = stored.AccessToken
 	}
-	url := strings.TrimRight(s.cfg.BaseURL, "/") + "/webhooks/" + conn.Provider + "/" + automation.ID
+	url := strings.TrimRight(s.publicBaseURL(), "/") + "/webhooks/" + conn.Provider + "/" + automation.ID
 	webhookID, err := ad.Registrar.RegisterWebhook(r.Context(), s.providerCredential(r.Context(), conn.Provider, conn.ID), conn.Instance, url, secret)
 	if err != nil {
 		writeErr(w, http.StatusBadGateway, "E_WEBHOOK", err.Error())
