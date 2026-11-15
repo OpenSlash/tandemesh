@@ -39,6 +39,8 @@ func TestNormalizeGitHub(t *testing.T) {
 	payload.Issue.UpdatedAt = "2026-10-30T00:00:00Z"
 	payload.Repository.FullName = "acme/api"
 	payload.Sender.Login = "alice"
+	payload.Issue.State = "open"
+	payload.Issue.Assignee.Login = "alice"
 
 	work, snap, prompt, skip := NormalizeGitHub(payload)
 	if skip != "" {
@@ -47,7 +49,7 @@ func TestNormalizeGitHub(t *testing.T) {
 	if work.Provider != "github" || work.ID != "42" || work.Instance != "acme/api" {
 		t.Fatalf("bad work ref: %+v", work)
 	}
-	if snap.Title != "flaky test" || snap.Author != "alice" {
+	if snap.Title != "flaky test" || snap.Author != "alice" || snap.Status != "open" || snap.StatusGroup != "unstarted" || snap.Assignee != "alice" {
 		t.Fatalf("bad snapshot: %+v", snap)
 	}
 	if prompt == "" {

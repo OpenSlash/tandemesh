@@ -48,12 +48,16 @@ type GitHubPayload struct {
 		Body      string `json:"body"`
 		HTMLURL   string `json:"html_url"`
 		UpdatedAt string `json:"updated_at"`
+		State     string `json:"state"`
 		Labels    []struct {
 			Name string `json:"name"`
 		} `json:"labels"`
 		User struct {
 			Login string `json:"login"`
 		} `json:"user"`
+		Assignee struct {
+			Login string `json:"login"`
+		} `json:"assignee"`
 	} `json:"issue"`
 	Repository struct {
 		FullName string `json:"full_name"`
@@ -108,11 +112,14 @@ func NormalizeGitHub(p *GitHubPayload) (domain.WorkRef, domain.Snapshot, string,
 		author = p.Sender.Login
 	}
 	snap := domain.Snapshot{
-		Title:    p.Issue.Title,
-		Body:     p.Issue.Body,
-		BodyHash: hashBody(p.Issue.Body),
-		Labels:   labels,
-		Author:   author,
+		Title:       p.Issue.Title,
+		Body:        p.Issue.Body,
+		BodyHash:    hashBody(p.Issue.Body),
+		Labels:      labels,
+		Author:      author,
+		Assignee:    p.Issue.Assignee.Login,
+		Status:      p.Issue.State,
+		StatusGroup: map[string]string{"closed": "completed", "open": "unstarted"}[p.Issue.State],
 	}
 	// Only opened / labeled / assigned / reopened events and comment commands
 	// start work.
