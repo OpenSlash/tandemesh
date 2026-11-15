@@ -1220,6 +1220,8 @@ export const api = {
     request<{ enabled: boolean }>('/api/v1/integrations/github/oauth/status'),
   oauthStatus: () =>
     request<{ providers: string[] }>('/api/v1/integrations/oauth/status'),
+  capabilities: () =>
+    request<{ profile: string; authMode: string; publicUrl: string; oauthRedirect: string; webhook: boolean; polling: boolean }>('/api/v1/capabilities'),
   oauthApp: (provider: string) =>
     request<{ provider: string; configured: boolean; clientId: string; clientSecret: string; callbackUrl: string }>('/api/v1/integrations/' + provider + '/oauth/config'),
   saveOAuthApp: (provider: string, body: { clientId: string; clientSecret: string }) =>

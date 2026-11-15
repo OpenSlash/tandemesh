@@ -27,6 +27,8 @@ export default function ProvidersPage() {
     queryKey: ['connections', workspaceId],
     queryFn: () => api.connections(workspaceId),
   })
+  const { data: capabilities } = useQuery({ queryKey: ['capabilities'], queryFn: api.capabilities })
+  const showWebhook = capabilities?.webhook ?? false
   const { data: importsData } = useQuery({
     queryKey: ['imports', workspaceId],
     queryFn: () => api.imports(workspaceId),
@@ -145,8 +147,10 @@ export default function ProvidersPage() {
   const authOptions = activeProvider?.authOptions ?? []
   const selectedAuth = authOptions.find((option) => option.kind === authKind)
   const configFields = selectedAuth?.fields?.length
-    ? selectedAuth.fields
-    : (activeProvider?.configFields ?? []).filter((field) => !(authKind !== 'token' && authKind !== 'bot' && field.key === 'token'))
+    ? selectedAuth.fields.filter((field) => showWebhook || field.key !== 'webhookSecret')
+    : (activeProvider?.configFields ?? []).filter(
+        (field) => (showWebhook || field.key !== 'webhookSecret') && !(authKind !== 'token' && authKind !== 'bot' && field.key === 'token'),
+      )
   const fieldValue = (key: string) => {
     if (fields[key] !== undefined) return fields[key]
     if (key === 'token') return token
@@ -662,7 +666,7 @@ export default function ProvidersPage() {
                     >
                       <Boxes className="h-3 w-3" /> {t('providers.bindings')}
                     </Button>
-                    {connection.automationId && (
+                    {showWebhook && connection.automationId && (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -672,7 +676,7 @@ export default function ProvidersPage() {
                         <Copy className="h-3 w-3" /> {t('providers.copyWebhook')}
                       </Button>
                     )}
-                    {connection.automationId && ['github', 'plane', 'linear', 'jira'].includes(connection.provider) && (
+                    {showWebhook && connection.automationId && ['github', 'plane', 'linear', 'jira'].includes(connection.provider) && (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -723,7 +727,7 @@ export default function ProvidersPage() {
                   <span>{new Date(connection.createdAt).toLocaleDateString()}</span>
                 </div>
                 {connection.status === 'connected' && <ConnectionSyncStatus connectionId={connection.id} />}
-                {connection.automationId && <ConnectionDeliveries automationId={connection.automationId} />}
+                {showWebhook && connection.automationId && <ConnectionDeliveries automationId={connection.automationId} />}
                 {connection.provider === 'plane' && (
                   <div className="mt-2 flex items-center gap-2">
                     {connStates[connection.id] ? (
@@ -850,19 +854,21 @@ export default function ProvidersPage() {
                     </Button>
                   </div>
                 )}
-                <div className="mt-2 flex items-center gap-2">
-                  <code className="min-w-0 flex-1 truncate rounded bg-panel2 px-2 py-1 font-mono text-[10.5px] text-muted">
-                    {webhook || t('providers.noAutomation')}
-                  </code>
-                  <button
-                    className="text-muted hover:text-fg disabled:opacity-40"
-                    title={t('providers.copyWebhook')}
-                    disabled={!webhook}
-                    onClick={() => webhook && navigator.clipboard?.writeText(webhook)}
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                {showWebhook && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <code className="min-w-0 flex-1 truncate rounded bg-panel2 px-2 py-1 font-mono text-[10.5px] text-muted">
+                      {webhook || t('providers.noAutomation')}
+                    </code>
+                    <button
+                      className="text-muted hover:text-fg disabled:opacity-40"
+                      title={t('providers.copyWebhook')}
+                      disabled={!webhook}
+                      onClick={() => webhook && navigator.clipboard?.writeText(webhook)}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
                 {syncState[connection.id] && (
                   <p className="mt-1 text-[10.5px] text-muted">{syncState[connection.id]}</p>
                 )}
