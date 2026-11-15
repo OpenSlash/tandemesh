@@ -156,6 +156,7 @@ func (s *Server) Router() http.Handler {
 		r.Patch("/tasks/{id}/comment-threads/{threadId}", s.resolveCommentThread)
 		r.Get("/tasks/{id}/pull-requests", s.listTaskPullRequests)
 		r.Post("/tasks/{id}/pull-requests/sync", s.syncTaskPullRequests)
+		r.Post("/tasks/{id}/pull-requests/{pr}/comments", s.addPullRequestComment)
 		r.Get("/tasks/{id}/attachments", s.listTaskAttachments)
 		r.Get("/tasks/{id}/attachments/{attachmentId}/content", s.downloadTaskAttachment)
 		r.Get("/tasks/{id}/commits", s.listTaskCommits)
