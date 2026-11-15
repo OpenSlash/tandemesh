@@ -366,6 +366,19 @@ type CommitReaderForRef interface {
 	ListCommitsForRef(ctx context.Context, cred Credential, repo, ref string, limit int) ([]Commit, error)
 }
 
+// CatalogItem is a selectable workspace or project from a provider.
+type CatalogItem struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Slug string `json:"slug,omitempty"`
+}
+
+// CatalogReader discovers workspaces and projects for connection setup.
+type CatalogReader interface {
+	ListWorkspaces(ctx context.Context, cred Credential) ([]CatalogItem, error)
+	ListProjects(ctx context.Context, cred Credential, workspace string) ([]CatalogItem, error)
+}
+
 // PullRequestReader lists pull requests for a repository.
 type PullRequestReader interface {
 	ListPullRequests(ctx context.Context, cred Credential, repo string) ([]PullRequest, error)

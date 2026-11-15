@@ -9,6 +9,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { cn } from '../lib/utils'
 import { OAuthAppsDialog } from '../components/oauth-apps-dialog'
+import { PlaneCatalogPicker } from '../components/plane-catalog-picker'
 
 const GROUPS: { kind: Provider['kind']; labelKey: string; icon: typeof Boxes }[] = [
   { kind: 'task', labelKey: 'providers.groupTask', icon: Boxes },
@@ -1225,6 +1226,13 @@ export default function ProvidersPage() {
                   <Input className="mt-1" value={instance} onChange={(e) => setInstance(e.target.value)} placeholder="workspace/project" />
                 </label>
               </>
+            )}
+            {connectFor === 'plane' && (
+              <PlaneCatalogPicker
+                token={fieldValue('token')}
+                baseUrl={fieldValue('baseUrl')}
+                onSelect={(value) => setFieldValue('instance', value)}
+              />
             )}
             {oauthProviders.includes(connectFor) && (
               <Button
