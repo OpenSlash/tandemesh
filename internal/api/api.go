@@ -1167,7 +1167,7 @@ func (s *Server) webhook(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]string{"skipped": "SKIP_ACTOR"})
 			return
 		}
-		if strings.Contains(ev.Text, "<!-- orca:") {
+		if strings.Contains(ev.Text, "<!-- orca:") || strings.Contains(ev.Text, integration.OutboundCommentMarker) {
 			status = "dropped"
 			reason = "SKIP_ECHO"
 			writeJSON(w, http.StatusOK, map[string]string{"skipped": "SKIP_ECHO"})

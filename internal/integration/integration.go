@@ -371,6 +371,9 @@ type PullRequestReader interface {
 	ListPullRequests(ctx context.Context, cred Credential, repo string) ([]PullRequest, error)
 }
 
+// OutboundCommentMarker marks comments written by Tandemesh so polling does not echo them back.
+const OutboundCommentMarker = "<!-- tandemesh:outbound -->"
+
 // ErrUnsupported is returned when a slot is nil.
 var ErrUnsupported = errors.New("operation not supported by this integration")
 

@@ -283,6 +283,9 @@ func (s *Server) syncPlatformComments(ctx context.Context, ad *integration.Integ
 	}
 	commentAttachments := make([]*domain.TaskAttachment, 0)
 	for _, comment := range comments {
+		if strings.Contains(comment.Body, integration.OutboundCommentMarker) {
+			continue
+		}
 		if workspaceID != "" && comment.Author != "" {
 			_, _ = s.store.EnsureExternalIdentity(ctx, workspaceID, provider, comment.Author, comment.Author, "")
 		}

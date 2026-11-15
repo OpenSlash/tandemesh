@@ -105,6 +105,9 @@ func (a *Adapter) Comment(ctx context.Context, work domain.WorkRef, cred integra
 	if cred.AccessToken == "" {
 		return "", fmt.Errorf("github: access token is required to comment")
 	}
+	if !strings.Contains(markdown, integration.OutboundCommentMarker) {
+		markdown += "\n\n" + integration.OutboundCommentMarker
+	}
 	body, _ := json.Marshal(map[string]string{"body": markdown})
 	url := fmt.Sprintf("%s/repos/%s/issues/%s/comments", a.baseURLFor(cred), work.Instance, work.ID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
