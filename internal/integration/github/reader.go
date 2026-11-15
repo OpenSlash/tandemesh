@@ -24,6 +24,34 @@ func (a *Adapter) ListAssigned(ctx context.Context, cred integration.Credential,
 		limit = 30
 	}
 	endpoint := fmt.Sprintf("%s/issues?filter=assigned&state=open&per_page=%d", a.baseURLFor(cred), limit)
+	if instance := strings.Trim(opts.Instance, "/"); instance != "" {
+		login := cred.Account
+		if login == "" {
+			var user struct {
+				Login string `json:"login"`
+			}
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.baseURLFor(cred)+"/user", nil)
+			if err != nil {
+				return nil, err
+			}
+			req.Header.Set("Authorization", "Bearer "+cred.AccessToken)
+			req.Header.Set("Accept", "application/vnd.github+json")
+			resp, err := a.client().Do(req)
+			if err != nil {
+				return nil, err
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode >= 300 {
+				return nil, fmt.Errorf("github user: status %d", resp.StatusCode)
+			}
+			if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+				return nil, err
+			}
+			login = user.Login
+		}
+		endpoint = fmt.Sprintf("%s/repos/%s/issues?state=open&assignee=%s&per_page=%d",
+			a.baseURLFor(cred), instance, url.QueryEscape(login), limit)
+	}
 	if !opts.Since.IsZero() {
 		endpoint += "&since=" + url.QueryEscape(opts.Since.UTC().Format(time.RFC3339))
 	}
@@ -42,13 +70,14 @@ func (a *Adapter) ListAssigned(ctx context.Context, cred integration.Credential,
 		return nil, fmt.Errorf("github inbox: status %d", resp.StatusCode)
 	}
 	var rows []struct {
-		Number        int    `json:"number"`
-		Title         string `json:"title"`
-		Body          string `json:"body"`
-		HTMLURL       string `json:"html_url"`
-		RepositoryURL string `json:"repository_url"`
-		UpdatedAt     string `json:"updated_at"`
-		State         string `json:"state"`
+		Number        int             `json:"number"`
+		Title         string          `json:"title"`
+		Body          string          `json:"body"`
+		HTMLURL       string          `json:"html_url"`
+		RepositoryURL string          `json:"repository_url"`
+		UpdatedAt     string          `json:"updated_at"`
+		State         string          `json:"state"`
+		PullRequest   json.RawMessage `json:"pull_request"`
 		Labels        []struct {
 			Name string `json:"name"`
 		} `json:"labels"`
@@ -64,6 +93,9 @@ func (a *Adapter) ListAssigned(ctx context.Context, cred integration.Credential,
 	}
 	out := make([]integration.WorkItem, 0, len(rows))
 	for _, row := range rows {
+		if len(row.PullRequest) > 0 && string(row.PullRequest) != "null" {
+			continue
+		}
 		labels := make([]string, 0, len(row.Labels))
 		for _, l := range row.Labels {
 			labels = append(labels, l.Name)

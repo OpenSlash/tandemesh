@@ -36,3 +36,29 @@ func TestListAssigned(t *testing.T) {
 		t.Fatalf("labels/assignee = %+v", item)
 	}
 }
+
+func TestListAssignedForInstance(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/user":
+			_, _ = w.Write([]byte(`{"login":"alice"}`))
+		case "/repos/acme/api/issues":
+			if got := r.URL.Query().Get("assignee"); got != "alice" {
+				t.Errorf("assignee = %q", got)
+			}
+			_, _ = w.Write([]byte(`[{"number":7,"title":"flaky test","body":"details","html_url":"https://github.com/acme/api/issues/7","repository_url":"https://api.github.com/repos/acme/api","updated_at":"2026-10-30T10:00:00Z","labels":[{"name":"agent:fix"}],"assignee":{"login":"alice"}},{"number":8,"title":"a pull request","pull_request":{"url":"x"}}]`))
+		default:
+			t.Errorf("path = %q", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+
+	a := &Adapter{BaseURL: srv.URL, HTTPClient: srv.Client()}
+	items, err := a.ListAssigned(t.Context(), integration.Credential{AccessToken: "tok"}, integration.ListOptions{Limit: 5, Instance: "acme/api"})
+	if err != nil || len(items) != 1 {
+		t.Fatalf("items = %+v err=%v", items, err)
+	}
+	if items[0].Ref.Instance != "acme/api" || items[0].Ref.ID != "7" {
+		t.Fatalf("item = %+v", items[0])
+	}
+}
