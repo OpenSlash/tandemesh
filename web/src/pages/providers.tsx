@@ -96,6 +96,7 @@ export default function ProvidersPage() {
   const [results, setResults] = useState<Record<string, string>>({})
   const [connectFor, setConnectFor] = useState('')
   const [oauthOpen, setOauthOpen] = useState(false)
+  const [reuseConnectionId, setReuseConnectionId] = useState("")
   const [authKind, setAuthKind] = useState('token')
   const [fields, setFields] = useState<Record<string, string>>({})
   const [token, setToken] = useState('')
@@ -148,9 +149,9 @@ export default function ProvidersPage() {
   const authOptions = activeProvider?.authOptions ?? []
   const selectedAuth = authOptions.find((option) => option.kind === authKind)
   const configFields = selectedAuth?.fields?.length
-    ? selectedAuth.fields.filter((field) => showWebhook || field.key !== 'webhookSecret')
+    ? selectedAuth.fields.filter((field) => (showWebhook || field.key !== 'webhookSecret') && !(reuseConnectionId && field.key === 'token'))
     : (activeProvider?.configFields ?? []).filter(
-        (field) => (showWebhook || field.key !== 'webhookSecret') && !(authKind !== 'token' && authKind !== 'bot' && field.key === 'token'),
+        (field) => (showWebhook || field.key !== 'webhookSecret') && !(reuseConnectionId && field.key === 'token') && !(authKind !== 'token' && authKind !== 'bot' && field.key === 'token'),
       )
   const fieldValue = (key: string) => {
     if (fields[key] !== undefined) return fields[key]
@@ -185,6 +186,7 @@ export default function ProvidersPage() {
         instance: instance || undefined,
         name: connectionName || undefined,
         workspaceId,
+        reuseConnectionId: reuseConnectionId || undefined,
         transition: transition || undefined,
         webhookSecret: webhookSecret || undefined,
         commentTemplate: commentTemplate || undefined,
@@ -542,6 +544,7 @@ export default function ProvidersPage() {
                           setTransition('')
                           setSyncDirection('read_write')
                           setConnectionName('')
+                          setReuseConnectionId('')
                           setWebhookSecret('')
                         }}
                       >
@@ -1161,6 +1164,26 @@ export default function ProvidersPage() {
                 ))}
               </div>
             )}
+            {connectFor === 'plane' && connections.some((c) => c.provider === 'plane') && (
+              <label className="text-[12px] text-muted">
+                Use existing Plane account
+                <select
+                  className="mt-1 h-8 w-full rounded-md border border-line2 bg-panel px-2 text-[12px]"
+                  value={reuseConnectionId}
+                  onChange={(e) => {
+                    const id = e.target.value
+                    setReuseConnectionId(id)
+                    const source = connections.find((c) => c.id === id)
+                    if (source) setFieldValue('baseUrl', source.baseUrl || '')
+                  }}
+                >
+                  <option value="">New API key</option>
+                  {connections.filter((c) => c.provider === 'plane').map((c) => (
+                    <option key={c.id} value={c.id}>{c.name || c.instance}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             {configFields.length > 0 ? configFields.map((field, index) => {
               const label = field.labelKey ? t(field.labelKey) : field.label ?? field.key
               const value = fieldValue(field.key)
@@ -1224,6 +1247,7 @@ export default function ProvidersPage() {
               <PlaneCatalogPicker
                 token={fieldValue('token')}
                 baseUrl={fieldValue('baseUrl')}
+                connectionId={reuseConnectionId}
                 onSelect={(value) => setFieldValue('instance', value)}
               />
             )}

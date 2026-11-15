@@ -10,9 +10,10 @@ import (
 )
 
 type catalogRequest struct {
-	Token     string `json:"token"`
-	BaseURL   string `json:"baseUrl"`
-	Workspace string `json:"workspace"`
+	Token        string `json:"token"`
+	BaseURL      string `json:"baseUrl"`
+	Workspace    string `json:"workspace"`
+	ConnectionID string `json:"connectionId"`
 }
 
 func (s *Server) integrationCatalog(w http.ResponseWriter, r *http.Request) {
@@ -34,6 +35,16 @@ func (s *Server) integrationCatalog(w http.ResponseWriter, r *http.Request) {
 	}
 	cred := integration.Credential{
 		Provider: provider, AccessToken: strings.TrimSpace(req.Token), BaseURL: strings.TrimRight(strings.TrimSpace(req.BaseURL), "/"),
+	}
+	if cred.AccessToken == "" && req.ConnectionID != "" && s.vault != nil {
+		if source, err := s.store.GetConnection(r.Context(), req.ConnectionID); err == nil && source != nil && source.Provider == provider {
+			if stored, ok, err := s.vault.Get(r.Context(), provider, source.ID); err == nil && ok {
+				cred.AccessToken = stored.AccessToken
+				if cred.BaseURL == "" {
+					cred.BaseURL = source.BaseURL
+				}
+			}
+		}
 	}
 	if cred.AccessToken == "" {
 		writeErr(w, http.StatusBadRequest, "E_FIELDS", "token is required")

@@ -1207,6 +1207,7 @@ export const api = {
     comment?: boolean
     transition?: string
     webhookSecret?: string
+    reuseConnectionId?: string
     commentTemplate?: string
     fields?: Record<string, string>
   }) =>
@@ -1222,7 +1223,7 @@ export const api = {
     request<{ providers: string[] }>('/api/v1/integrations/oauth/status'),
   capabilities: () =>
     request<{ profile: string; authMode: string; publicUrl: string; oauthRedirect: string; webhook: boolean; polling: boolean }>('/api/v1/capabilities'),
-  catalog: (provider: string, body: { token: string; baseUrl?: string; workspace?: string }) =>
+  catalog: (provider: string, body: { token?: string; baseUrl?: string; workspace?: string; connectionId?: string }) =>
     request<{ workspaces?: { id: string; name: string; slug?: string }[]; projects?: { id: string; name: string; slug?: string }[] }>('/api/v1/integrations/' + provider + '/catalog', { method: 'POST', body: JSON.stringify(body) }),
   oauthApp: (provider: string) =>
     request<{ provider: string; configured: boolean; clientId: string; clientSecret: string; callbackUrl: string }>('/api/v1/integrations/' + provider + '/oauth/config'),

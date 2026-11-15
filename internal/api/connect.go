@@ -13,18 +13,19 @@ import (
 )
 
 type connectRequest struct {
-	Provider        string            `json:"provider"`
-	Token           string            `json:"token"`
-	BaseURL         string            `json:"baseUrl"`
-	Instance        string            `json:"instance"`
-	AgentID         string            `json:"agentId"`
-	Name            string            `json:"name"`
-	WorkspaceID     string            `json:"workspaceId"`
-	Comment         *bool             `json:"comment"`
-	Transition      string            `json:"transition"`
-	CommentTemplate string            `json:"commentTemplate"`
-	WebhookSecret   string            `json:"webhookSecret"`
-	Fields          map[string]string `json:"fields,omitempty"`
+	Provider          string            `json:"provider"`
+	Token             string            `json:"token"`
+	BaseURL           string            `json:"baseUrl"`
+	Instance          string            `json:"instance"`
+	AgentID           string            `json:"agentId"`
+	Name              string            `json:"name"`
+	WorkspaceID       string            `json:"workspaceId"`
+	Comment           *bool             `json:"comment"`
+	Transition        string            `json:"transition"`
+	CommentTemplate   string            `json:"commentTemplate"`
+	WebhookSecret     string            `json:"webhookSecret"`
+	ReuseConnectionID string            `json:"reuseConnectionId"`
+	Fields            map[string]string `json:"fields,omitempty"`
 }
 
 // connectProvider validates a credential, stores it and creates a binding in
@@ -51,6 +52,22 @@ func (s *Server) connectProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fields := connectFields(ad.Manifest, &req)
+	if reuse := strings.TrimSpace(req.ReuseConnectionID); reuse != "" && fields["token"] == "" {
+		source, err := s.store.GetConnection(r.Context(), reuse)
+		if err != nil || source == nil || source.Provider != req.Provider || source.WorkspaceID != req.WorkspaceID || s.vault == nil {
+			writeErr(w, http.StatusBadRequest, "E_REUSE", "source connection is not available")
+			return
+		}
+		stored, ok, err := s.vault.Get(r.Context(), source.Provider, source.ID)
+		if err != nil || !ok || stored.AccessToken == "" {
+			writeErr(w, http.StatusBadRequest, "E_REUSE", "source credential is not available")
+			return
+		}
+		fields["token"] = stored.AccessToken
+		if fields["baseUrl"] == "" {
+			fields["baseUrl"] = source.BaseURL
+		}
+	}
 	for _, field := range ad.Manifest.ConfigFields {
 		if field.Required && fields[field.Key] == "" {
 			writeErr(w, http.StatusBadRequest, "E_FIELDS", "missing required field: "+field.Key)
