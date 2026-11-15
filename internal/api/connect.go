@@ -71,6 +71,13 @@ func (s *Server) connectProvider(w http.ResponseWriter, r *http.Request) {
 		Provider: req.Provider, AccessToken: token, BaseURL: baseURL,
 		Account: fields["email"], Fields: fields,
 	}
+	existing, _ := s.store.ListConnections(r.Context(), req.WorkspaceID, req.Provider)
+	for _, item := range existing {
+		if item.Instance == instance && strings.TrimRight(item.BaseURL, "/") == strings.TrimRight(baseURL, "/") {
+			writeErr(w, http.StatusConflict, "E_EXISTS", "connection already exists")
+			return
+		}
+	}
 	if ad.Probe != nil {
 		if err := ad.Probe.Probe(r.Context(), cred); err != nil {
 			writeErr(w, http.StatusBadGateway, "E_PROBE", err.Error())
