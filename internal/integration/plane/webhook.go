@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html"
 	"net/http"
 	"strings"
 	"time"
@@ -209,7 +210,7 @@ func stripHTML(s string) string {
 		}
 		s = s[:start] + s[start+end+1:]
 	}
-	return strings.TrimSpace(s)
+	return html.UnescapeString(strings.TrimSpace(s))
 }
 
 func (a *Adapter) webhookDelivery(r *http.Request) string {

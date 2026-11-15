@@ -18,6 +18,9 @@ func (a *Adapter) Comment(ctx context.Context, work domain.WorkRef, cred integra
 	if err != nil {
 		return "", err
 	}
+	if !strings.Contains(markdown, integration.OutboundCommentMarker) {
+		markdown += "\n\n" + integration.OutboundCommentMarker
+	}
 	body := map[string]any{
 		"comment_html":     "<p>" + strings.ReplaceAll(html.EscapeString(markdown), "\n", "<br/>") + "</p>",
 		"comment_stripped": markdown,
@@ -35,11 +38,18 @@ func (a *Adapter) Comment(ctx context.Context, work domain.WorkRef, cred integra
 			return "", err
 		}
 		var out struct {
-			ID int `json:"id"`
+			ID json.RawMessage `json:"id"`
 		}
 		_ = json.Unmarshal(raw, &out)
-		if out.ID > 0 {
-			return fmt.Sprintf("%d", out.ID), nil
+		var id string
+		if json.Unmarshal(out.ID, &id) != nil {
+			var n int
+			if json.Unmarshal(out.ID, &n) == nil {
+				id = fmt.Sprintf("%d", n)
+			}
+		}
+		if id != "" {
+			return id, nil
 		}
 		return "comment", nil
 	}

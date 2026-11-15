@@ -192,12 +192,24 @@ func assigneeName(row issue) string {
 	return ""
 }
 
-func (a *Adapter) issueURL(slug, project string, row issue) string {
+func (a *Adapter) appURLAt(cred integration.Credential) string {
+	if cred.BaseURL != "" {
+		base := strings.TrimRight(cred.BaseURL, "/")
+		if strings.Contains(base, "api.plane.so") {
+			return "https://app.plane.so"
+		}
+		return base
+	}
+	return a.AppURL
+}
+
+func (a *Adapter) issueURL(cred integration.Credential, slug, project string, row issue) string {
 	if row.Permalink != "" {
 		return row.Permalink
 	}
-	if a.AppURL == "" {
+	base := a.appURLAt(cred)
+	if base == "" {
 		return ""
 	}
-	return fmt.Sprintf("%s/%s/projects/%s/issues/%s", a.AppURL, slug, project, row.ID)
+	return fmt.Sprintf("%s/%s/projects/%s/issues/%s", base, slug, project, row.ID)
 }

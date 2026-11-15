@@ -66,7 +66,7 @@ func TestPlaneReaderAndComment(t *testing.T) {
 	if err != nil || ref != "42" {
 		t.Fatalf("comment = %q err=%v", ref, err)
 	}
-	if commentBody["comment_stripped"] != "done" {
+	if body, _ := commentBody["comment_stripped"].(string); !strings.HasPrefix(body, "done") {
 		t.Fatalf("comment body = %+v", commentBody)
 	}
 }

@@ -58,7 +58,7 @@ func (a *Adapter) ListAssigned(ctx context.Context, cred integration.Credential,
 		out = append(out, integration.WorkItem{
 			Ref: domain.WorkRef{
 				Provider: "plane", Instance: slug + "/" + project, Type: "issue",
-				ID: row.ID, URL: a.issueURL(slug, project, row), Revision: row.UpdatedAt,
+				ID: row.ID, URL: a.issueURL(cred, slug, project, row), Revision: row.UpdatedAt,
 			},
 			Title: row.Name, Body: body, Labels: mappedLabels(row, labels),
 			Author: mappedAuthor(row, members), Assignee: mappedAssignee(row, members), Updated: updated,
