@@ -530,11 +530,6 @@ export default function ProvidersPage() {
                       <button
                         className="ml-auto rounded border border-line2 px-1.5 py-0.5 text-[10px] text-muted hover:text-fg"
                         onClick={() => {
-                          const existing = connections.find((c) => c.provider === p.id)
-                          if (existing) {
-                            openEdit(existing)
-                            return
-                          }
                           setConnectFor(p.id)
                           const preferredAuth = p.authOptions?.find((option) => option.default)?.kind ?? p.authOptions?.[0]?.kind ?? p.auth
                           setAuthKind(preferredAuth === 'oauth2' && !oauthProviders.includes(p.id) ? 'token' : preferredAuth)
@@ -550,9 +545,7 @@ export default function ProvidersPage() {
                           setWebhookSecret('')
                         }}
                       >
-                        {connections.some((c) => c.provider === p.id)
-                          ? t('providers.manage')
-                          : t('providers.connect')}
+                        {connections.some((c) => c.provider === p.id) ? 'Add connection' : t('providers.connect')}
                       </button>
                       <button
                         className="rounded border border-line2 px-1.5 py-0.5 text-[10px] text-muted hover:text-fg"
