@@ -59,7 +59,16 @@ func (s *Server) syncTaskCommits(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	cred := s.providerCredential(r.Context(), task.Provider, connectionID)
-	commits, err := reader.ListCommits(r.Context(), cred, task.Instance, 50)
+	ref := ""
+	if pulls, err := s.store.ListTaskPullRequests(r.Context(), task.ID); err == nil && len(pulls) > 0 {
+		ref = pulls[0].Branch
+	}
+	var commits []integration.Commit
+	if refReader, ok := reader.(integration.CommitReaderForRef); ok && ref != "" {
+		commits, err = refReader.ListCommitsForRef(r.Context(), cred, task.Instance, ref, 50)
+	} else {
+		commits, err = reader.ListCommits(r.Context(), cred, task.Instance, 50)
+	}
 	if err != nil {
 		writeErr(w, http.StatusBadGateway, "E_COMMITS", err.Error())
 		return

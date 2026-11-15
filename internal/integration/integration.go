@@ -361,6 +361,11 @@ type CommitReader interface {
 	ListCommits(ctx context.Context, cred Credential, repo string, limit int) ([]Commit, error)
 }
 
+// CommitReaderForRef lists commits for a branch or ref.
+type CommitReaderForRef interface {
+	ListCommitsForRef(ctx context.Context, cred Credential, repo, ref string, limit int) ([]Commit, error)
+}
+
 // PullRequestReader lists pull requests for a repository.
 type PullRequestReader interface {
 	ListPullRequests(ctx context.Context, cred Credential, repo string) ([]PullRequest, error)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/OpenSlash/tandemesh/internal/integration"
@@ -26,10 +27,18 @@ type commitRow struct {
 
 // ListCommits implements integration.CommitReader.
 func (a *Adapter) ListCommits(ctx context.Context, cred integration.Credential, repo string, limit int) ([]integration.Commit, error) {
+	return a.ListCommitsForRef(ctx, cred, repo, "", limit)
+}
+
+// ListCommitsForRef lists commits for a branch or ref.
+func (a *Adapter) ListCommitsForRef(ctx context.Context, cred integration.Credential, repo, ref string, limit int) ([]integration.Commit, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
 	endpoint := fmt.Sprintf("%s/repos/%s/commits?per_page=%d", a.baseURLFor(cred), strings.TrimSpace(repo), limit)
+	if ref != "" {
+		endpoint += "&sha=" + url.QueryEscape(ref)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, err

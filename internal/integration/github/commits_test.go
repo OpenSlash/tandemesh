@@ -25,3 +25,21 @@ func TestListCommits(t *testing.T) {
 		t.Fatalf("commits = %+v", commits)
 	}
 }
+
+func TestListCommitsForRef(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/repos/acme/api/commits" || r.URL.Query().Get("sha") != "feature" {
+			t.Errorf("url = %s", r.URL.String())
+		}
+		_, _ = w.Write([]byte(`[{"sha":"def456","html_url":"https://github.test/acme/api/commit/def456","commit":{"message":"fix ENG-42","author":{"name":"Alice"}},"author":{"login":"alice"}}]`))
+	}))
+	defer srv.Close()
+	a := &Adapter{HTTPClient: srv.Client(), BaseURL: srv.URL}
+	commits, err := a.ListCommitsForRef(t.Context(), integration.Credential{AccessToken: "tok"}, "acme/api", "feature", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(commits) != 1 || commits[0].SHA != "def456" {
+		t.Fatalf("commits = %+v", commits)
+	}
+}
