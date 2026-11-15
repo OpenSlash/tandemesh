@@ -291,6 +291,9 @@ CREATE TABLE IF NOT EXISTS connections (
     updated_at_ms          INTEGER NOT NULL
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS connections_scope_idx
+    ON connections(workspace_id, provider, base_url, instance);
+
 CREATE TABLE IF NOT EXISTS assignment_rules (
     id             TEXT PRIMARY KEY,
     workspace_id   TEXT NOT NULL DEFAULT 'ws_default',
