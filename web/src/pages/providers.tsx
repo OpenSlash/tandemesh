@@ -1611,11 +1611,12 @@ function ConnectionDeliveries({ automationId }: { automationId: string }) {
     mutationFn: (id: string) => api.replayWebhookDelivery(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['webhook-deliveries', automationId] }),
   })
-  if (!data?.items.length) return null
+  const deliveries = data?.items ?? []
+  if (!deliveries.length) return null
   return (
     <div className="mt-2 rounded border border-line bg-panel2/40 p-2">
       <p className="text-[10.5px] uppercase tracking-wider text-muted/70">Webhook deliveries</p>
-      {data.items.slice(0, 5).map((item) => (
+      {deliveries.slice(0, 5).map((item) => (
         <div key={item.id} className="mt-1 flex items-center gap-2 text-[10.5px]">
           <span
             className={

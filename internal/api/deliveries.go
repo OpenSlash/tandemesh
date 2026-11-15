@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/OpenSlash/tandemesh/internal/domain"
 )
 
 func (s *Server) listWebhookDeliveries(w http.ResponseWriter, r *http.Request) {
@@ -22,6 +24,9 @@ func (s *Server) listWebhookDeliveries(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
 		return
+	}
+	if items == nil {
+		items = []*domain.WebhookDelivery{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items})
 }
