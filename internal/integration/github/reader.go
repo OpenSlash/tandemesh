@@ -114,7 +114,7 @@ func (a *Adapter) ListAssigned(ctx context.Context, cred integration.Credential,
 				Provider: "github", Instance: repoFromURL(row.RepositoryURL), Type: "issue",
 				ID: strconv.Itoa(row.Number), URL: row.HTMLURL, Revision: row.UpdatedAt,
 			},
-			Title: row.Title, Body: row.Body, Labels: labels, Author: author, Assignee: assignee, Updated: updated,
+			Title: row.Title, Body: row.Body, Labels: labels, Author: author, Assignee: assignee, Updated: updated, Attachments: attachmentsFromText(row.Body),
 			Status: row.State, StatusGroup: map[string]string{"closed": "completed", "open": "unstarted"}[row.State],
 		})
 	}

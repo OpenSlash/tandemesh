@@ -80,13 +80,14 @@ func (a *Adapter) Parse(body []byte) (integration.Event, error) {
 		kind = "comment"
 	}
 	return integration.Event{
-		Delivery: p.Issue.HTMLURL,
-		Kind:     kind,
-		Actor:    p.Sender.Login,
-		Labels:   labels,
-		Assignee: p.Assignee.Login,
-		Text:     p.Comment.Body,
-		Raw:      body,
+		Delivery:    p.Issue.HTMLURL,
+		Kind:        kind,
+		Actor:       p.Sender.Login,
+		Labels:      labels,
+		Assignee:    p.Assignee.Login,
+		Text:        p.Comment.Body,
+		Attachments: attachmentsFromText(p.Issue.Body + "\n" + p.Comment.Body),
+		Raw:         body,
 	}, nil
 }
 

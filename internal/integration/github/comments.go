@@ -49,10 +49,11 @@ func (a *Adapter) ListComments(ctx context.Context, cred integration.Credential,
 	out := make([]integration.Comment, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, integration.Comment{
-			ID:        fmt.Sprintf("%d", row.ID),
-			Author:    row.User.Login,
-			Body:      row.Body,
-			CreatedAt: row.CreatedAt,
+			ID:          fmt.Sprintf("%d", row.ID),
+			Author:      row.User.Login,
+			Body:        row.Body,
+			Attachments: attachmentsFromText(row.Body),
+			CreatedAt:   row.CreatedAt,
 		})
 	}
 	return out, nil

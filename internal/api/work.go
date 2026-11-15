@@ -127,6 +127,20 @@ func (s *Server) syncWork(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
 			return
 		}
+		if len(item.Attachments) > 0 {
+			attachments := make([]*domain.TaskAttachment, 0, len(item.Attachments))
+			for _, attachment := range item.Attachments {
+				attachments = append(attachments, &domain.TaskAttachment{
+					ID: "att_" + task.ID + "_" + attachment.ID, TaskID: task.ID, Provider: task.Provider,
+					ExternalID: attachment.ID, Name: attachment.Name, URL: attachment.URL,
+					Mime: attachment.Mime, Size: attachment.Size, Author: attachment.Author, Source: "issue",
+				})
+			}
+			if err := s.store.ReplaceTaskAttachments(r.Context(), task.ID, task.Provider, "issue", attachments); err != nil {
+				writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
+				return
+			}
+		}
 		s.applyPlatformState(r.Context(), task, snap, stateMap, conflict)
 		s.applyAssignmentRules(r.Context(), task)
 		synced++
