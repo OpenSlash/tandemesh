@@ -7,6 +7,7 @@ import { useI18n } from '../lib/i18n'
 import { useWorkspace } from '../lib/workspace'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { WorkspaceAddProject } from '../components/workspace-add-project'
 
 export default function WorkspaceSettingsPage() {
   const { t } = useI18n()
@@ -15,6 +16,7 @@ export default function WorkspaceSettingsPage() {
   const { workspaceId, setWorkspaceId, workspaces } = useWorkspace()
   const workspace = workspaces.find((w) => w.id === id)
   const [name, setName] = useState(workspace?.name ?? '')
+  const [addOpen, setAddOpen] = useState(false)
   const { data: connectionsData } = useQuery({
     queryKey: ['connections', id],
     queryFn: () => api.connections(id),
@@ -104,12 +106,9 @@ export default function WorkspaceSettingsPage() {
               External projects bound to this workspace. Connections are shared across workspaces.
             </p>
           </div>
-          <Link
-            to="/providers"
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line2 px-2.5 text-[11.5px] text-muted hover:text-fg"
-          >
+          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)}>
             <Plug className="h-3.5 w-3.5" /> Add project
-          </Link>
+          </Button>
         </div>
         <div className="mt-3 space-y-2">
           {(connectionsData?.items ?? []).map((connection) => (
@@ -144,6 +143,12 @@ export default function WorkspaceSettingsPage() {
           )}
         </div>
       </section>
+      <WorkspaceAddProject
+        workspaceId={id}
+        connections={connectionsData?.items ?? []}
+        open={addOpen}
+        onOpenChange={setAddOpen}
+      />
     </div>
   )
 }
