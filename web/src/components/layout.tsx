@@ -1,6 +1,6 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Activity,
   Inbox,
@@ -28,12 +28,16 @@ import {
   ScrollText,
   MoreHorizontal,
   Menu,
+  Plus,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { api } from '../lib/api'
 import { useWorkspace } from '../lib/workspace'
 import { useI18n } from '../lib/i18n'
 import CommandPalette from './command-palette'
+import { Dialog, DialogContent } from './ui/dialog'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
 
 interface NavEntry {
   to: string
@@ -150,8 +154,20 @@ export default function Layout() {
     setWorkspaceMode,
   } = useWorkspace()
   const { t } = useI18n()
+  const qc = useQueryClient()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newWorkspaceName, setNewWorkspaceName] = useState('')
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+  const createWorkspace = useMutation({
+    mutationFn: () => api.createWorkspace({ name: newWorkspaceName.trim() }),
+    onSuccess: (workspace) => {
+      void qc.invalidateQueries({ queryKey: ['workspaces'] })
+      setWorkspaceId(workspace.id)
+      setCreateOpen(false)
+      setNewWorkspaceName('')
+    },
+  })
   const [mobileNav, setMobileNav] = useState(false)
   useEffect(() => {
     setOpenGroups((prev) => ({ ...prev, [workspaceId]: true }))
@@ -276,17 +292,27 @@ export default function Layout() {
             <span className="text-[10.5px] uppercase tracking-wider text-muted/70">
               {t('shell.workspaces')}
             </span>
-            <button
-              title={workspaceMode === 'select' ? t('settings.list') : t('settings.dropdown')}
-              onClick={() => setWorkspaceMode(workspaceMode === 'select' ? 'list' : 'select')}
-              className="text-muted hover:text-fg"
-            >
-              {workspaceMode === 'select' ? (
-                <ListTree className="h-3.5 w-3.5" />
-              ) : (
-                <ChevronsUpDown className="h-3.5 w-3.5" />
-              )}
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                title="New workspace"
+                aria-label="New workspace"
+                onClick={() => setCreateOpen(true)}
+                className="text-muted hover:text-fg"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+              <button
+                title={workspaceMode === 'select' ? t('settings.list') : t('settings.dropdown')}
+                onClick={() => setWorkspaceMode(workspaceMode === 'select' ? 'list' : 'select')}
+                className="text-muted hover:text-fg"
+              >
+                {workspaceMode === 'select' ? (
+                  <ListTree className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronsUpDown className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </div>
           </div>
 
           {workspaceMode === 'select' ? (
@@ -381,6 +407,37 @@ export default function Layout() {
         <Outlet />
       </main>
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} />
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent title="New workspace" description="Create a workspace for a separate project or team.">
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (newWorkspaceName.trim()) createWorkspace.mutate()
+            }}
+          >
+            <Input
+              autoFocus
+              value={newWorkspaceName}
+              maxLength={80}
+              placeholder="Workspace name"
+              onChange={(e) => setNewWorkspaceName(e.target.value)}
+            />
+            {createWorkspace.isError && (
+              <p className="text-[11px] text-err">{createWorkspace.error.message}</p>
+            )}
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={!newWorkspaceName.trim() || createWorkspace.isPending}
+              >
+                Create
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
