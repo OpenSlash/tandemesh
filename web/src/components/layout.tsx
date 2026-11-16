@@ -210,6 +210,7 @@ export default function Layout() {
     refetchInterval: 30000,
   })
   const unreadNotifications = (notifications?.notifications ?? []).filter((n) => !n.readAt).length
+  const { data: capabilities } = useQuery({ queryKey: ['capabilities'], queryFn: api.capabilities })
 
   const globalNav: NavEntry[] = [
     { to: '/machines', label: t('nav.machines'), icon: Monitor },
@@ -386,7 +387,7 @@ export default function Layout() {
 
         <div className="mt-auto border-t border-line pt-2">
           <div className="px-2">
-            {globalNav.map((item) => (
+            {globalNav.filter((item) => item.to !== '/audit' || capabilities?.profile === 'public').map((item) => (
               <NavItem key={item.to} {...item} />
             ))}
           </div>
