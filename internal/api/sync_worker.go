@@ -236,6 +236,19 @@ func (s *Server) syncBinding(ctx context.Context, conn *domain.Connection, ad *i
 			continue
 		}
 		s.applyPlatformState(ctx, task, snap, stateMap, conflict)
+		attachments := make([]*domain.TaskAttachment, 0, len(item.Attachments))
+		for _, attachment := range item.Attachments {
+			attachments = append(attachments, &domain.TaskAttachment{
+				ID: "att_" + task.ID + "_" + attachment.ID, TaskID: task.ID, Provider: conn.Provider,
+				ExternalID: attachment.ID, Name: attachment.Name, URL: attachment.URL,
+				Mime: attachment.Mime, Size: attachment.Size, Author: attachment.Author,
+				CreatedAt: attachment.CreatedAt, Source: "issue",
+			})
+		}
+		_ = s.store.ReplaceTaskAttachments(ctx, task.ID, conn.Provider, "issue", attachments)
+		_ = s.store.ReplaceTaskFields(ctx, task.ID, conn.Provider, item.Fields)
+		s.syncPlatformComments(ctx, ad, cred, conn.Provider, task.ID, item.Ref)
+		_ = s.store.TouchTaskComments(ctx, task.ID)
 		s.applyAssignmentRules(ctx, task)
 		if item.Updated.After(latest) {
 			latest = item.Updated
