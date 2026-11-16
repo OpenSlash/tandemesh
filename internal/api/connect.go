@@ -367,6 +367,13 @@ func (s *Server) listConnections(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		c.Bindings, _ = s.store.ListBindings(r.Context(), workspaceID, c.ID)
+		if all, err := s.store.ListAllBindings(r.Context()); err == nil {
+			for _, binding := range all {
+				if binding.ConnectionID == c.ID {
+					c.AllBindings = append(c.AllBindings, binding)
+				}
+			}
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items})
 }

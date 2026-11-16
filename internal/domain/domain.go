@@ -268,6 +268,7 @@ type Connection struct {
 	CreatedAt       time.Time          `json:"createdAt"`
 	UpdatedAt       time.Time          `json:"updatedAt"`
 	Bindings        []*ResourceBinding `json:"bindings,omitempty"`
+	AllBindings     []*ResourceBinding `json:"allBindings,omitempty"`
 }
 
 type ConnectionAccount struct {
