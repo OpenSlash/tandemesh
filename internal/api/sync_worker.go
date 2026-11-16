@@ -78,7 +78,11 @@ func (s *Server) SyncConnections(ctx context.Context) int {
 				break
 			}
 		}
-		opts := integration.ListOptions{Instance: conn.Instance, Limit: 100, Fields: customFields}
+		syncLimit := 100
+		if conn.Provider == "plane" {
+			syncLimit = 500
+		}
+		opts := integration.ListOptions{Instance: conn.Instance, Limit: syncLimit, Fields: customFields}
 		if !cursor.Cursor.IsZero() {
 			opts.Since = cursor.Cursor
 		}
@@ -196,7 +200,11 @@ func (s *Server) SyncConnections(ctx context.Context) int {
 func (s *Server) syncBinding(ctx context.Context, conn *domain.Connection, ad *integration.Integration, cred integration.Credential, binding *domain.ResourceBinding) int {
 	cred = s.accountCredential(ctx, conn.Provider, binding.AccountID, cred)
 	cursor, _ := s.store.GetBindingSyncCursor(ctx, conn.ID, binding.ID)
-	opts := integration.ListOptions{Instance: binding.ExternalID, Limit: 100}
+	syncLimit := 100
+	if conn.Provider == "plane" {
+		syncLimit = 500
+	}
+	opts := integration.ListOptions{Instance: binding.ExternalID, Limit: syncLimit}
 	if !cursor.Cursor.IsZero() {
 		opts.Since = cursor.Cursor
 	}

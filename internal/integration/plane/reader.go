@@ -19,27 +19,50 @@ func (a *Adapter) ListAssigned(ctx context.Context, cred integration.Credential,
 		return nil, err
 	}
 	limit := opts.Limit
-	if limit <= 0 || limit > 100 {
-		limit = 30
+	if limit <= 0 {
+		limit = 1000
 	}
-	paths := []string{
-		fmt.Sprintf("/workspaces/%s/projects/%s/work-items/?per_page=%d", url.PathEscape(slug), url.PathEscape(project), limit),
-		fmt.Sprintf("/workspaces/%s/projects/%s/issues/?per_page=%d", url.PathEscape(slug), url.PathEscape(project), limit),
+	if limit > 1000 {
+		limit = 1000
 	}
 	var rows []issue
-	for _, path := range paths {
+	cursor := ""
+	for pages := 0; pages < 10 && len(rows) < limit; pages++ {
+		path := fmt.Sprintf("/workspaces/%s/projects/%s/work-items/?per_page=100", url.PathEscape(slug), url.PathEscape(project))
+		if cursor != "" {
+			path += "&cursor=" + url.QueryEscape(cursor)
+		}
 		raw, status, err := a.do(ctx, "GET", a.apiAt(cred, path), cred, nil)
 		if err != nil {
-			if status == 404 {
-				continue
+			if status == 404 && len(rows) == 0 {
+				path = fmt.Sprintf("/workspaces/%s/projects/%s/issues/?per_page=100", url.PathEscape(slug), url.PathEscape(project))
+				raw, _, err = a.do(ctx, "GET", a.apiAt(cred, path), cred, nil)
 			}
-			return nil, err
+			if err != nil {
+				return nil, err
+			}
 		}
-		rows, err = decodeIssues(raw)
-		if err != nil {
-			return nil, err
+		var page struct {
+			Results         []issue `json:"results"`
+			NextCursor      string  `json:"next_cursor"`
+			NextPageResults bool    `json:"next_page_results"`
 		}
-		break
+		if err := json.Unmarshal(raw, &page); err != nil {
+			var list []issue
+			if json.Unmarshal(raw, &list) != nil {
+				return nil, err
+			}
+			rows = append(rows, list...)
+			break
+		}
+		rows = append(rows, page.Results...)
+		if !page.NextPageResults || page.NextCursor == "" {
+			break
+		}
+		cursor = page.NextCursor
+	}
+	if len(rows) > limit {
+		rows = rows[:limit]
 	}
 	labels := a.labelIndex(ctx, cred, slug, project)
 	members := a.memberIndex(ctx, cred, slug)
