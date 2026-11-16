@@ -380,6 +380,7 @@ func (s *Server) listConnections(w http.ResponseWriter, r *http.Request) {
 					c.AllBindings = append(c.AllBindings, binding)
 				}
 			}
+			s.backfillBindingNames(r.Context(), c, c.AllBindings)
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items})
