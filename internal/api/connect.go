@@ -52,6 +52,7 @@ func (s *Server) connectProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fields := connectFields(ad.Manifest, &req)
+	var reuseSource *domain.Connection
 	if reuse := strings.TrimSpace(req.ReuseConnectionID); reuse != "" && fields["token"] == "" {
 		source, err := s.store.GetConnection(r.Context(), reuse)
 		if err != nil || source == nil || source.Provider != req.Provider || source.WorkspaceID != req.WorkspaceID || s.vault == nil {
@@ -63,6 +64,7 @@ func (s *Server) connectProvider(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadRequest, "E_REUSE", "source credential is not available")
 			return
 		}
+		reuseSource = source
 		fields["token"] = stored.AccessToken
 		if fields["baseUrl"] == "" {
 			fields["baseUrl"] = source.BaseURL
@@ -100,6 +102,30 @@ func (s *Server) connectProvider(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadGateway, "E_PROBE", err.Error())
 			return
 		}
+	}
+	if reuseSource != nil {
+		if instance == "" {
+			writeErr(w, http.StatusBadRequest, "E_FIELDS", "instance is required")
+			return
+		}
+		bindings, _ := s.store.ListBindings(r.Context(), reuseSource.WorkspaceID, reuseSource.ID)
+		for _, item := range bindings {
+			if item.ExternalID == instance {
+				writeErr(w, http.StatusConflict, "E_EXISTS", "binding already exists")
+				return
+			}
+		}
+		binding := &domain.ResourceBinding{
+			ID: "bind_" + ulid.Make().String(), WorkspaceID: reuseSource.WorkspaceID,
+			ConnectionID: reuseSource.ID, Provider: reuseSource.Provider, ExternalID: instance,
+			Name: instance, Kind: "resource", Direction: "read_write", Enabled: true,
+		}
+		if err := s.store.UpsertBinding(r.Context(), binding); err != nil {
+			writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
+			return
+		}
+		writeJSON(w, http.StatusCreated, map[string]any{"provider": req.Provider, "connection": reuseSource, "binding": binding, "probe": "ok"})
+		return
 	}
 	name := req.Name
 	if name == "" {
@@ -317,6 +343,7 @@ func (s *Server) listConnections(w http.ResponseWriter, r *http.Request) {
 				c.Transition = transition
 			}
 		}
+		c.Bindings, _ = s.store.ListBindings(r.Context(), workspaceID, c.ID)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items})
 }

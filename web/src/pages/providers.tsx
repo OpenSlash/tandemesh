@@ -510,8 +510,10 @@ export default function ProvidersPage() {
                       </div>
                     </div>
                     {connections.filter((c) => c.provider === p.id).map((c) => (
-                      <div key={c.id} className="mt-1 truncate font-mono text-[10px] text-muted">
-                        {c.instance} · {c.baseUrl || 'default'}
+                      <div key={c.id} className="mt-1 font-mono text-[10px] text-muted">
+                        {c.bindings?.length
+                          ? c.bindings.map((b) => <div key={b.id} className="truncate">{b.externalId}</div>)
+                          : <div className="truncate">{c.instance}</div>}
                       </div>
                     ))}
                     <div className="mt-2 flex flex-wrap items-center gap-1">

@@ -752,6 +752,7 @@ export interface Connection {
   agentId?: string
   createdAt: string
   updatedAt: string
+  bindings?: { id: string; externalId: string; name: string; kind: string; enabled: boolean }[]
 }
 
 export interface ConnectionAccount {

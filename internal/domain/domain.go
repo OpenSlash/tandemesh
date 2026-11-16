@@ -247,26 +247,27 @@ const (
 
 // Writeback is a queued result publication to an external system.
 type Connection struct {
-	ID              string     `json:"id"`
-	WorkspaceID     string     `json:"workspaceId"`
-	Provider        string     `json:"provider"`
-	Name            string     `json:"name"`
-	Status          string     `json:"status"` // pending|connected|needs_reauth|revoked
-	AuthMethod      string     `json:"authMethod"`
-	SyncDirection   string     `json:"syncDirection"`
-	Instance        string     `json:"instance"`
-	BaseURL         string     `json:"baseUrl"`
-	AccountLogin    string     `json:"accountLogin"`
-	ExecutionMode   string     `json:"executionMode"`
-	RunnerMachineID string     `json:"runnerMachineId"`
-	TokenExpiresAt  *time.Time `json:"tokenExpiresAt,omitempty"`
-	LastCallbackAt  *time.Time `json:"lastCallbackAt,omitempty"`
-	Enabled         bool       `json:"enabled"`
-	AutomationID    string     `json:"automationId,omitempty"`
-	Transition      string     `json:"transition,omitempty"`
-	AgentID         string     `json:"agentId,omitempty"`
-	CreatedAt       time.Time  `json:"createdAt"`
-	UpdatedAt       time.Time  `json:"updatedAt"`
+	ID              string             `json:"id"`
+	WorkspaceID     string             `json:"workspaceId"`
+	Provider        string             `json:"provider"`
+	Name            string             `json:"name"`
+	Status          string             `json:"status"` // pending|connected|needs_reauth|revoked
+	AuthMethod      string             `json:"authMethod"`
+	SyncDirection   string             `json:"syncDirection"`
+	Instance        string             `json:"instance"`
+	BaseURL         string             `json:"baseUrl"`
+	AccountLogin    string             `json:"accountLogin"`
+	ExecutionMode   string             `json:"executionMode"`
+	RunnerMachineID string             `json:"runnerMachineId"`
+	TokenExpiresAt  *time.Time         `json:"tokenExpiresAt,omitempty"`
+	LastCallbackAt  *time.Time         `json:"lastCallbackAt,omitempty"`
+	Enabled         bool               `json:"enabled"`
+	AutomationID    string             `json:"automationId,omitempty"`
+	Transition      string             `json:"transition,omitempty"`
+	AgentID         string             `json:"agentId,omitempty"`
+	CreatedAt       time.Time          `json:"createdAt"`
+	UpdatedAt       time.Time          `json:"updatedAt"`
+	Bindings        []*ResourceBinding `json:"bindings,omitempty"`
 }
 
 type ConnectionAccount struct {

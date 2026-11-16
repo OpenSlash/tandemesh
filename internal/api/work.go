@@ -81,6 +81,15 @@ func (s *Server) syncWork(w http.ResponseWriter, r *http.Request) {
 					connectionID = c.ID
 					break
 				}
+				if connectionID == "" {
+					bindings, _ := s.store.ListBindings(r.Context(), workspaceID, c.ID)
+					for _, binding := range bindings {
+						if binding.ExternalID == req.Instance {
+							connectionID = c.ID
+							break
+						}
+					}
+				}
 			}
 		}
 	}
