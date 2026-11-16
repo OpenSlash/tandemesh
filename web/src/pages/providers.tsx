@@ -227,6 +227,18 @@ export default function ProvidersPage() {
       setSyncState((prev) => ({ ...prev, [connection.id]: `webhook ${result.webhookId}` })),
     onError: (err, connection) => setSyncState((prev) => ({ ...prev, [connection.id]: String(err) })),
   })
+  const registerBindingWebhook = useMutation({
+    mutationFn: ({ connectionId, bindingId }: { connectionId: string; bindingId: string }) =>
+      api.registerBindingWebhook(connectionId, bindingId),
+    onSuccess: (result, vars) =>
+      setSyncState((prev) => ({ ...prev, [vars.connectionId]: `binding webhook ${result.webhookId}` })),
+    onError: (err, vars) => setSyncState((prev) => ({ ...prev, [vars.connectionId]: String(err) })),
+  })
+  const mergeConnection = useMutation({
+    mutationFn: ({ targetId, sourceId }: { targetId: string; sourceId: string }) =>
+      api.mergeConnection(targetId, sourceId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['connections', workspaceId] }),
+  })
   const copyWebhook = useMutation({
     mutationFn: (connection: Connection) => api.connectionWebhook(connection.id),
     onSuccess: async (result, connection) => {
@@ -615,6 +627,19 @@ export default function ProvidersPage() {
                   </span>
                   <span className="text-[10px] text-muted">{connection.authMethod}</span>
                   <span className="font-mono text-[10.5px] text-muted">{connection.instance}</span>
+                  {connection.bindings?.filter((binding) => binding.externalId !== connection.instance).map((binding) => (
+                    <span key={binding.id} className="rounded border border-line2 px-1.5 py-0.5 font-mono text-[10px] text-muted">
+                      {binding.externalId}
+                      {showWebhook && (
+                        <button
+                          className="ml-1 text-accent2 hover:underline"
+                          onClick={() => registerBindingWebhook.mutate({ connectionId: connection.id, bindingId: binding.id })}
+                        >
+                          webhook
+                        </button>
+                      )}
+                    </span>
+                  ))}
                   <div className="ml-auto flex items-center gap-2">
                     {connection.status === 'needs_reauth' && (
                       <Button

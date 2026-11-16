@@ -220,11 +220,21 @@ func (s *Server) syncBinding(ctx context.Context, conn *domain.Connection, ad *i
 	stateMap := map[string]string{}
 	conflict := "platform"
 	if automations, err := s.store.ListAutomations(ctx, conn.WorkspaceID); err == nil {
+		fallback := false
 		for _, automation := range automations {
-			if automation.ConnectionID == conn.ID {
+			if automation.ConnectionID != conn.ID {
+				continue
+			}
+			if automation.Instance == binding.ExternalID {
 				stateMap = automation.StateMap
 				conflict = conflictPolicy(automation)
+				fallback = false
 				break
+			}
+			if !fallback {
+				stateMap = automation.StateMap
+				conflict = conflictPolicy(automation)
+				fallback = true
 			}
 		}
 	}

@@ -21,8 +21,17 @@ func (s *Server) automationForTask(ctx context.Context, task *domain.Task) *doma
 			continue
 		}
 		conn, err := s.store.GetConnection(ctx, automation.ConnectionID)
-		if err == nil && conn != nil && conn.Instance == task.Instance {
-			return automation
+		if err == nil && conn != nil {
+			if conn.Instance == task.Instance {
+				return automation
+			}
+			if bindings, err := s.store.ListBindings(ctx, conn.WorkspaceID, conn.ID); err == nil {
+				for _, binding := range bindings {
+					if binding.ExternalID == task.Instance && binding.Enabled {
+						return automation
+					}
+				}
+			}
 		}
 	}
 	return nil

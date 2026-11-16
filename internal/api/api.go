@@ -339,6 +339,7 @@ func (s *Server) Router() http.Handler {
 		r.Get("/connections/{id}/bindings", s.listConnectionBindings)
 		r.Post("/connections/{id}/bindings", s.createConnectionBinding)
 		r.Post("/connections/{id}/register-webhook", s.registerConnectionWebhook)
+		r.Post("/connections/{id}/bindings/{bindingId}/register-webhook", s.registerBindingWebhook)
 		r.Get("/webhook-deliveries/{automation}", s.listWebhookDeliveries)
 		r.Post("/webhook-deliveries/{id}/replay", s.replayWebhookDelivery)
 		r.Patch("/connections/{id}", s.patchConnection)

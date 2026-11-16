@@ -1337,6 +1337,13 @@ export const api = {
     request<{ items: { id: string; provider: string; kind: string; status: string; reason: string; runId: string; createdAt: string }[] }>('/api/v1/webhook-deliveries/' + automationId),
   replayWebhookDelivery: (id: string) =>
     request<{ status: number; result: string }>('/api/v1/webhook-deliveries/' + id + '/replay', { method: 'POST' }),
+  registerBindingWebhook: (connectionId: string, bindingId: string) =>
+    request<{ webhookId: string; url: string; bindingId: string }>(
+      '/api/v1/connections/' + connectionId + '/bindings/' + bindingId + '/register-webhook',
+      { method: 'POST' },
+    ),
+  mergeConnection: (targetId: string, sourceId: string) =>
+    request<{ moved: number }>('/api/v1/connections/' + targetId + '/merge/' + sourceId, { method: 'POST' }),
   connections: (workspace: string) =>
     request<List<Connection>>(`/api/v1/connections?workspace=${workspace}`),
   reconnectConnection: (id: string, body: { token: string; baseUrl?: string }) =>
