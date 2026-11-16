@@ -65,6 +65,20 @@ func (s *Server) SyncConnections(ctx context.Context) int {
 		if cred.AccessToken == "" {
 			continue
 		}
+		var own []*domain.ResourceBinding
+		if all, err := s.store.ListAllBindings(ctx); err == nil {
+			for _, binding := range all {
+				if binding.ConnectionID == conn.ID {
+					own = append(own, binding)
+				}
+			}
+		}
+		if len(own) > 0 {
+			for _, binding := range own {
+				synced += s.syncBinding(ctx, conn, ad, cred, binding)
+			}
+			continue
+		}
 		cursor, _ := s.store.GetSyncCursor(ctx, conn.ID)
 		customFields := map[string]string{}
 		if automations, err := s.store.ListAutomations(ctx, conn.WorkspaceID); err == nil {
@@ -199,6 +213,10 @@ func (s *Server) SyncConnections(ctx context.Context) int {
 
 func (s *Server) syncBinding(ctx context.Context, conn *domain.Connection, ad *integration.Integration, cred integration.Credential, binding *domain.ResourceBinding) int {
 	cred = s.accountCredential(ctx, conn.Provider, binding.AccountID, cred)
+	workspaceID := binding.WorkspaceID
+	if workspaceID == "" {
+		workspaceID = conn.WorkspaceID
+	}
 	cursor, _ := s.store.GetBindingSyncCursor(ctx, conn.ID, binding.ID)
 	syncLimit := 100
 	if conn.Provider == "plane" {
@@ -219,7 +237,7 @@ func (s *Server) syncBinding(ctx context.Context, conn *domain.Connection, ad *i
 	}
 	stateMap := map[string]string{}
 	conflict := "platform"
-	if automations, err := s.store.ListAutomations(ctx, conn.WorkspaceID); err == nil {
+	if automations, err := s.store.ListAutomations(ctx, workspaceID); err == nil {
 		fallback := false
 		for _, automation := range automations {
 			if automation.ConnectionID != conn.ID {
@@ -249,7 +267,7 @@ func (s *Server) syncBinding(ctx context.Context, conn *domain.Connection, ad *i
 			Author: item.Author, Assignee: item.Assignee,
 			Status: item.Status, StatusGroup: item.StatusGroup,
 		}
-		task, err := s.store.EnsureTaskIn(ctx, conn.WorkspaceID, item.Ref, snap)
+		task, err := s.store.EnsureTaskIn(ctx, workspaceID, item.Ref, snap)
 		if err != nil {
 			continue
 		}

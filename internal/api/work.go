@@ -75,8 +75,11 @@ func (s *Server) syncWork(w http.ResponseWriter, r *http.Request) {
 	}
 	connectionID := req.ConnectionID
 	if connectionID == "" {
-		if conns, err := s.store.ListConnections(r.Context(), workspaceID, req.Provider); err == nil {
-			for _, c := range conns {
+		if all, err := s.store.ListAllConnections(r.Context()); err == nil {
+			for _, c := range all {
+				if c.Provider != req.Provider {
+					continue
+				}
 				if c.Instance == req.Instance {
 					connectionID = c.ID
 					break

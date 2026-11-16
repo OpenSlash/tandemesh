@@ -55,7 +55,7 @@ func (s *Server) connectProvider(w http.ResponseWriter, r *http.Request) {
 	var reuseSource *domain.Connection
 	if reuse := strings.TrimSpace(req.ReuseConnectionID); reuse != "" && fields["token"] == "" {
 		source, err := s.store.GetConnection(r.Context(), reuse)
-		if err != nil || source == nil || source.Provider != req.Provider || source.WorkspaceID != req.WorkspaceID || s.vault == nil {
+		if err != nil || source == nil || source.Provider != req.Provider || s.vault == nil {
 			writeErr(w, http.StatusBadRequest, "E_REUSE", "source connection is not available")
 			return
 		}
@@ -116,7 +116,7 @@ func (s *Server) connectProvider(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		binding := &domain.ResourceBinding{
-			ID: "bind_" + ulid.Make().String(), WorkspaceID: reuseSource.WorkspaceID,
+			ID: "bind_" + ulid.Make().String(), WorkspaceID: req.WorkspaceID,
 			ConnectionID: reuseSource.ID, Provider: reuseSource.Provider, ExternalID: instance,
 			Name: instance, Kind: "resource", Direction: "read_write", Enabled: true,
 		}
@@ -126,7 +126,7 @@ func (s *Server) connectProvider(w http.ResponseWriter, r *http.Request) {
 		}
 		if ad.Manifest.Kind == integration.KindTask {
 			automation := &domain.Automation{
-				ID: "auto_" + ulid.Make().String(), WorkspaceID: reuseSource.WorkspaceID,
+				ID: "auto_" + ulid.Make().String(), WorkspaceID: req.WorkspaceID,
 				Name: instance, Provider: reuseSource.Provider, Instance: instance,
 				TriggerKind: domain.TriggerCreated, ConnectionID: reuseSource.ID,
 				Writeback: map[string]any{"comment": true}, Enabled: true, Base: "main",
@@ -338,10 +338,18 @@ func (s *Server) listConnections(w http.ResponseWriter, r *http.Request) {
 	if !s.requireWorkspace(w, r, workspaceID) {
 		return
 	}
-	items, err := s.store.ListConnections(r.Context(), workspaceID, r.URL.Query().Get("provider"))
+	all, err := s.store.ListAllConnections(r.Context())
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
 		return
+	}
+	providerFilter := r.URL.Query().Get("provider")
+	items := make([]*domain.Connection, 0, len(all))
+	for _, item := range all {
+		if providerFilter != "" && item.Provider != providerFilter {
+			continue
+		}
+		items = append(items, item)
 	}
 	automations, _ := s.store.ListAutomations(r.Context(), workspaceID)
 	byConnection := map[string]*domain.Automation{}
