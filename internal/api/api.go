@@ -343,6 +343,7 @@ func (s *Server) Router() http.Handler {
 		r.Post("/webhook-deliveries/{id}/replay", s.replayWebhookDelivery)
 		r.Patch("/connections/{id}", s.patchConnection)
 		r.Delete("/connections/{id}", s.deleteConnectionByID)
+		r.Post("/connections/{id}/merge/{source}", s.mergeConnection)
 		r.Patch("/bindings/{id}", s.patchBinding)
 		r.Delete("/bindings/{id}", s.deleteBinding)
 		r.Delete("/integrations/{provider}", s.deleteConnection)

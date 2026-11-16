@@ -124,6 +124,21 @@ func (s *Server) connectProvider(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
 			return
 		}
+		if ad.Manifest.Kind == integration.KindTask {
+			automation := &domain.Automation{
+				ID: "auto_" + ulid.Make().String(), WorkspaceID: reuseSource.WorkspaceID,
+				Name: instance, Provider: reuseSource.Provider, Instance: instance,
+				TriggerKind: domain.TriggerCreated, ConnectionID: reuseSource.ID,
+				Writeback: map[string]any{"comment": true}, Enabled: true, Base: "main",
+			}
+			if err := s.store.UpsertAutomation(r.Context(), automation); err == nil {
+				if binding.Settings == nil {
+					binding.Settings = map[string]string{}
+				}
+				binding.Settings["automationId"] = automation.ID
+				_ = s.store.UpsertBinding(r.Context(), binding)
+			}
+		}
 		writeJSON(w, http.StatusCreated, map[string]any{"provider": req.Provider, "connection": reuseSource, "binding": binding, "probe": "ok"})
 		return
 	}
