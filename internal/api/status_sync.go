@@ -88,6 +88,7 @@ func (s *Server) enqueueStatusWriteback(ctx context.Context, task *domain.Task, 
 	}
 	item := &domain.Writeback{
 		ID:           "wb_" + ulid.Make().String(),
+		RunID:        "status:" + task.ID + ":" + status,
 		Provider:     task.Provider,
 		ConnectionID: automation.ConnectionID,
 		Action:       "transition",
