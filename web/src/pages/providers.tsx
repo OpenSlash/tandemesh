@@ -524,7 +524,7 @@ export default function ProvidersPage() {
                     {connections.filter((c) => c.provider === p.id).map((c) => (
                       <div key={c.id} className="mt-1 font-mono text-[10px] text-muted">
                         {c.bindings?.length
-                          ? c.bindings.map((b) => <div key={b.id} className="truncate">{b.externalId}</div>)
+                          ? c.bindings.map((b) => <div key={b.id} className="truncate">{b.name || b.externalId}</div>)
                           : <div className="truncate">{c.instance}</div>}
                       </div>
                     ))}
@@ -629,7 +629,7 @@ export default function ProvidersPage() {
                   <span className="font-mono text-[10.5px] text-muted">{connection.instance}</span>
                   {connection.bindings?.filter((binding) => binding.externalId !== connection.instance).map((binding) => (
                     <span key={binding.id} className="rounded border border-line2 px-1.5 py-0.5 font-mono text-[10px] text-muted">
-                      {binding.externalId}
+                      {binding.name || binding.externalId}
                       {showWebhook && (
                         <button
                           className="ml-1 text-accent2 hover:underline"

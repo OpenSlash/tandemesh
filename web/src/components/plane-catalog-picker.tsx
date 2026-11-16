@@ -17,7 +17,7 @@ export function PlaneCatalogPicker({
   baseUrl: string
   connectionId?: string
   initialWorkspace?: string
-  onSelect: (instance: string) => void
+  onSelect: (instance: string, name?: string) => void
 }) {
   const [workspace, setWorkspace] = useState('')
   const [projects, setProjects] = useState<Item[]>([])
@@ -63,7 +63,7 @@ export function PlaneCatalogPicker({
           value=""
           onChange={(e) => {
             const project = projects.find((item) => item.id === e.target.value)
-            if (project) onSelect(`${workspace}/${project.id}`)
+            if (project) onSelect(`${workspace}/${project.id}`, project.name)
           }}
         >
           <option value="">Select project</option>

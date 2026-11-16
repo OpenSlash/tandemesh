@@ -118,7 +118,7 @@ func (s *Server) connectProvider(w http.ResponseWriter, r *http.Request) {
 		binding := &domain.ResourceBinding{
 			ID: "bind_" + ulid.Make().String(), WorkspaceID: req.WorkspaceID,
 			ConnectionID: reuseSource.ID, Provider: reuseSource.Provider, ExternalID: instance,
-			Name: instance, Kind: "resource", Direction: "read_write", Enabled: true,
+			Name: bindingDisplayName(req.Name, instance), Kind: "resource", Direction: "read_write", Enabled: true,
 		}
 		if err := s.store.UpsertBinding(r.Context(), binding); err != nil {
 			writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
@@ -228,7 +228,7 @@ func (s *Server) connectProvider(w http.ResponseWriter, r *http.Request) {
 		binding := &domain.ResourceBinding{
 			ID: "bind_" + ulid.Make().String(), WorkspaceID: req.WorkspaceID,
 			ConnectionID: conn.ID, Provider: req.Provider, ExternalID: instance,
-			Name: instance, Kind: bindingKind(req.Provider), Direction: direction,
+			Name: bindingDisplayName(req.Name, instance), Kind: bindingKind(req.Provider), Direction: direction,
 			AccountID: account.ID, Enabled: true,
 		}
 		if err := s.store.UpsertBinding(r.Context(), binding); err != nil {
@@ -257,6 +257,13 @@ func (s *Server) connectProvider(w http.ResponseWriter, r *http.Request) {
 
 // connectFields maps both legacy top-level fields and manifest-driven fields
 // into one normalized map.
+func bindingDisplayName(name, instance string) string {
+	if value := strings.TrimSpace(name); value != "" {
+		return value
+	}
+	return instance
+}
+
 func connectFields(manifest integration.Manifest, req *connectRequest) map[string]string {
 	fields := map[string]string{}
 	for key, value := range req.Fields {

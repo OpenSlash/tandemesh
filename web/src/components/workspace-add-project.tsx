@@ -21,6 +21,7 @@ export function WorkspaceAddProject({
   const [connectionId, setConnectionId] = useState('')
   const [instance, setInstance] = useState('')
   const [name, setName] = useState('')
+  const [projectName, setProjectName] = useState('')
   const [message, setMessage] = useState('')
   const connection = connections.find((item) => item.id === connectionId)
   const save = useMutation({
@@ -32,7 +33,7 @@ export function WorkspaceAddProject({
         reuseConnectionId: connectionId,
         baseUrl: connection?.baseUrl,
         instance,
-        name: name || undefined,
+        name: name || projectName || undefined,
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['connections', workspaceId] })
@@ -73,7 +74,10 @@ export function WorkspaceAddProject({
               baseUrl={connection.baseUrl}
               connectionId={connection.id}
               initialWorkspace={(connection.allBindings ?? connection.bindings)?.[0]?.externalId.split('/')[0]}
-              onSelect={(value) => setInstance(value)}
+              onSelect={(value, project) => {
+                setInstance(value)
+                setProjectName(project ?? '')
+              }}
             />
           )}
 

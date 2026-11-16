@@ -122,7 +122,9 @@ export default function WorkspaceSettingsPage() {
               </div>
               {(connection.bindings ?? []).map((binding) => (
                 <div key={binding.id} className="mt-1 flex items-center gap-2 text-[11px] text-muted">
-                  <span className="min-w-0 flex-1 truncate font-mono">{binding.externalId}</span>
+                  <span className="min-w-0 flex-1 truncate" title={binding.externalId}>
+                    {binding.name || binding.externalId}
+                  </span>
                   <button
                     className="text-muted hover:text-err disabled:opacity-40"
                     title="Remove binding"
