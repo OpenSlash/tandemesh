@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Button } from './ui/button'
@@ -10,11 +10,13 @@ export function PlaneCatalogPicker({
   token,
   baseUrl,
   connectionId,
+  initialWorkspace,
   onSelect,
 }: {
   token: string
   baseUrl: string
   connectionId?: string
+  initialWorkspace?: string
   onSelect: (instance: string) => void
 }) {
   const [workspace, setWorkspace] = useState('')
@@ -22,13 +24,19 @@ export function PlaneCatalogPicker({
   const [message, setMessage] = useState('')
 
   const loadProjects = useMutation({
-    mutationFn: () => api.catalog('plane', { token, baseUrl, workspace, connectionId }),
+    mutationFn: (slug: string) => api.catalog('plane', { token, baseUrl, workspace: slug, connectionId }),
     onSuccess: (data) => {
       setProjects(data.projects ?? [])
       setMessage('')
     },
     onError: (err) => setMessage(String(err)),
   })
+
+  useEffect(() => {
+    if (!initialWorkspace) return
+    setWorkspace(initialWorkspace)
+    loadProjects.mutate(initialWorkspace)
+  }, [initialWorkspace])
 
   return (
     <div className="rounded-md border border-line2 p-2">
@@ -44,7 +52,7 @@ export function PlaneCatalogPicker({
           size="sm"
           variant="secondary"
           disabled={(!token && !connectionId) || !workspace || loadProjects.isPending}
-          onClick={() => loadProjects.mutate()}
+          onClick={() => loadProjects.mutate(workspace)}
         >
           Load projects
         </Button>

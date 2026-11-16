@@ -72,6 +72,7 @@ export function WorkspaceAddProject({
               token=""
               baseUrl={connection.baseUrl}
               connectionId={connection.id}
+              initialWorkspace={connection.bindings?.[0]?.externalId.split('/')[0]}
               onSelect={(value) => setInstance(value)}
             />
           )}

@@ -1275,6 +1275,7 @@ export default function ProvidersPage() {
                 token={fieldValue('token')}
                 baseUrl={fieldValue('baseUrl')}
                 connectionId={reuseConnectionId}
+                initialWorkspace={connections.find((c) => c.id === reuseConnectionId)?.bindings?.[0]?.externalId.split('/')[0]}
                 onSelect={(value) => setFieldValue('instance', value)}
               />
             )}
