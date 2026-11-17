@@ -122,6 +122,28 @@ func (s *Server) applyAssignmentRules(ctx context.Context, task *domain.Task) *d
 	if err != nil {
 		return nil
 	}
+	if automations, err := s.store.ListAutomations(ctx, task.WorkspaceID); err == nil {
+		for _, automation := range automations {
+			if !automation.Enabled || automation.TriggerKind != "task.synced" || automation.Schedule != "" {
+				continue
+			}
+			groupID, _ := automation.Writeback["groupId"].(string)
+			policy, _ := automation.Writeback["policy"].(string)
+			author, _ := automation.Writeback["author"].(string)
+			assignee, _ := automation.Writeback["assignee"].(string)
+			autoDispatch, _ := automation.Writeback["autoDispatch"].(bool)
+			if policy == "" {
+				policy = "conditional"
+			}
+			rules = append(rules, &domain.AssignmentRule{
+				ID: automation.ID, WorkspaceID: automation.WorkspaceID, Name: automation.Name,
+				Provider: automation.Provider, Instance: automation.Instance, Label: automation.TriggerValue,
+				Author: author, Assignee: assignee, AgentID: automation.AgentID, GroupID: groupID,
+				Repo: automation.Repo, AutoDispatch: autoDispatch, Policy: policy, Enabled: automation.Enabled,
+				Priority: automation.Priority, CreatedAt: automation.CreatedAt,
+			})
+		}
+	}
 	mappedAuthor, mappedAssignee := "", ""
 	if item, err := s.store.ResolveExternalIdentity(ctx, task.WorkspaceID, task.Provider, task.Author); err == nil && item != nil {
 		mappedAuthor = item.MemberID
