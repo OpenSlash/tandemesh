@@ -41,14 +41,6 @@ export default function ProvidersPage() {
     queryFn: () => api.importRuntime(),
     refetchInterval: 5000,
   })
-  const { data: identitiesData } = useQuery({
-    queryKey: ['identities', workspaceId],
-    queryFn: () => api.identities(workspaceId),
-  })
-  const { data: memberIdentitiesData } = useQuery({
-    queryKey: ['member-identities', workspaceId],
-    queryFn: () => api.memberIdentities(workspaceId),
-  })
   const { data: rulesData } = useQuery({
     queryKey: ['assignment-rules', workspaceId],
     queryFn: () => api.assignmentRules(workspaceId),
@@ -81,8 +73,6 @@ export default function ProvidersPage() {
   const jiraConnection = connections.find((connection) => connection.provider === 'jira')
   const gitlabConnection = connections.find((connection) => connection.provider === 'gitlab')
   const imports = importsData?.items ?? []
-  const identities = identitiesData?.items ?? []
-  const memberIdentities = memberIdentitiesData?.items ?? []
   const rules = rulesData?.items ?? []
   const agents = agentsData?.items ?? []
   const groups = groupsData?.items ?? []
@@ -126,22 +116,6 @@ export default function ProvidersPage() {
   const [bindingBacklink, setBindingBacklink] = useState(false)
   const [bindingTrusted, setBindingTrusted] = useState(false)
   const [bindingAccountID, setBindingAccountID] = useState('')
-  const [identityProvider, setIdentityProvider] = useState('github')
-  const [identityExternal, setIdentityExternal] = useState('')
-  const [identityLogin, setIdentityLogin] = useState('')
-  const [identityMember, setIdentityMember] = useState('')
-  const [linkMembers, setLinkMembers] = useState<Record<string, string>>({})
-  const [memberProvider, setMemberProvider] = useState('github')
-  const memberOAuthEnabled = memberProvider === 'github'
-    ? Boolean(githubOAuth?.enabled)
-    : ['gitlab', 'jira', 'linear'].includes(memberProvider) && oauthProviders.includes(memberProvider)
-  const [memberID, setMemberID] = useState('')
-  const [memberExternal, setMemberExternal] = useState('')
-  const [memberLogin, setMemberLogin] = useState('')
-  const [memberEmail, setMemberEmail] = useState('')
-  const [memberToken, setMemberToken] = useState('')
-  const [memberUsers, setMemberUsers] = useState<{ id: string; login: string; name?: string; email?: string }[]>([])
-  const [memberUserQuery, setMemberUserQuery] = useState('')
   const [accountsFor, setAccountsFor] = useState<Connection | null>(null)
   const [accountToken, setAccountToken] = useState('')
   const [accountKind, setAccountKind] = useState('user')
@@ -287,56 +261,6 @@ export default function ProvidersPage() {
   const removeBinding = useMutation({
     mutationFn: (id: string) => api.deleteBinding(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['bindings', bindingsFor?.id] }),
-  })
-  const addIdentity = useMutation({
-    mutationFn: () =>
-      api.createIdentity(workspaceId, {
-        provider: identityProvider,
-        externalId: identityExternal,
-        login: identityLogin || identityExternal,
-        memberId: identityMember,
-      }),
-    onSuccess: () => {
-      setIdentityExternal('')
-      setIdentityLogin('')
-      setIdentityMember('')
-      qc.invalidateQueries({ queryKey: ['identities', workspaceId] })
-    },
-  })
-  const removeIdentity = useMutation({
-    mutationFn: (id: string) => api.deleteIdentity(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['identities', workspaceId] }),
-  })
-  const linkIdentity = useMutation({
-    mutationFn: ({ id, memberId }: { id: string; memberId: string }) => api.linkIdentity(id, memberId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['identities', workspaceId] }),
-  })
-  const addMemberIdentity = useMutation({
-    mutationFn: () =>
-      api.createMemberIdentity(workspaceId, {
-        memberId: memberID,
-        provider: memberProvider,
-        externalId: memberExternal,
-        login: memberLogin || memberExternal,
-        email: memberEmail || undefined,
-        token: memberToken || undefined,
-      }),
-    onSuccess: () => {
-      setMemberID('')
-      setMemberExternal('')
-      setMemberLogin('')
-      setMemberEmail('')
-      setMemberToken('')
-      qc.invalidateQueries({ queryKey: ['member-identities', workspaceId] })
-    },
-  })
-  const removeMemberIdentity = useMutation({
-    mutationFn: (id: string) => api.deleteMemberIdentity(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['member-identities', workspaceId] }),
-  })
-  const searchMemberUsers = useMutation({
-    mutationFn: () => api.connectionUsers(jiraConnection!.id, memberUserQuery),
-    onSuccess: (data) => setMemberUsers(data.items ?? []),
   })
   const { data: accountsData } = useQuery({
     queryKey: ['accounts', accountsFor?.id],
@@ -587,7 +511,7 @@ export default function ProvidersPage() {
           open
           onOpenChange={(open) => !open && setDetailsFor('')}
           title={items.find((provider) => provider.id === detailsFor)?.name ?? detailsFor}
-          description="Connections, configuration and external identities"
+          description="Connections and configuration"
         >
       <section className="mt-8">
         <h2 className="text-[13px] font-medium">{t('providers.connections')}</h2>
@@ -882,184 +806,9 @@ export default function ProvidersPage() {
         </div>
       </section>
 
-      <section className="hidden">
-        <h2 className="text-[13px] font-medium">{t('providers.identities')}</h2>
-        <p className="mt-0.5 text-[11.5px] text-muted">{t('providers.identitiesHint')}</p>
-        <div className="mt-2 space-y-2">
-          {identities.filter((identity) => identity.provider === detailsFor).map((identity) => (
-            <div key={identity.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-panel/40 p-2.5">
-              <span className="text-[12px] font-medium">{identity.login || identity.externalId}</span>
-              <span className="font-mono text-[10.5px] text-muted">{identity.provider}</span>
-              <span className="font-mono text-[10.5px] text-muted">{identity.externalId}</span>
-              <span className="text-[11px] text-muted">to</span>
-              <Input
-                className="h-7 w-28"
-                value={linkMembers[identity.id] ?? identity.memberId}
-                onChange={(e) => setLinkMembers((prev) => ({ ...prev, [identity.id]: e.target.value }))}
-                placeholder={t('providers.identityMember')}
-              />
-              <button
-                className="rounded border border-line2 px-1.5 py-0.5 text-[10px] text-muted hover:text-fg"
-                onClick={() => linkIdentity.mutate({ id: identity.id, memberId: linkMembers[identity.id] ?? identity.memberId })}
-              >
-                {t('common.save')}
-              </button>
-              <button className="ml-auto text-muted hover:text-err" onClick={() => removeIdentity.mutate(identity.id)}>
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-          {identities.length === 0 && <p className="text-[11.5px] text-muted">{t('providers.noIdentities')}</p>}
-          <form
-            className="flex flex-wrap items-end gap-2 rounded-lg border border-line bg-panel/40 p-2.5"
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (identityExternal.trim() && identityMember.trim()) addIdentity.mutate()
-            }}
-          >
-            <label className="text-[11px] text-muted">
-              {t('meta.provider')}
-              <select
-                className="mt-1 h-8 rounded-md border border-line2 bg-panel px-2 text-[11px]"
-                value={identityProvider}
-                onChange={(e) => setIdentityProvider(e.target.value)}
-              >
-                {items.filter((provider) => provider.kind === 'task').map((provider) => (
-                  <option key={provider.id} value={provider.id}>{provider.name}</option>
-                ))}
-              </select>
-            </label>
-            <label className="text-[11px] text-muted">
-              {t('providers.bindingExternal')}
-              <Input className="mt-1 h-8 w-36" value={identityExternal} onChange={(e) => setIdentityExternal(e.target.value)} />
-            </label>
-            <label className="text-[11px] text-muted">
-              {t('providers.identityLogin')}
-              <Input className="mt-1 h-8 w-32" value={identityLogin} onChange={(e) => setIdentityLogin(e.target.value)} />
-            </label>
-            <label className="text-[11px] text-muted">
-              {t('providers.identityMember')}
-              <Input className="mt-1 h-8 w-32" value={identityMember} onChange={(e) => setIdentityMember(e.target.value)} />
-            </label>
-            <Button type="submit" size="sm" variant="primary" disabled={!identityExternal.trim() || !identityMember.trim() || addIdentity.isPending}>
-              {t('common.add')}
-            </Button>
-          </form>
-          {addIdentity.error && <p className="text-[11.5px] text-err">{String(addIdentity.error.message)}</p>}
-        </div>
-      </section>
         </Drawer>
       )}
 
-      <section className="hidden">
-        <h2 className="text-[13px] font-medium">{t('providers.memberIdentities')}</h2>
-        <p className="mt-0.5 text-[11.5px] text-muted">{t('providers.memberIdentitiesHint')}</p>
-        <div className="mt-2 space-y-2">
-          {memberIdentities.map((identity) => (
-            <div key={identity.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-panel/40 p-2.5">
-              <span className="text-[12px] font-medium">{identity.login || identity.externalId}</span>
-              <span className="font-mono text-[10.5px] text-muted">{identity.provider}</span>
-              <span className="font-mono text-[10.5px] text-muted">{identity.externalId}</span>
-              <span className="text-[11px] text-muted">{'->'} {identity.memberId}</span>
-              <button className="ml-auto text-muted hover:text-err" onClick={() => removeMemberIdentity.mutate(identity.id)}>
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-          {memberIdentities.length === 0 && <p className="text-[11.5px] text-muted">{t('providers.noMemberIdentities')}</p>}
-          <form
-            className="flex flex-wrap items-end gap-2 rounded-lg border border-line bg-panel/40 p-2.5"
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (memberID.trim() && memberExternal.trim()) addMemberIdentity.mutate()
-            }}
-          >
-            <label className="text-[11px] text-muted">
-              {t('meta.provider')}
-              <select
-                className="mt-1 h-8 rounded-md border border-line2 bg-panel px-2 text-[11px]"
-                value={memberProvider}
-                onChange={(e) => setMemberProvider(e.target.value)}
-              >
-                {items.filter((provider) => provider.kind === 'task').map((provider) => (
-                  <option key={provider.id} value={provider.id}>{provider.name}</option>
-                ))}
-              </select>
-            </label>
-            <label className="text-[11px] text-muted">
-              {t('providers.identityMember')}
-              <Input className="mt-1 h-8 w-28" value={memberID} onChange={(e) => setMemberID(e.target.value)} />
-            </label>
-            <label className="text-[11px] text-muted">
-              {t('providers.bindingExternal')}
-              <Input className="mt-1 h-8 w-32" value={memberExternal} onChange={(e) => setMemberExternal(e.target.value)} />
-            </label>
-            <label className="text-[11px] text-muted">
-              {t('providers.identityLogin')}
-              <Input className="mt-1 h-8 w-28" value={memberLogin} onChange={(e) => setMemberLogin(e.target.value)} />
-            </label>
-            <label className="text-[11px] text-muted">
-              {t('providers.token')}
-              <Input className="mt-1 h-8 w-44" type="password" value={memberToken} onChange={(e) => setMemberToken(e.target.value)} />
-            </label>
-            <Button type="submit" size="sm" variant="primary" disabled={!memberID.trim() || !memberExternal.trim() || addMemberIdentity.isPending}>
-              {t('common.add')}
-            </Button>
-            {memberOAuthEnabled && (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                disabled={!memberID.trim()}
-                onClick={() => {
-                  const params = new URLSearchParams({ workspace: workspaceId, memberId: memberID.trim() })
-                  if (memberProvider === 'gitlab') params.set('baseUrl', 'https://gitlab.com')
-                  window.location.href = `/api/v1/integrations/${memberProvider}/oauth/start?${params.toString()}`
-                }}
-              >
-                <Plug className="h-3.5 w-3.5" /> {t('providers.authorizeMemberOAuth')}
-              </Button>
-            )}
-          </form>
-          {addMemberIdentity.error && <p className="text-[11.5px] text-err">{String(addMemberIdentity.error.message)}</p>}
-          {memberProvider === 'jira' && jiraConnection && (
-            <div className="rounded-lg border border-line bg-panel/40 p-2.5">
-              <div className="flex gap-2">
-                <Input
-                  className="h-8"
-                  value={memberUserQuery}
-                  onChange={(e) => setMemberUserQuery(e.target.value)}
-                  placeholder={t('providers.searchJiraUser')}
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={!memberUserQuery.trim() || searchMemberUsers.isPending}
-                  onClick={() => searchMemberUsers.mutate()}
-                >
-                  {t('common.search')}
-                </Button>
-              </div>
-              <div className="mt-2 space-y-1">
-                {memberUsers.map((user) => (
-                  <button
-                    key={user.id}
-                    className="flex w-full items-center gap-2 rounded border border-line2/60 px-2 py-1 text-left text-[11px] hover:text-fg"
-                    onClick={() => {
-                      setMemberExternal(user.id)
-                      setMemberLogin(user.login)
-                      setMemberEmail(user.email ?? '')
-                    }}
-                  >
-                    <span>{user.name || user.login}</span>
-                    <span className="font-mono text-[10px] text-muted">{user.email || user.id}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
 
 
       <Dialog open={!!connectFor} onOpenChange={(open) => !open && setConnectFor('')}>
