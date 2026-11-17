@@ -447,29 +447,6 @@ export default function ProvidersPage() {
     setEditInstance(connection.instance)
     setEditEnabled(connection.enabled)
   }
-  const addRule = useMutation({
-    mutationFn: () =>
-      api.createAssignmentRule({
-        workspaceId,
-        name: ruleName,
-        provider: ruleProvider || undefined,
-        instance: ruleInstance || undefined,
-        label: ruleLabel || undefined,
-        agentId: ruleAgent || undefined,
-        groupId: ruleGroup || undefined,
-        autoDispatch: ruleAuto,
-      }),
-    onSuccess: () => {
-      setRuleName('')
-      setRuleLabel('')
-      setRuleInstance('')
-      qc.invalidateQueries({ queryKey: ['assignment-rules', workspaceId] })
-    },
-  })
-  const deleteRule = useMutation({
-    mutationFn: (id: string) => api.deleteAssignmentRule(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['assignment-rules', workspaceId] }),
-  })
 
   return (
     <div className="mx-auto max-w-[1180px] px-6 py-5">
@@ -531,7 +508,7 @@ export default function ProvidersPage() {
                     </div>
                     {connections.filter((c) => c.provider === p.id).map((c) => (
                       <div key={c.id} className="mt-1 font-mono text-[10px] text-muted">
-                        {c.allBindings?.length ?? 0} projects · {c.baseUrl || 'default'}
+                        {c.allBindings?.length ?? 0} projects 闂?{c.baseUrl || 'default'}
                       </div>
                     ))}
                     <div className="mt-2 flex flex-wrap items-center gap-1">
@@ -745,9 +722,9 @@ export default function ProvidersPage() {
                   <span>
                     {t('providers.config')}: {connection.baseUrl || 'default'}
                   </span>
-                  <span>·</span>
-                  <span>{connection.authMethod}</span>
-                  <span>·</span>
+                  <span>|</span>
+                  <span>to</span>
+                  <span>|</span>
                   <span>{new Date(connection.createdAt).toLocaleDateString()}</span>
                 </div>
                 {connection.status === 'connected' && <ConnectionSyncStatus connectionId={connection.id} />}
@@ -799,7 +776,7 @@ export default function ProvidersPage() {
                               patchConn.mutate({ id: connection.id, body: { stateMap: { [local]: value } } })
                             }}
                           >
-                            <option value="">—</option>
+                            <option value="">-</option>
                             {connStates[connection.id].map((state) => (
                               <option key={state.id} value={state.id}>{state.name}</option>
                             ))}
@@ -833,7 +810,7 @@ export default function ProvidersPage() {
                     </Button>
                     {importRuntime && (
                       <span className="text-[10px] text-muted">
-                        {importRuntime.active}/{importRuntime.concurrency} active · {importRuntime.queued} queued
+                        {importRuntime.active}/{importRuntime.concurrency} active 闂?{importRuntime.queued} queued
                       </span>
                     )}
                     {imports.filter((batch) => batch.connectionId === connection.id).map((batch) => (
@@ -914,7 +891,7 @@ export default function ProvidersPage() {
               <span className="text-[12px] font-medium">{identity.login || identity.externalId}</span>
               <span className="font-mono text-[10.5px] text-muted">{identity.provider}</span>
               <span className="font-mono text-[10.5px] text-muted">{identity.externalId}</span>
-              <span className="text-[11px] text-muted">→</span>
+              <span className="text-[11px] text-muted">to</span>
               <Input
                 className="h-7 w-28"
                 value={linkMembers[identity.id] ?? identity.memberId}
@@ -983,7 +960,7 @@ export default function ProvidersPage() {
               <span className="text-[12px] font-medium">{identity.login || identity.externalId}</span>
               <span className="font-mono text-[10.5px] text-muted">{identity.provider}</span>
               <span className="font-mono text-[10.5px] text-muted">{identity.externalId}</span>
-              <span className="text-[11px] text-muted">→ {identity.memberId}</span>
+              <span className="text-[11px] text-muted">{'->'} {identity.memberId}</span>
               <button className="ml-auto text-muted hover:text-err" onClick={() => removeMemberIdentity.mutate(identity.id)}>
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
@@ -1084,92 +1061,10 @@ export default function ProvidersPage() {
         </div>
       </section>
 
-      <section className="mt-8">
-        <h2 className="text-[13px] font-medium">{t('providers.rules')}</h2>
-        <p className="mt-0.5 text-[11.5px] text-muted">{t('providers.rulesHint')}</p>
-        <div className="mt-2 space-y-2">
-          {rules.map((rule) => (
-            <div key={rule.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-panel/40 p-2.5">
-              <span className="text-[12px] font-medium">{rule.name || rule.id}</span>
-              <span className="font-mono text-[10.5px] text-muted">{rule.provider || '*'}</span>
-              <span className="font-mono text-[10.5px] text-muted">{rule.instance || '*'}</span>
-              {rule.label && <span className="rounded bg-panel2 px-1.5 py-0.5 text-[10px]">{rule.label}</span>}
-              <span className="ml-auto text-[10.5px] text-muted">
-                {rule.agentId} · {rule.autoDispatch ? t('providers.autoDispatch') : t('providers.assignOnly')}
-              </span>
-              <button className="text-muted hover:text-err" onClick={() => deleteRule.mutate(rule.id)}>
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-          {rules.length === 0 && <p className="text-[11.5px] text-muted">{t('providers.noRules')}</p>}
-        </div>
-        <form
-          className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-line bg-panel/40 p-2.5"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (ruleAgent || ruleGroup) addRule.mutate()
-          }}
-        >
-          <label className="text-[11px] text-muted">
-            {t('providers.ruleName')}
-            <Input className="mt-1 h-7 w-40" value={ruleName} onChange={(e) => setRuleName(e.target.value)} />
-          </label>
-          <label className="text-[11px] text-muted">
-            {t('meta.provider')}
-            <Input className="mt-1 h-7 w-28" value={ruleProvider} onChange={(e) => setRuleProvider(e.target.value)} />
-          </label>
-          <label className="text-[11px] text-muted">
-            {t('providers.instance')}
-            <Input className="mt-1 h-7 w-56" value={ruleInstance} onChange={(e) => setRuleInstance(e.target.value)} />
-          </label>
-          <label className="text-[11px] text-muted">
-            {t('common.labels')}
-            <Input className="mt-1 h-7 w-28" value={ruleLabel} onChange={(e) => setRuleLabel(e.target.value)} />
-          </label>
-          <label className="text-[11px] text-muted">
-            {t('providers.agent')}
-            <select
-              className="mt-1 h-7 rounded-md border border-line2 bg-panel px-2 text-[11px]"
-              value={ruleAgent}
-              onChange={(e) => setRuleAgent(e.target.value)}
-            >
-              <option value="">—</option>
-              {agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-[11px] text-muted">
-            {t('providers.group')}
-            <select
-              className="mt-1 h-7 rounded-md border border-line2 bg-panel px-2 text-[11px]"
-              value={ruleGroup}
-              onChange={(e) => setRuleGroup(e.target.value)}
-            >
-              <option value="">—</option>
-              {groups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-1.5 pb-1.5 text-[11px] text-muted">
-            <input type="checkbox" checked={ruleAuto} onChange={(e) => setRuleAuto(e.target.checked)} />
-            {t('providers.autoDispatch')}
-          </label>
-          <Button type="submit" size="sm" variant="primary" disabled={(!ruleAgent && !ruleGroup) || addRule.isPending}>
-            {t('common.add')}
-          </Button>
-        </form>
-      </section>
 
       <Dialog open={!!connectFor} onOpenChange={(open) => !open && setConnectFor('')}>
         <DialogContent
-          title={t('providers.connect') + (connectFor ? ` · ${connectFor}` : '')}
+          title={t('providers.connect') + (connectFor ? ` 闂?${connectFor}` : '')}
           description={activeProvider?.kind === 'task' ? t('providers.connectHint') : t('providers.connectHintChat')}
         >
           <form
@@ -1234,7 +1129,7 @@ export default function ProvidersPage() {
                       value={value}
                       onChange={(e) => setFieldValue(field.key, e.target.value)}
                     >
-                      <option value="">{field.placeholder || '—'}</option>
+                      <option value="">{field.placeholder || '-'}</option>
                       {(field.options ?? []).map((option) => (
                         <option key={option} value={option}>{option}</option>
                       ))}
@@ -1307,7 +1202,7 @@ export default function ProvidersPage() {
                 className="mt-1"
                 value={connectionName}
                 onChange={(e) => setConnectionName(e.target.value)}
-                placeholder={activeProvider ? `${activeProvider.name} · connection` : 'Connection name'}
+                placeholder={activeProvider ? `${activeProvider.name} 闂?connection` : 'Connection name'}
               />
             </label>
             {activeProvider?.kind === 'task' && (
@@ -1329,7 +1224,7 @@ export default function ProvidersPage() {
                     className="mt-1 min-h-20 w-full rounded-md border border-line2 bg-panel px-2 py-1 font-mono text-[11px]"
                     value={commentTemplate}
                     onChange={(e) => setCommentTemplate(e.target.value)}
-                    placeholder="{{status}} · {{branch}} · {{url}}"
+                    placeholder="{{status}} 闂?{{branch}} 闂?{{url}}"
                   />
                 </label>
                 {!configFields.some((field) => field.key === 'webhookSecret') && (
@@ -1425,7 +1320,7 @@ export default function ProvidersPage() {
 
       <Dialog open={!!accountsFor} onOpenChange={(open) => !open && setAccountsFor(null)}>
         <DialogContent
-          title={`${t('providers.accounts')} · ${accountsFor?.name ?? ''}`}
+          title={`${t('providers.accounts')} 闂?${accountsFor?.name ?? ''}`}
           description={t('providers.accountsHint')}
         >
           <div className="flex flex-col gap-3">
@@ -1493,7 +1388,7 @@ export default function ProvidersPage() {
 
       <Dialog open={!!bindingsFor} onOpenChange={(open) => !open && setBindingsFor(null)}>
         <DialogContent
-          title={`${t('providers.bindings')} · ${bindingsFor?.name ?? ''}`}
+          title={`${t('providers.bindings')} 闂?${bindingsFor?.name ?? ''}`}
           description={t('providers.bindingsHint')}
         >
           <div className="flex flex-col gap-3">
@@ -1593,7 +1488,7 @@ export default function ProvidersPage() {
 
       <Dialog open={!!reauthFor} onOpenChange={(open) => !open && setReauthFor(null)}>
         <DialogContent
-          title={`${t('providers.reconnect')} · ${reauthFor?.name ?? ''}`}
+          title={`${t('providers.reconnect')} 闂?${reauthFor?.name ?? ''}`}
           description={t('providers.reconnectHint')}
         >
           <form
@@ -1628,7 +1523,7 @@ export default function ProvidersPage() {
 
       <Dialog open={!!editFor} onOpenChange={(open) => !open && setEditFor(null)}>
         <DialogContent
-          title={`${t('providers.edit')} · ${editFor?.provider ?? ''}`}
+          title={`${t('providers.edit')} 闂?${editFor?.provider ?? ''}`}
           description={t('providers.config')}
         >
           <form
@@ -1726,12 +1621,12 @@ function ConnectionSyncStatus({ connectionId }: { connectionId: string }) {
   if (!cursor) return null
   return (
     <div className="mt-1 flex flex-wrap items-center gap-1 text-[10.5px] text-muted">
-      <span>同步</span>
-      <span>{cursor.lastSyncedAt ? new Date(cursor.lastSyncedAt).toLocaleString() : '尚未同步'}</span>
+      <span>Sync</span>
+      <span>{cursor.lastSyncedAt ? new Date(cursor.lastSyncedAt).toLocaleString() : 'Not synced'}</span>
       {cursor.lastError ? (
-        <span className="text-err">· {cursor.lastError}</span>
+        <span className="text-err">Error: {cursor.lastError}</span>
       ) : (
-        <span className="text-ok">· 正常</span>
+        <span className="text-ok">OK</span>
       )}
     </div>
   )

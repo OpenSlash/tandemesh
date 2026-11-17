@@ -9,6 +9,7 @@ import { cn } from '../lib/utils'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Dialog, DialogContent, DialogTrigger } from '../components/ui/dialog'
+import { AssignmentRulesPanel } from '../components/assignment-rules-panel'
 
 const TRIGGERS = [
   { value: 'any', labelKey: 'automations.triggerAny' },
@@ -441,6 +442,7 @@ export default function AutomationsPage() {
           <p className="px-3 py-10 text-center text-[12px] text-muted">{t('automations.emptyUnified')}</p>
         )}
       </div>
+      <AssignmentRulesPanel />
     </div>
   )
 }
