@@ -841,6 +841,7 @@ export const api = {
     agent?: string
     inbox?: string
     assignee?: string
+    member?: string
     iteration?: string
     unassigned?: boolean
   }) => {
@@ -848,6 +849,7 @@ export const api = {
     if (params?.workspace) query.set('workspace', params.workspace)
     if (params?.inbox) query.set('inbox', params.inbox)
     if (params?.assignee) query.set('assignee', params.assignee)
+    if (params?.member) query.set('member', params.member)
     if (params?.iteration) query.set('iteration', params.iteration)
     if (params?.status) query.set('status', params.status)
     if (params?.provider) query.set('provider', params.provider)

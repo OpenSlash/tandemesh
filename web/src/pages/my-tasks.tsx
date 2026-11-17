@@ -21,7 +21,7 @@ export default function MyTasksPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['my-tasks', scope, name],
-    queryFn: () => api.tasks({ workspace: scope, assignee: name }),
+    queryFn: () => api.tasks({ workspace: scope, member: name }),
     enabled: !!name,
   })
   const items = data?.items ?? []
