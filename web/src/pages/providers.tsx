@@ -10,6 +10,7 @@ import { Input } from '../components/ui/input'
 import { cn } from '../lib/utils'
 import { OAuthAppsDialog } from '../components/oauth-apps-dialog'
 import { PlaneCatalogPicker } from '../components/plane-catalog-picker'
+import { Drawer } from '../components/ui/drawer'
 
 const GROUPS: { kind: Provider['kind']; labelKey: string; icon: typeof Boxes }[] = [
   { kind: 'task', labelKey: 'providers.groupTask', icon: Boxes },
@@ -96,6 +97,7 @@ export default function ProvidersPage() {
   const [results, setResults] = useState<Record<string, string>>({})
   const [connectFor, setConnectFor] = useState('')
   const [oauthOpen, setOauthOpen] = useState(false)
+  const [detailsFor, setDetailsFor] = useState('')
   const [reuseConnectionId, setReuseConnectionId] = useState("")
   const [authKind, setAuthKind] = useState('token')
   const [fields, setFields] = useState<Record<string, string>>({})
@@ -519,6 +521,12 @@ export default function ProvidersPage() {
                             : t('providers.notConnected')}
                         </span>
                         <span className="font-mono text-[11px] text-muted">{p.id}</span>
+                        <button
+                          className="rounded border border-line2 px-1.5 py-0.5 text-[10px] text-muted hover:text-fg"
+                          onClick={() => setDetailsFor(p.id)}
+                        >
+                          Details
+                        </button>
                       </div>
                     </div>
                     {connections.filter((c) => c.provider === p.id).map((c) => (
@@ -597,10 +605,17 @@ export default function ProvidersPage() {
 
       {connectMsg && <p className="mt-4 text-[12px] text-muted">{connectMsg}</p>}
 
+      {detailsFor && (
+        <Drawer
+          open
+          onOpenChange={(open) => !open && setDetailsFor('')}
+          title={items.find((provider) => provider.id === detailsFor)?.name ?? detailsFor}
+          description="Connections, configuration and external identities"
+        >
       <section className="mt-8">
         <h2 className="text-[13px] font-medium">{t('providers.connections')}</h2>
         <div className="mt-2 space-y-2">
-          {connections.map((connection) => {
+          {connections.filter((connection) => connection.provider === detailsFor).map((connection) => {
             const webhook = connection.automationId
               ? `${window.location.origin}/webhooks/${connection.provider}/${connection.automationId}`
               : ''
@@ -884,7 +899,7 @@ export default function ProvidersPage() {
               </div>
             )
           })}
-          {connections.length === 0 && (
+          {connections.filter((connection) => connection.provider === detailsFor).length === 0 && (
             <p className="text-[11.5px] text-muted">{t('providers.noConnections')}</p>
           )}
         </div>
@@ -894,7 +909,7 @@ export default function ProvidersPage() {
         <h2 className="text-[13px] font-medium">{t('providers.identities')}</h2>
         <p className="mt-0.5 text-[11.5px] text-muted">{t('providers.identitiesHint')}</p>
         <div className="mt-2 space-y-2">
-          {identities.map((identity) => (
+          {identities.filter((identity) => identity.provider === detailsFor).map((identity) => (
             <div key={identity.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-panel/40 p-2.5">
               <span className="text-[12px] font-medium">{identity.login || identity.externalId}</span>
               <span className="font-mono text-[10.5px] text-muted">{identity.provider}</span>
@@ -956,6 +971,8 @@ export default function ProvidersPage() {
           {addIdentity.error && <p className="text-[11.5px] text-err">{String(addIdentity.error.message)}</p>}
         </div>
       </section>
+        </Drawer>
+      )}
 
       <section className="mt-8">
         <h2 className="text-[13px] font-medium">{t('providers.memberIdentities')}</h2>
