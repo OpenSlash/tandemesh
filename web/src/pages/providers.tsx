@@ -882,7 +882,7 @@ export default function ProvidersPage() {
         </div>
       </section>
 
-      <section className="mt-8">
+      <section className="hidden">
         <h2 className="text-[13px] font-medium">{t('providers.identities')}</h2>
         <p className="mt-0.5 text-[11.5px] text-muted">{t('providers.identitiesHint')}</p>
         <div className="mt-2 space-y-2">
@@ -951,7 +951,7 @@ export default function ProvidersPage() {
         </Drawer>
       )}
 
-      <section className="mt-8">
+      <section className="hidden">
         <h2 className="text-[13px] font-medium">{t('providers.memberIdentities')}</h2>
         <p className="mt-0.5 text-[11.5px] text-muted">{t('providers.memberIdentitiesHint')}</p>
         <div className="mt-2 space-y-2">

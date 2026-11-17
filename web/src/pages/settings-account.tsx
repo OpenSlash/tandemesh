@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useI18n } from '../lib/i18n'
+import { useWorkspace } from '../lib/workspace'
+import { MemberIdentitiesPanel } from '../components/member-identities-panel'
 
 export default function SettingsAccountPage() {
   const { t } = useI18n()
   const { data: me } = useQuery({ queryKey: ['me'], queryFn: api.me })
+  const { workspaceId } = useWorkspace()
 
   return (
     <div className="mx-auto max-w-[760px] px-8 py-7">
@@ -16,6 +19,7 @@ export default function SettingsAccountPage() {
           {t('settings.signedInAs')}: <span className="font-medium">{me?.name ?? '—'}</span>
         </p>
       </section>
+      <MemberIdentitiesPanel workspaceId={workspaceId} />
     </div>
   )
 }

@@ -8,6 +8,7 @@ import { useWorkspace } from '../lib/workspace'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { WorkspaceAddProject } from '../components/workspace-add-project'
+import { ExternalIdentitiesPanel } from '../components/external-identities-panel'
 
 export default function WorkspaceSettingsPage() {
   const { t } = useI18n()
@@ -145,6 +146,7 @@ export default function WorkspaceSettingsPage() {
           )}
         </div>
       </section>
+      <ExternalIdentitiesPanel workspaceId={id} />
       <WorkspaceAddProject
         workspaceId={id}
         connections={connectionsData?.items ?? []}
