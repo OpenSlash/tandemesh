@@ -130,6 +130,7 @@ export default function AutomationsPage() {
   const removeSchedule = useMutation({ mutationFn: (id: string) => api.deleteAutomation(id), onSuccess: invalidate })
 
   const rows = (data?.items ?? [])
+    .filter((row: UnifiedAutomation) => row.triggerKind !== 'task.synced')
     .filter((row: UnifiedAutomation) =>
       tab === 'all' ? true : tab === 'scheduled' ? row.kind === 'schedule' : row.kind === 'event',
     )
