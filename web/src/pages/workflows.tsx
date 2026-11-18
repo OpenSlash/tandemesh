@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Play, Plus, RotateCcw, Workflow as WorkflowIcon, X } from 'lucide-react'
 import { api, type Workflow, type WorkflowNode } from '../lib/api'
@@ -22,7 +22,7 @@ export default function WorkflowsPage() {
   const [nodesText, setNodesText] = useState(DEFAULT_NODES)
   const [runFor, setRunFor] = useState<Workflow | null>(null)
   const [taskId, setTaskId] = useState('')
-  const [selected, setSelected] = useState('')
+  const [selected, setSelected] = useState(() => new URLSearchParams(window.location.search).get('run') ?? '')
   const [message, setMessage] = useState('')
 
   const { data: workflowsData } = useQuery({ queryKey: ['workflows', workspaceId], queryFn: () => api.workflows(workspaceId) })

@@ -140,7 +140,7 @@ func (s *Server) listWorkflowRuns(w http.ResponseWriter, r *http.Request) {
 	if !s.requireWorkspace(w, r, workspaceID) {
 		return
 	}
-	items, err := s.store.ListWorkflowRuns(r.Context(), workspaceID, 100)
+	items, err := s.store.ListWorkflowRuns(r.Context(), workspaceID, r.URL.Query().Get("task"), 100)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
 		return

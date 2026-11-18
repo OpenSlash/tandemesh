@@ -1528,8 +1528,8 @@ export const api = {
     request<Workflow>('/api/v1/workflows', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) }),
   startWorkflow: (id: string, body: { taskId?: string }) =>
     request<WorkflowRun>(`/api/v1/workflows/${id}/runs`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) }),
-  workflowRuns: (workspace: string) =>
-    request<List<WorkflowRun>>(`/api/v1/workflow-runs?workspace=${workspace}`),
+  workflowRuns: (workspace: string, task?: string) =>
+    request<List<WorkflowRun>>(`/api/v1/workflow-runs?workspace=${workspace}${task ? `&task=${encodeURIComponent(task)}` : ''}`),
   workflowRun: (id: string) =>
     request<WorkflowRun>(`/api/v1/workflow-runs/${id}`),
   gateWorkflowRun: (id: string, body: { nodeId?: string; action: 'approve' | 'reject' | 'retry'; target?: string; note?: string }) =>

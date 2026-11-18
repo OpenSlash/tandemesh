@@ -114,7 +114,7 @@ func (s *Store) GetWorkflowRun(ctx context.Context, id string) (*domain.Workflow
 	return &run, nil
 }
 
-func (s *Store) ListWorkflowRuns(ctx context.Context, workspaceID string, limit int) ([]*domain.WorkflowRun, error) {
+func (s *Store) ListWorkflowRuns(ctx context.Context, workspaceID, taskID string, limit int) ([]*domain.WorkflowRun, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
@@ -123,6 +123,10 @@ func (s *Store) ListWorkflowRuns(ctx context.Context, workspaceID string, limit 
 	if workspaceID != "" {
 		q += " WHERE workspace_id = ?"
 		args = append(args, workspaceID)
+	}
+	if taskID != "" {
+		q += " AND task_id = ?"
+		args = append(args, taskID)
 	}
 	q += " ORDER BY created_at_ms DESC LIMIT ?"
 	args = append(args, limit)
