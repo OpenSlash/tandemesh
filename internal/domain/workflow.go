@@ -18,14 +18,17 @@ const (
 )
 
 type WorkflowNode struct {
-	ID      string `json:"id"`
-	Kind    string `json:"kind"`
-	Name    string `json:"name"`
-	AgentID string `json:"agentId,omitempty"`
-	Prompt  string `json:"prompt,omitempty"`
-	Command string `json:"command,omitempty"`
-	Next    string `json:"next,omitempty"`
-	OnFail  string `json:"onFail,omitempty"`
+	ID         string `json:"id"`
+	Kind       string `json:"kind"`
+	Name       string `json:"name"`
+	AgentID    string `json:"agentId,omitempty"`
+	Role       string `json:"role,omitempty"`
+	Model      string `json:"model,omitempty"`
+	WorkflowID string `json:"workflowId,omitempty"`
+	Prompt     string `json:"prompt,omitempty"`
+	Command    string `json:"command,omitempty"`
+	Next       string `json:"next,omitempty"`
+	OnFail     string `json:"onFail,omitempty"`
 }
 
 type Workflow struct {

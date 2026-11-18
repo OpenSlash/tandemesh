@@ -44,3 +44,23 @@ func waitWorkflow(t *testing.T, url, status, current string) domain.WorkflowRun 
 	t.Fatalf("workflow did not reach %s/%s", status, current)
 	return domain.WorkflowRun{}
 }
+
+func TestWorkflowSubflow(t *testing.T) {
+	ts := newTestServer(t)
+	child := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "child",
+		"nodes": []map[string]any{{"id": "c", "kind": "script", "name": "Child", "command": "echo CHILD"}},
+	})
+	parent := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "parent",
+		"nodes": []map[string]any{
+			{"id": "sub", "kind": "workflow", "name": "Sub", "workflowId": child.ID, "next": "after"},
+			{"id": "after", "kind": "script", "name": "After", "command": "echo AFTER"},
+		},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+parent.ID+"/runs", map[string]any{})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	if len(final.Nodes) != 2 || final.Nodes[0].Status != domain.WorkflowNodeSucceeded || strings.TrimSpace(final.Nodes[1].Output) != "AFTER" {
+		t.Fatalf("subflow nodes = %+v", final.Nodes)
+	}
+}

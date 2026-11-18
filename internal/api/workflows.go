@@ -296,7 +296,11 @@ func (s *Server) executeWorkflow(runID, start string) {
 			if prompt == "" {
 				prompt, _ = s.taskPrompt(context.Background(), task, "")
 			}
-			agentRun, err := s.createTaskRun(context.Background(), task, def.AgentID, "lead", "", "", prompt)
+			role := def.Role
+			if role == "" {
+				role = "lead"
+			}
+			agentRun, err := s.createTaskRunModel(context.Background(), task, def.AgentID, role, "", "", prompt, def.Model)
 			if err != nil {
 				node.Status = domain.WorkflowNodeFailed
 				node.Error = err.Error()
@@ -310,6 +314,35 @@ func (s *Server) executeWorkflow(runID, start string) {
 			run.Status = domain.WorkflowWaiting
 			_ = s.store.UpdateWorkflowRun(context.Background(), run)
 			go s.watchWorkflowAgent(run.ID, current, agentRun.ID)
+			return
+		case "workflow":
+			childWF, err := s.store.GetWorkflow(context.Background(), def.WorkflowID)
+			if err != nil || childWF == nil || childWF.WorkspaceID != run.WorkspaceID {
+				node.Status = domain.WorkflowNodeFailed
+				node.Error = "child workflow not found"
+				run.Status = domain.WorkflowFailed
+				run.Error = node.Error
+				_ = s.store.UpdateWorkflowRun(context.Background(), run)
+				return
+			}
+			child := &domain.WorkflowRun{WorkflowID: childWF.ID, WorkspaceID: run.WorkspaceID, TaskID: run.TaskID, Status: domain.WorkflowRunning, Nodes: initialNodeRuns(childWF.Nodes)}
+			if len(childWF.Nodes) > 0 {
+				child.CurrentNode = childWF.Nodes[0].ID
+			}
+			if err := s.store.CreateWorkflowRun(context.Background(), child); err != nil {
+				node.Status = domain.WorkflowNodeFailed
+				node.Error = err.Error()
+				run.Status = domain.WorkflowFailed
+				run.Error = err.Error()
+				_ = s.store.UpdateWorkflowRun(context.Background(), run)
+				return
+			}
+			node.RunID = child.ID
+			node.Status = domain.WorkflowNodeRunning
+			run.Status = domain.WorkflowWaiting
+			_ = s.store.UpdateWorkflowRun(context.Background(), run)
+			go s.executeWorkflow(child.ID, childWF.Nodes[0].ID)
+			go s.watchWorkflowChild(run.ID, current, child.ID)
 			return
 		case "gate":
 			node.Status = domain.WorkflowNodeWaiting
@@ -385,6 +418,60 @@ func (s *Server) watchWorkflowAgent(runID, nodeID, agentRunID string) {
 		return
 	}
 }
+func (s *Server) watchWorkflowChild(runID, nodeID, childID string) {
+	deadline := time.Now().Add(2 * time.Hour)
+	for time.Now().Before(deadline) {
+		time.Sleep(2 * time.Second)
+		child, err := s.store.GetWorkflowRun(context.Background(), childID)
+		if err != nil || child == nil {
+			continue
+		}
+		if child.Status != domain.WorkflowSucceeded && child.Status != domain.WorkflowFailed && child.Status != domain.WorkflowCancelled {
+			continue
+		}
+		s.workflowMu.Lock()
+		run, _ := s.store.GetWorkflowRun(context.Background(), runID)
+		if run == nil {
+			s.workflowMu.Unlock()
+			return
+		}
+		wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+		if wf == nil {
+			s.workflowMu.Unlock()
+			return
+		}
+		node := findNodeRun(run, nodeID)
+		def := findNode(wf.Nodes, nodeID)
+		if node == nil || def == nil {
+			s.workflowMu.Unlock()
+			return
+		}
+		now := time.Now().UTC()
+		node.FinishedAt = &now
+		next := def.Next
+		if child.Status == domain.WorkflowSucceeded {
+			node.Status = domain.WorkflowNodeSucceeded
+			node.Output = "child workflow " + child.ID + " succeeded"
+			run.CurrentNode = next
+			run.Status = domain.WorkflowRunning
+		} else {
+			node.Status = domain.WorkflowNodeFailed
+			node.Error = "child workflow " + child.Status
+			run.Status = domain.WorkflowFailed
+			run.Error = node.Error
+		}
+		if run.Status == domain.WorkflowRunning && next == "" {
+			run.Status = domain.WorkflowSucceeded
+			run.CurrentNode = ""
+		}
+		_ = s.store.UpdateWorkflowRun(context.Background(), run)
+		s.workflowMu.Unlock()
+		if run.Status == domain.WorkflowRunning && next != "" {
+			s.executeWorkflow(runID, next)
+		}
+		return
+	}
+}
 func runScript(command string) (string, error) {
 	if strings.TrimSpace(command) == "" {
 		return "", fmt.Errorf("command is required")
@@ -427,6 +514,10 @@ func validateWorkflowNodes(nodes []domain.WorkflowNode) error {
 				return fmt.Errorf("script node %s needs a command", node.ID)
 			}
 		case "gate":
+		case "workflow":
+			if strings.TrimSpace(node.WorkflowID) == "" {
+				return fmt.Errorf("workflow node %s needs a workflowId", node.ID)
+			}
 		case "agent":
 			if strings.TrimSpace(node.AgentID) == "" {
 				return fmt.Errorf("agent node %s needs an agentId", node.ID)

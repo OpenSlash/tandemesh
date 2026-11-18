@@ -377,6 +377,10 @@ func (s *Server) ensureTaskRunSession(ctx context.Context, task *domain.Task, ag
 
 // createTaskRun persists one run under a task.
 func (s *Server) createTaskRun(ctx context.Context, task *domain.Task, agent, role, repo, base, prompt string) (*domain.Run, error) {
+	return s.createTaskRunModel(ctx, task, agent, role, repo, base, prompt, "")
+}
+
+func (s *Server) createTaskRunModel(ctx context.Context, task *domain.Task, agent, role, repo, base, prompt, model string) (*domain.Run, error) {
 	if prefix := s.skillPrompt(ctx, task.WorkspaceID, agent); prefix != "" {
 		prompt = prefix + "\n\n" + prompt
 	}
@@ -397,6 +401,7 @@ func (s *Server) createTaskRun(ctx context.Context, task *domain.Task, agent, ro
 		Base:      base,
 		Branch:    "orca/" + id[len(id)-8:],
 		Prompt:    prompt,
+		Model:     model,
 		SessionID: s.ensureTaskRunSession(ctx, task, agent, repo, base),
 		TaskID:    task.ID,
 		Role:      role,
