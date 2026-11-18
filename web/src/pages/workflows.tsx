@@ -126,6 +126,12 @@ export default function WorkflowsPage() {
                     </div>
                     {node.output && <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap rounded bg-black/20 p-1.5 text-[10px] text-muted">{node.output}</pre>}
                     {node.error && <p className="mt-1 text-[10.5px] text-err">{node.error}</p>}
+                    {(node.artifacts ?? []).map((artifact) => (
+                      <details key={artifact.path} className="mt-1 rounded border border-line2/60 px-1.5 py-1 text-[10px]">
+                        <summary className="cursor-pointer text-muted">{artifact.name} · {artifact.size} bytes</summary>
+                        <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap text-[10px] text-muted">{artifact.content}</pre>
+                      </details>
+                    ))}
                     {node.kind === 'agent' && node.runId && <p className="mt-1 font-mono text-[10px] text-muted">run {node.runId}</p>}
                     {node.status === 'waiting' && (
                       <div className="mt-1 flex gap-1">

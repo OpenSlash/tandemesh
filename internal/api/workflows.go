@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -268,6 +270,7 @@ func (s *Server) executeWorkflow(runID, start string) {
 
 		switch def.Kind {
 		case "script":
+			artifactDir := s.workflowArtifactDir(run.ID, current)
 			attempts := def.Retries + 1
 			if attempts < 1 {
 				attempts = 1
@@ -275,7 +278,7 @@ func (s *Server) executeWorkflow(runID, start string) {
 			var out string
 			var err error
 			for attempt := 0; attempt < attempts; attempt++ {
-				out, err = runScript(def.Command)
+				out, err = runScript(def.Command, artifactDir)
 				if err == nil {
 					break
 				}
@@ -283,6 +286,7 @@ func (s *Server) executeWorkflow(runID, start string) {
 			finish := time.Now().UTC()
 			node.FinishedAt = &finish
 			node.Output = out
+			node.Artifacts = collectArtifacts(artifactDir)
 			if err != nil {
 				node.Status = domain.WorkflowNodeFailed
 				node.Error = err.Error()
@@ -502,7 +506,32 @@ func (s *Server) watchWorkflowChild(runID, nodeID, childID string) {
 		return
 	}
 }
-func runScript(command string) (string, error) {
+func (s *Server) workflowArtifactDir(runID, nodeID string) string {
+	dir := filepath.Join(filepath.Dir(s.cfg.DBPath), "artifacts", runID, nodeID)
+	_ = os.MkdirAll(dir, 0o755)
+	return dir
+}
+func collectArtifacts(dir string) []domain.WorkflowArtifact {
+	var out []domain.WorkflowArtifact
+	_ = filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return nil
+		}
+		rel, _ := filepath.Rel(dir, path)
+		info, infoErr := entry.Info()
+		if infoErr != nil || info.Size() > 64*1024 {
+			return nil
+		}
+		raw, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return nil
+		}
+		out = append(out, domain.WorkflowArtifact{Name: entry.Name(), Path: rel, Size: int(info.Size()), Content: string(raw)})
+		return nil
+	})
+	return out
+}
+func runScript(command, artifactDir string) (string, error) {
 	if strings.TrimSpace(command) == "" {
 		return "", fmt.Errorf("command is required")
 	}
@@ -514,6 +543,7 @@ func runScript(command string) (string, error) {
 	} else {
 		cmd = exec.CommandContext(ctx, "sh", "-c", command)
 	}
+	cmd.Env = append(os.Environ(), "TANDEMESH_ARTIFACT_DIR="+artifactDir)
 	out, err := cmd.CombinedOutput()
 	text := string(out)
 	if len(text) > 64*1024 {

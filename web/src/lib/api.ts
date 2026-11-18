@@ -659,6 +659,13 @@ export interface Workflow {
   updatedAt: string
 }
 
+export interface WorkflowArtifact {
+  name: string
+  path: string
+  size: number
+  content?: string
+}
+
 export interface WorkflowNodeRun {
   nodeId: string
   kind: string
@@ -667,6 +674,7 @@ export interface WorkflowNodeRun {
   output?: string
   error?: string
   runId?: string
+  artifacts?: WorkflowArtifact[]
   startedAt?: string
   finishedAt?: string
 }

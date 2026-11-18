@@ -1,6 +1,7 @@
 package api
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -79,4 +80,26 @@ func TestWorkflowOnFail(t *testing.T) {
 	if len(final.Nodes) != 2 || final.Nodes[0].Status != domain.WorkflowNodeFailed || strings.TrimSpace(final.Nodes[1].Output) != "RECOVERED" {
 		t.Fatalf("fallback nodes = %+v", final.Nodes)
 	}
+}
+
+func TestWorkflowArtifacts(t *testing.T) {
+	ts := newTestServer(t)
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "artifacts",
+		"nodes": []map[string]any{{"id": "report", "kind": "script", "name": "Report", "command": artifactCommand()}},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wf.ID+"/runs", map[string]any{})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	if len(final.Nodes) != 1 || len(final.Nodes[0].Artifacts) != 1 {
+		t.Fatalf("artifacts = %+v", final.Nodes)
+	}
+	if final.Nodes[0].Artifacts[0].Name != "report.txt" || strings.TrimSpace(final.Nodes[0].Artifacts[0].Content) != "hello" {
+		t.Fatalf("artifact = %+v", final.Nodes[0].Artifacts[0])
+	}
+}
+func artifactCommand() string {
+	if runtime.GOOS == "windows" {
+		return `echo hello>%TANDEMESH_ARTIFACT_DIR%\report.txt`
+	}
+	return `echo hello>$TANDEMESH_ARTIFACT_DIR/report.txt`
 }

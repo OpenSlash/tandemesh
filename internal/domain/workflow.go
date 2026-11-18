@@ -42,16 +42,23 @@ type Workflow struct {
 	UpdatedAt   time.Time      `json:"updatedAt"`
 }
 
+type WorkflowArtifact struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Size    int    `json:"size"`
+	Content string `json:"content,omitempty"`
+}
 type WorkflowNodeRun struct {
-	NodeID     string     `json:"nodeId"`
-	Kind       string     `json:"kind"`
-	Name       string     `json:"name"`
-	Status     string     `json:"status"`
-	Output     string     `json:"output,omitempty"`
-	Error      string     `json:"error,omitempty"`
-	RunID      string     `json:"runId,omitempty"`
-	StartedAt  *time.Time `json:"startedAt,omitempty"`
-	FinishedAt *time.Time `json:"finishedAt,omitempty"`
+	NodeID     string             `json:"nodeId"`
+	Kind       string             `json:"kind"`
+	Name       string             `json:"name"`
+	Status     string             `json:"status"`
+	Output     string             `json:"output,omitempty"`
+	Error      string             `json:"error,omitempty"`
+	RunID      string             `json:"runId,omitempty"`
+	Artifacts  []WorkflowArtifact `json:"artifacts,omitempty"`
+	StartedAt  *time.Time         `json:"startedAt,omitempty"`
+	FinishedAt *time.Time         `json:"finishedAt,omitempty"`
 }
 
 type WorkflowRun struct {
