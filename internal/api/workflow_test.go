@@ -64,3 +64,19 @@ func TestWorkflowSubflow(t *testing.T) {
 		t.Fatalf("subflow nodes = %+v", final.Nodes)
 	}
 }
+
+func TestWorkflowOnFail(t *testing.T) {
+	ts := newTestServer(t)
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "fallback",
+		"nodes": []map[string]any{
+			{"id": "bad", "kind": "script", "name": "Bad", "command": "tandemesh-nonexistent-command", "retries": 1, "onFail": "recover"},
+			{"id": "recover", "kind": "script", "name": "Recover", "command": "echo RECOVERED"},
+		},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wf.ID+"/runs", map[string]any{})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	if len(final.Nodes) != 2 || final.Nodes[0].Status != domain.WorkflowNodeFailed || strings.TrimSpace(final.Nodes[1].Output) != "RECOVERED" {
+		t.Fatalf("fallback nodes = %+v", final.Nodes)
+	}
+}

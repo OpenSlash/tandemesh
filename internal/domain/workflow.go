@@ -29,6 +29,7 @@ type WorkflowNode struct {
 	Command    string `json:"command,omitempty"`
 	Next       string `json:"next,omitempty"`
 	OnFail     string `json:"onFail,omitempty"`
+	Retries    int    `json:"retries,omitempty"`
 }
 
 type Workflow struct {

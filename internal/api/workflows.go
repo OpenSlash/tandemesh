@@ -268,20 +268,37 @@ func (s *Server) executeWorkflow(runID, start string) {
 
 		switch def.Kind {
 		case "script":
-			out, err := runScript(def.Command)
+			attempts := def.Retries + 1
+			if attempts < 1 {
+				attempts = 1
+			}
+			var out string
+			var err error
+			for attempt := 0; attempt < attempts; attempt++ {
+				out, err = runScript(def.Command)
+				if err == nil {
+					break
+				}
+			}
 			finish := time.Now().UTC()
 			node.FinishedAt = &finish
 			node.Output = out
 			if err != nil {
 				node.Status = domain.WorkflowNodeFailed
 				node.Error = err.Error()
-				run.Status = domain.WorkflowFailed
-				run.Error = err.Error()
-				_ = s.store.UpdateWorkflowRun(context.Background(), run)
-				return
+				if def.OnFail != "" {
+					current = def.OnFail
+					run.Status = domain.WorkflowRunning
+				} else {
+					run.Status = domain.WorkflowFailed
+					run.Error = err.Error()
+					_ = s.store.UpdateWorkflowRun(context.Background(), run)
+					return
+				}
+			} else {
+				node.Status = domain.WorkflowNodeSucceeded
+				current = def.Next
 			}
-			node.Status = domain.WorkflowNodeSucceeded
-			current = def.Next
 		case "agent":
 			task, err := s.store.GetTask(context.Background(), run.TaskID)
 			if err != nil || task == nil {
@@ -394,6 +411,7 @@ func (s *Server) watchWorkflowAgent(runID, nodeID, agentRunID string) {
 		}
 		now := time.Now().UTC()
 		node.FinishedAt = &now
+		next := def.Next
 		if agentRun.Status == domain.RunSucceeded {
 			node.Status = domain.WorkflowNodeSucceeded
 			node.Output = "agent run " + agentRun.ID + " succeeded"
@@ -402,10 +420,17 @@ func (s *Server) watchWorkflowAgent(runID, nodeID, agentRunID string) {
 		} else {
 			node.Status = domain.WorkflowNodeFailed
 			node.Error = "agent run failed"
-			run.Status = domain.WorkflowFailed
-			run.Error = node.Error
+			if def.OnFail != "" {
+				next = def.OnFail
+				run.Status = domain.WorkflowRunning
+			} else {
+				run.Status = domain.WorkflowFailed
+				run.Error = node.Error
+			}
 		}
-		next := def.Next
+		if next == "" {
+			next = def.Next
+		}
 		if run.Status == domain.WorkflowSucceeded || (run.Status == domain.WorkflowRunning && next == "") {
 			run.Status = domain.WorkflowSucceeded
 			run.CurrentNode = ""
@@ -457,8 +482,13 @@ func (s *Server) watchWorkflowChild(runID, nodeID, childID string) {
 		} else {
 			node.Status = domain.WorkflowNodeFailed
 			node.Error = "child workflow " + child.Status
-			run.Status = domain.WorkflowFailed
-			run.Error = node.Error
+			if def.OnFail != "" {
+				next = def.OnFail
+				run.Status = domain.WorkflowRunning
+			} else {
+				run.Status = domain.WorkflowFailed
+				run.Error = node.Error
+			}
 		}
 		if run.Status == domain.WorkflowRunning && next == "" {
 			run.Status = domain.WorkflowSucceeded
@@ -529,6 +559,9 @@ func validateWorkflowNodes(nodes []domain.WorkflowNode) error {
 	for _, node := range nodes {
 		if node.Next != "" && !seen[node.Next] {
 			return fmt.Errorf("node %s references missing next node %s", node.ID, node.Next)
+		}
+		if node.OnFail != "" && !seen[node.OnFail] {
+			return fmt.Errorf("node %s references missing onFail node %s", node.ID, node.OnFail)
 		}
 	}
 	return nil
