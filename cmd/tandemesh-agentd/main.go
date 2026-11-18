@@ -309,6 +309,10 @@ func leaseLoop(ctx context.Context, c *http.Client, plane, machineID string, run
 
 func execute(ctx context.Context, out sink, r *run, runner agent.Runner, workdir string, mgr *workspace.Manager, c *http.Client, plane, machineID string, log *slog.Logger) {
 	log.Info("run leased", "run", r.ID, "repo", r.Repo, "branch", r.Branch)
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	ctx = runCtx
+	go watchCancel(ctx, c, plane, r.ID, cancel, log)
 	out.Started(ctx, r.ID, r.Fence)
 	stopRenew := make(chan struct{})
 	go renewLoop(ctx, c, plane, machineID, r, stopRenew, log)
@@ -452,6 +456,32 @@ func execute(ctx context.Context, out sink, r *run, runner agent.Runner, workdir
 	log.Info("run finished", "run", r.ID, "status", res.Status)
 }
 
+func watchCancel(ctx context.Context, c *http.Client, plane, runID string, cancel context.CancelFunc, log *slog.Logger) {
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			req, _ := http.NewRequestWithContext(ctx, http.MethodGet, plane+"/api/v1/agentd/runs/"+runID+"/status", nil)
+			resp, err := c.Do(req)
+			if err != nil {
+				continue
+			}
+			var body struct {
+				Status string `json:"status"`
+			}
+			_ = json.NewDecoder(resp.Body).Decode(&body)
+			resp.Body.Close()
+			if body.Status == "cancelled" {
+				log.Info("run cancelled remotely", "run", runID)
+				cancel()
+				return
+			}
+		}
+	}
+}
 func event(ctx context.Context, c *http.Client, plane, runID string, fence int64, typ string, payload map[string]any) {
 	post(ctx, c, plane+"/api/v1/agentd/runs/"+runID+"/events", map[string]any{
 		"type":    typ,

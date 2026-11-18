@@ -404,6 +404,7 @@ func (s *Server) Router() http.Handler {
 		r.Post("/agentd/runs/{id}/questions", s.createAgentdQuestion)
 		r.Get("/agentd/questions/{id}", s.getAgentdQuestion)
 		r.Post("/agentd/runs/{id}/finish", s.finishRun)
+		r.Get("/agentd/runs/{id}/status", s.agentdRunStatus)
 		r.Post("/agentd/runs/{id}/usage", s.runUsage)
 	})
 
@@ -1009,6 +1010,14 @@ func (s *Server) runUsage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (s *Server) agentdRunStatus(w http.ResponseWriter, r *http.Request) {
+	run, err := s.store.GetRun(r.Context(), chi.URLParam(r, "id"))
+	if err != nil || run == nil {
+		writeErr(w, http.StatusNotFound, "E_RUN", "run not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"id": run.ID, "status": run.Status})
+}
 func (s *Server) finishRun(w http.ResponseWriter, r *http.Request) {
 	var req finishRequest
 	if err := decodeJSON(w, r, &req); err != nil {
