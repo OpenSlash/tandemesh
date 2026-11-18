@@ -117,3 +117,26 @@ func TestWorkflowCancel(t *testing.T) {
 		t.Fatalf("cancel status = %s", cancelled.Status)
 	}
 }
+
+func TestWorkflowCancelCascades(t *testing.T) {
+	ts := newTestServer(t)
+	child := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "gate-child",
+		"nodes": []map[string]any{{"id": "hold", "kind": "gate", "name": "Hold"}},
+	})
+	parent := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "parent",
+		"nodes": []map[string]any{{"id": "sub", "kind": "workflow", "name": "Sub", "workflowId": child.ID}},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+parent.ID+"/runs", map[string]any{})
+	waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowWaiting, "sub")
+	current := getJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflow-runs/"+run.ID)
+	if len(current.Nodes) == 0 || current.Nodes[0].RunID == "" {
+		t.Fatalf("child run missing: %+v", current.Nodes)
+	}
+	postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflow-runs/"+run.ID+"/cancel", map[string]any{})
+	childRun := getJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflow-runs/"+current.Nodes[0].RunID)
+	if childRun.Status != domain.WorkflowCancelled {
+		t.Fatalf("child status = %s", childRun.Status)
+	}
+}

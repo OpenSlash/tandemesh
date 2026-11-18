@@ -293,10 +293,30 @@ func (s *Server) cancelWorkflowRun(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusConflict, "E_STATE", "workflow is already finished")
 		return
 	}
+	s.cancelWorkflowTree(r.Context(), run, 0)
+	writeJSON(w, http.StatusOK, run)
+}
+func (s *Server) cancelWorkflowTree(ctx context.Context, run *domain.WorkflowRun, depth int) {
+	if run == nil || depth > 8 {
+		return
+	}
 	run.Status = domain.WorkflowCancelled
 	run.CurrentNode = ""
-	_ = s.store.UpdateWorkflowRun(r.Context(), run)
-	writeJSON(w, http.StatusOK, run)
+	_ = s.store.UpdateWorkflowRun(ctx, run)
+	for _, node := range run.Nodes {
+		if node.RunID == "" {
+			continue
+		}
+		switch node.Kind {
+		case "agent":
+			_, _ = s.store.CancelRun(ctx, node.RunID)
+		case "workflow":
+			child, _ := s.store.GetWorkflowRun(ctx, node.RunID)
+			if child != nil && child.Status != domain.WorkflowSucceeded && child.Status != domain.WorkflowFailed && child.Status != domain.WorkflowCancelled {
+				s.cancelWorkflowTree(ctx, child, depth+1)
+			}
+		}
+	}
 }
 func (s *Server) executeWorkflow(runID, start string) {
 	s.workflowMu.Lock()
