@@ -234,6 +234,70 @@ func (s *Server) gateWorkflowRun(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, run)
 }
 
+func (s *Server) retryWorkflowRun(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		NodeID string `json:"nodeId"`
+	}
+	_ = decodeJSON(w, r, &req)
+	run, err := s.store.GetWorkflowRun(r.Context(), chi.URLParam(r, "id"))
+	if err != nil || run == nil {
+		writeErr(w, http.StatusNotFound, "E_RUN", "workflow run not found")
+		return
+	}
+	if !s.requireWorkspace(w, r, run.WorkspaceID) {
+		return
+	}
+	if run.Status == domain.WorkflowRunning {
+		writeErr(w, http.StatusConflict, "E_STATE", "workflow is already running")
+		return
+	}
+	wf, _ := s.store.GetWorkflow(r.Context(), run.WorkflowID)
+	if wf == nil {
+		writeErr(w, http.StatusNotFound, "E_WORKFLOW", "workflow not found")
+		return
+	}
+	target := req.NodeID
+	if target == "" {
+		target = run.CurrentNode
+	}
+	if target == "" {
+		writeErr(w, http.StatusBadRequest, "E_NODE", "nodeId is required")
+		return
+	}
+	if findNode(wf.Nodes, target) == nil {
+		writeErr(w, http.StatusBadRequest, "E_NODE", "node not found")
+		return
+	}
+	resetFrom(run, wf.Nodes, target)
+	run.Status = domain.WorkflowRunning
+	run.CurrentNode = target
+	run.Error = ""
+	if err := s.store.UpdateWorkflowRun(r.Context(), run); err != nil {
+		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
+		return
+	}
+	go s.executeWorkflow(run.ID, target)
+	writeJSON(w, http.StatusOK, run)
+}
+
+func (s *Server) cancelWorkflowRun(w http.ResponseWriter, r *http.Request) {
+	run, err := s.store.GetWorkflowRun(r.Context(), chi.URLParam(r, "id"))
+	if err != nil || run == nil {
+		writeErr(w, http.StatusNotFound, "E_RUN", "workflow run not found")
+		return
+	}
+	if !s.requireWorkspace(w, r, run.WorkspaceID) {
+		return
+	}
+	if run.Status == domain.WorkflowSucceeded || run.Status == domain.WorkflowFailed || run.Status == domain.WorkflowCancelled {
+		writeErr(w, http.StatusConflict, "E_STATE", "workflow is already finished")
+		return
+	}
+	run.Status = domain.WorkflowCancelled
+	run.CurrentNode = ""
+	_ = s.store.UpdateWorkflowRun(r.Context(), run)
+	writeJSON(w, http.StatusOK, run)
+}
 func (s *Server) executeWorkflow(runID, start string) {
 	s.workflowMu.Lock()
 	defer s.workflowMu.Unlock()

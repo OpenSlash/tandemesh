@@ -55,6 +55,16 @@ export default function WorkflowsPage() {
     onSuccess: (result) => { invalidate(); setSelected(result.id); setRunFor(null); setTaskId('') },
     onError: (err) => setMessage(String(err)),
   })
+  const retry = useMutation({
+    mutationFn: (nodeId: string) => api.retryWorkflowRun(selected, nodeId),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['workflow-run', selected] }); invalidate() },
+    onError: (err) => setMessage(String(err)),
+  })
+  const cancel = useMutation({
+    mutationFn: () => api.cancelWorkflowRun(selected),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['workflow-run', selected] }); invalidate() },
+    onError: (err) => setMessage(String(err)),
+  })
   const gate = useMutation({
     mutationFn: (body: { nodeId: string; action: 'approve' | 'reject' | 'retry'; target?: string }) => api.gateWorkflowRun(selected, body),
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ['workflow-run', selected] }); invalidate() },
@@ -115,6 +125,9 @@ export default function WorkflowsPage() {
                 <span className="text-[13px] font-medium">{run.id}</span>
                 <span className={cn('rounded px-1.5 py-0.5 text-[10px]', run.status === 'succeeded' ? 'bg-ok/10 text-ok' : run.status === 'failed' ? 'bg-err/10 text-err' : 'bg-warn/10 text-warn')}>{run.status}</span>
                 {run.taskId && <span className="font-mono text-[10px] text-muted">{run.taskId}</span>}
+                {(run.status === 'running' || run.status === 'waiting') && (
+                  <Button className="ml-auto" size="sm" variant="secondary" onClick={() => cancel.mutate()}><X className="h-3 w-3" /> Cancel</Button>
+                )}
               </div>
               <div className="mt-3 space-y-2">
                 {run.nodes.map((node) => (
@@ -133,6 +146,11 @@ export default function WorkflowsPage() {
                       </details>
                     ))}
                     {node.kind === 'agent' && node.runId && <p className="mt-1 font-mono text-[10px] text-muted">run {node.runId}</p>}
+                    {node.status === 'failed' && (
+                      <div className="mt-1 flex gap-1">
+                        <Button size="sm" variant="secondary" onClick={() => retry.mutate(node.nodeId)}><RotateCcw className="h-3 w-3" /> Retry</Button>
+                      </div>
+                    )}
                     {node.status === 'waiting' && (
                       <div className="mt-1 flex gap-1">
                         <Button size="sm" variant="primary" onClick={() => gate.mutate({ nodeId: node.nodeId, action: 'approve' })}><Check className="h-3 w-3" /> Approve</Button>

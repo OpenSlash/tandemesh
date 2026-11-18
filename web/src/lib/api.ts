@@ -1540,6 +1540,10 @@ export const api = {
     request<List<WorkflowRun>>(`/api/v1/workflow-runs?workspace=${workspace}${task ? `&task=${encodeURIComponent(task)}` : ''}`),
   workflowRun: (id: string) =>
     request<WorkflowRun>(`/api/v1/workflow-runs/${id}`),
+  retryWorkflowRun: (id: string, nodeId?: string) =>
+    request<WorkflowRun>(`/api/v1/workflow-runs/${id}/retry`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ nodeId }) }),
+  cancelWorkflowRun: (id: string) =>
+    request<WorkflowRun>(`/api/v1/workflow-runs/${id}/cancel`, { method: 'POST' }),
   gateWorkflowRun: (id: string, body: { nodeId?: string; action: 'approve' | 'reject' | 'retry'; target?: string; note?: string }) =>
     request<WorkflowRun>(`/api/v1/workflow-runs/${id}/gate`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) }),
   automations: (workspace: string) =>

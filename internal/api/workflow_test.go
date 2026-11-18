@@ -103,3 +103,17 @@ func artifactCommand() string {
 	}
 	return `echo hello>$TANDEMESH_ARTIFACT_DIR/report.txt`
 }
+
+func TestWorkflowCancel(t *testing.T) {
+	ts := newTestServer(t)
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "control",
+		"nodes": []map[string]any{{"id": "gate", "kind": "gate", "name": "Gate"}},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wf.ID+"/runs", map[string]any{})
+	waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowWaiting, "gate")
+	cancelled := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflow-runs/"+run.ID+"/cancel", map[string]any{})
+	if cancelled.Status != domain.WorkflowCancelled {
+		t.Fatalf("cancel status = %s", cancelled.Status)
+	}
+}
