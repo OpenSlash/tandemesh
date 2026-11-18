@@ -206,6 +206,7 @@ type Agent struct {
 	Model        string         `json:"model"`
 	Skills       []string       `json:"skills"`
 	Repos        []string       `json:"repos"`
+	SessionMode  string         `json:"sessionMode,omitempty"`
 	Tools        map[string]any `json:"tools"`
 	CreatedAt    time.Time      `json:"createdAt"`
 	UpdatedAt    time.Time      `json:"updatedAt"`

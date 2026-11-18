@@ -689,6 +689,7 @@ export interface Agent {
   model: string
   skills?: string[]
   repos?: string[]
+  sessionMode?: 'off' | 'task' | 'agent'
   tools?: Record<string, unknown>
 }
 
@@ -1565,6 +1566,7 @@ installSkill: (body: { workspaceId: string; name?: string; body?: string; source
     model: string
     skills: string[]
     repos: string[]
+    sessionMode?: 'off' | 'task' | 'agent'
     workspaceId: string
     workspaceIds?: string[]
     machineId?: string

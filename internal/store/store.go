@@ -157,6 +157,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 		`ALTER TABLE automations ADD COLUMN state_map TEXT NOT NULL DEFAULT '{}'`,
 		`ALTER TABLE automations ADD COLUMN connection_id TEXT NOT NULL DEFAULT ''''`,
 		`ALTER TABLE connections ADD COLUMN sync_direction TEXT NOT NULL DEFAULT 'read_write'`,
+		`ALTER TABLE agents ADD COLUMN session_mode TEXT NOT NULL DEFAULT 'off'`,
 		`ALTER TABLE connections ADD COLUMN automation_id TEXT NOT NULL DEFAULT ''''`,
 		`ALTER TABLE resource_bindings ADD COLUMN account_id TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE connection_accounts ADD COLUMN member_id TEXT NOT NULL DEFAULT ''`,
@@ -1377,16 +1378,16 @@ func (s *Store) UpsertAgent(ctx context.Context, a *domain.Agent) error {
 	}
 	a.UpdatedAt = now
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO agents (id, workspace_id, machine_id, name, instructions, backend, role, capabilities_json, model, skills_json, repos_json, tools_json, created_at_ms, updated_at_ms)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+		INSERT INTO agents (id, workspace_id, machine_id, name, instructions, backend, role, capabilities_json, model, skills_json, repos_json, tools_json, session_mode, created_at_ms, updated_at_ms)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		ON CONFLICT(id) DO UPDATE SET
 			machine_id = excluded.machine_id,
 			workspace_id = excluded.workspace_id,
 			name = excluded.name, instructions = excluded.instructions, backend = excluded.backend,
 			role = excluded.role, capabilities_json = excluded.capabilities_json,
 			model = excluded.model, skills_json = excluded.skills_json, repos_json = excluded.repos_json,
-			tools_json = excluded.tools_json, updated_at_ms = excluded.updated_at_ms`,
-		a.ID, a.WorkspaceID, a.MachineID, a.Name, a.Instructions, a.Backend, a.Role, string(caps), a.Model, string(skills), string(repos), string(tools), ms(a.CreatedAt), ms(a.UpdatedAt))
+			tools_json = excluded.tools_json, session_mode = excluded.session_mode, updated_at_ms = excluded.updated_at_ms`,
+		a.ID, a.WorkspaceID, a.MachineID, a.Name, a.Instructions, a.Backend, a.Role, string(caps), a.Model, string(skills), string(repos), string(tools), a.SessionMode, ms(a.CreatedAt), ms(a.UpdatedAt))
 	return err
 }
 
@@ -1398,9 +1399,9 @@ func (s *Store) GetAgent(ctx context.Context, id string) (*domain.Agent, error) 
 		tools               string
 		created, upd        int64
 	)
-	err := s.db.QueryRowContext(ctx, `SELECT id, workspace_id, machine_id, name, instructions, backend, role, capabilities_json, model, skills_json, repos_json, tools_json, created_at_ms, updated_at_ms
+	err := s.db.QueryRowContext(ctx, `SELECT id, workspace_id, machine_id, name, instructions, backend, role, capabilities_json, model, skills_json, repos_json, tools_json, session_mode, created_at_ms, updated_at_ms
 		FROM agents WHERE id = ?`, id).
-		Scan(&a.ID, &a.WorkspaceID, &a.MachineID, &a.Name, &a.Instructions, &a.Backend, &a.Role, &caps, &a.Model, &skills, &repos, &tools, &created, &upd)
+		Scan(&a.ID, &a.WorkspaceID, &a.MachineID, &a.Name, &a.Instructions, &a.Backend, &a.Role, &caps, &a.Model, &skills, &repos, &tools, &a.SessionMode, &created, &upd)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -1421,7 +1422,7 @@ func (s *Store) GetAgent(ctx context.Context, id string) (*domain.Agent, error) 
 
 // ListAgents returns agents in a workspace ordered by name.
 func (s *Store) ListAgents(ctx context.Context, workspaceID string) ([]*domain.Agent, error) {
-	q := `SELECT id, workspace_id, machine_id, name, instructions, backend, role, capabilities_json, model, skills_json, repos_json, tools_json, created_at_ms, updated_at_ms FROM agents`
+	q := `SELECT id, workspace_id, machine_id, name, instructions, backend, role, capabilities_json, model, skills_json, repos_json, tools_json, session_mode, created_at_ms, updated_at_ms FROM agents`
 	args := []any{}
 	if workspaceID != "" {
 		q += ` WHERE workspace_id = ? OR EXISTS (SELECT 1 FROM agent_workspaces aw WHERE aw.agent_id = agents.id AND aw.workspace_id = ?)`
@@ -1441,7 +1442,7 @@ func (s *Store) ListAgents(ctx context.Context, workspaceID string) ([]*domain.A
 			tools               string
 			created, upd        int64
 		)
-		if err := rows.Scan(&a.ID, &a.WorkspaceID, &a.MachineID, &a.Name, &a.Instructions, &a.Backend, &a.Role, &caps, &a.Model, &skills, &repos, &tools, &created, &upd); err != nil {
+		if err := rows.Scan(&a.ID, &a.WorkspaceID, &a.MachineID, &a.Name, &a.Instructions, &a.Backend, &a.Role, &caps, &a.Model, &skills, &repos, &tools, &a.SessionMode, &created, &upd); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(skills), &a.Skills)

@@ -86,6 +86,24 @@ func (s *Store) ListAgentSessions(ctx context.Context, workspaceID, taskID, stat
 	return out, rows.Err()
 }
 
+// FindReusableAgentSession returns the latest active session for a task and
+// agent. An empty taskID selects an agent-level persistent session.
+func (s *Store) FindReusableAgentSession(ctx context.Context, workspaceID, taskID, agentID string) (*domain.AgentSession, error) {
+	q := `SELECT id, workspace_id, task_id, agent_id, backend, model, reasoning, mode, title, repo, base, worktree_id, status,
+		(SELECT status FROM runs r WHERE r.session_id = agent_sessions.id ORDER BY r.created_at_ms DESC LIMIT 1),
+		backend_session_id, last_run_id, created_by, created_at_ms, updated_at_ms, seed_context, closed_at_ms
+		FROM agent_sessions WHERE workspace_id = ? AND agent_id = ? AND status = 'active'`
+	args := []any{workspaceID, agentID}
+	if taskID == "" {
+		q += " AND task_id = ''"
+	} else {
+		q += " AND task_id = ?"
+		args = append(args, taskID)
+	}
+	q += " ORDER BY updated_at_ms DESC LIMIT 1"
+	return scanAgentSession(s.db.QueryRowContext(ctx, q, args...))
+}
+
 // SetAgentSessionWorktree binds a session to its persistent worktree.
 func (s *Store) SetAgentSessionWorktree(ctx context.Context, id, worktreeID string) error {
 	_, err := s.db.ExecContext(ctx, `UPDATE agent_sessions SET worktree_id = ?, updated_at_ms = ? WHERE id = ?`,

@@ -25,6 +25,16 @@ type agentRequest struct {
 	Skills       []string       `json:"skills"`
 	Repos        []string       `json:"repos"`
 	Tools        map[string]any `json:"tools"`
+	SessionMode  string         `json:"sessionMode"`
+}
+
+func normalizeSessionMode(mode string) string {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "task", "agent":
+		return strings.ToLower(strings.TrimSpace(mode))
+	default:
+		return "off"
+	}
 }
 
 func agentWorkspaces(agent *domain.Agent) []string {
@@ -157,6 +167,7 @@ func (s *Server) createAgent(w http.ResponseWriter, r *http.Request) {
 		Skills:       req.Skills,
 		Repos:        req.Repos,
 		Tools:        req.Tools,
+		SessionMode:  normalizeSessionMode(req.SessionMode),
 	}
 	if agent.Backend == "" {
 		agent.Backend = "claude"
@@ -249,6 +260,7 @@ func (s *Server) updateAgent(w http.ResponseWriter, r *http.Request) {
 	existing.Skills = req.Skills
 	existing.Repos = req.Repos
 	existing.Tools = req.Tools
+	existing.SessionMode = normalizeSessionMode(req.SessionMode)
 	existing.MachineID = req.MachineID
 	if err := s.store.UpsertAgent(r.Context(), existing); err != nil {
 		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())

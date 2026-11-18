@@ -46,9 +46,11 @@ export default function AgentsPage() {
   const [skills, setSkills] = useState<string[]>([])
   const [askTools, setAskTools] = useState<string[]>([])
   const [repos, setRepos] = useState('')
+  const [sessionMode, setSessionMode] = useState<'off' | 'task' | 'agent'>('off')
   const [createWorkspaceIds, setCreateWorkspaceIds] = useState<string[]>([workspaceId])
   const [editWorkspaceIds, setEditWorkspaceIds] = useState<string[]>([])
   const [editFor, setEditFor] = useState<Agent | null>(null)
+  const [editSessionMode, setEditSessionMode] = useState<'off' | 'task' | 'agent'>('off')
   const [editName, setEditName] = useState('')
   const [editInstructions, setEditInstructions] = useState('')
   const [editRole, setEditRole] = useState('')
@@ -74,6 +76,7 @@ export default function AgentsPage() {
         skills,
         tools: askTools.length > 0 ? { approval: { ask: askTools } } : undefined,
         repos: repos ? repos.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        sessionMode,
       }),
     onSuccess: () => {
       setOpen(false)
@@ -84,6 +87,7 @@ export default function AgentsPage() {
       setSkills([])
       setAskTools([])
       setRepos('')
+      setSessionMode('off')
       qc.invalidateQueries({ queryKey: ['agents'] })
     },
   })
@@ -101,6 +105,7 @@ export default function AgentsPage() {
         skills: editSkills,
         tools: { ...(editFor.tools ?? {}), approval: { ...((editFor.tools?.approval as Record<string, unknown>) ?? {}), ask: editAskTools } },
         repos: editFor.repos ?? [],
+        sessionMode: editSessionMode,
         workspaceId: editWorkspaceIds[0] ?? editFor.workspaceId,
         workspaceIds: editWorkspaceIds,
       })
@@ -206,6 +211,19 @@ export default function AgentsPage() {
                 {t('agents.reposCommaSeparated')}
                 <Input className="mt-1" value={repos} onChange={(e) => setRepos(e.target.value)} />
               </label>
+              <label className="text-[12px] text-muted">
+                Context
+                <select
+                  className="mt-1 w-full rounded-md border border-line2 bg-panel px-2 py-1.5 text-[12px] text-fg"
+                  value={sessionMode}
+                  onChange={(e) => setSessionMode(e.target.value as 'off' | 'task' | 'agent')}
+                >
+                  <option value="off">Off — fresh context per run</option>
+                  <option value="task">Per task — reuse context for the same task</option>
+                  <option value="agent">Agent — reuse one context across tasks</option>
+                </select>
+                <p className="mt-1 text-[10.5px] text-muted/60">Reuse an agent session so later runs remember earlier work.</p>
+              </label>
               {create.error && <p className="text-[12px] text-err">{String(create.error.message)}</p>}
               <div className="mt-1 flex justify-end gap-2">
                 <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
@@ -248,6 +266,7 @@ export default function AgentsPage() {
                 className="mr-2 text-[10px] text-muted hover:text-fg"
                 onClick={() => {
                   setEditFor(a)
+                  setEditSessionMode((a.sessionMode as 'off' | 'task' | 'agent') ?? 'off')
                   setEditName(a.name)
                   setEditWorkspaceIds(a.workspaceIds?.length ? a.workspaceIds : [a.workspaceId])
                   setEditInstructions(a.instructions ?? '')
@@ -391,6 +410,18 @@ export default function AgentsPage() {
                 onChange={(e) => setEditCaps(e.target.value)}
                 placeholder="code, review, deploy"
               />
+            </label>
+            <label className="text-[12px] text-muted">
+              Context
+              <select
+                className="mt-1 w-full rounded-md border border-line2 bg-panel px-2 py-1.5 text-[12px] text-fg"
+                value={editSessionMode}
+                onChange={(e) => setEditSessionMode(e.target.value as 'off' | 'task' | 'agent')}
+              >
+                <option value="off">Off — fresh context per run</option>
+                <option value="task">Per task — reuse context for the same task</option>
+                <option value="agent">Agent — reuse one context across tasks</option>
+              </select>
             </label>
             <label className="text-[12px] text-muted">
               {t('agents.env')}

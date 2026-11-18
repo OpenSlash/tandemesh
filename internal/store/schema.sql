@@ -255,6 +255,7 @@ CREATE TABLE IF NOT EXISTS agents (
     skills_json     TEXT NOT NULL DEFAULT '[]',
     repos_json      TEXT NOT NULL DEFAULT '[]',
     tools_json      TEXT NOT NULL DEFAULT '{}',
+    session_mode    TEXT NOT NULL DEFAULT 'off',
     created_at_ms   INTEGER NOT NULL,
     updated_at_ms   INTEGER NOT NULL
 );

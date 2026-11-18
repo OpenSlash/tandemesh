@@ -346,6 +346,35 @@ func (s *Server) taskPrompt(ctx context.Context, task *domain.Task, override str
 	return prompt, nil
 }
 
+// ensureTaskRunSession returns a reusable agent session when the agent enables
+// task or agent level context. Empty means a fresh ACP session per run.
+func (s *Server) ensureTaskRunSession(ctx context.Context, task *domain.Task, agentID, repo, base string) string {
+	agent, _ := s.store.GetAgent(ctx, agentID)
+	if agent == nil || agent.SessionMode == "" || agent.SessionMode == "off" {
+		return ""
+	}
+	taskID := task.ID
+	if agent.SessionMode == "agent" {
+		taskID = ""
+	}
+	if existing, _ := s.store.FindReusableAgentSession(ctx, task.WorkspaceID, taskID, agentID); existing != nil {
+		return existing.ID
+	}
+	title := task.Title
+	if agent.SessionMode == "agent" {
+		title = agent.Name + " context"
+	}
+	sess, err := s.store.CreateAgentSession(ctx, &domain.AgentSession{
+		WorkspaceID: task.WorkspaceID, TaskID: taskID, AgentID: agentID,
+		Backend: agent.Backend, Model: agent.Model, Mode: "chat", Title: title,
+		Repo: repo, Base: base, Status: "active", CreatedBy: "system",
+	})
+	if err != nil {
+		return ""
+	}
+	return sess.ID
+}
+
 // createTaskRun persists one run under a task.
 func (s *Server) createTaskRun(ctx context.Context, task *domain.Task, agent, role, repo, base, prompt string) (*domain.Run, error) {
 	if prefix := s.skillPrompt(ctx, task.WorkspaceID, agent); prefix != "" {
@@ -368,6 +397,7 @@ func (s *Server) createTaskRun(ctx context.Context, task *domain.Task, agent, ro
 		Base:      base,
 		Branch:    "orca/" + id[len(id)-8:],
 		Prompt:    prompt,
+		SessionID: s.ensureTaskRunSession(ctx, task, agent, repo, base),
 		TaskID:    task.ID,
 		Role:      role,
 		CreatedAt: time.Now().UTC(),
