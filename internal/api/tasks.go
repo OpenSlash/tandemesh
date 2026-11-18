@@ -326,12 +326,12 @@ func (s *Server) launchTeam(ctx context.Context, task *domain.Task, repo, base s
 
 // taskPrompt combines the task text with the team notes.
 func (s *Server) taskPrompt(ctx context.Context, task *domain.Task, override string) (string, error) {
-	prompt := override
-	if prompt == "" {
-		prompt = task.Title
-		if task.Body != "" {
-			prompt += "\n\n" + task.Body
-		}
+	prompt := task.Title
+	if task.Body != "" {
+		prompt += "\n\n" + task.Body
+	}
+	if override != "" {
+		prompt += "\n\nAdditional instructions:\n" + override
 	}
 	notes, err := s.store.ListTaskNotes(ctx, task.ID)
 	if err != nil {
