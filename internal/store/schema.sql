@@ -975,3 +975,31 @@ CREATE TABLE IF NOT EXISTS comment_deliveries (
     updated_at_ms  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS comment_deliveries_task_idx ON comment_deliveries(task_id);
+
+CREATE TABLE IF NOT EXISTS workflows (
+    id             TEXT PRIMARY KEY,
+    workspace_id   TEXT NOT NULL DEFAULT 'ws_default',
+    name           TEXT NOT NULL,
+    description    TEXT NOT NULL DEFAULT '',
+    nodes_json     TEXT NOT NULL DEFAULT '[]',
+    created_at_ms  INTEGER NOT NULL,
+    updated_at_ms  INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS workflows_workspace_idx ON workflows(workspace_id, updated_at_ms);
+
+CREATE TABLE IF NOT EXISTS workflow_runs (
+    id             TEXT PRIMARY KEY,
+    workflow_id    TEXT NOT NULL,
+    workspace_id   TEXT NOT NULL DEFAULT 'ws_default',
+    task_id        TEXT NOT NULL DEFAULT '',
+    status         TEXT NOT NULL DEFAULT 'running',
+    current_node   TEXT NOT NULL DEFAULT '',
+    nodes_json     TEXT NOT NULL DEFAULT '[]',
+    error          TEXT NOT NULL DEFAULT '',
+    created_at_ms  INTEGER NOT NULL,
+    updated_at_ms  INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS workflow_runs_workspace_idx ON workflow_runs(workspace_id, created_at_ms);
+CREATE INDEX IF NOT EXISTS workflow_runs_task_idx ON workflow_runs(task_id);

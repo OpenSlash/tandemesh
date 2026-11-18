@@ -53,6 +53,7 @@ type Server struct {
 	importSlots  chan struct{}
 	importConnMu sync.Mutex
 	importConns  map[string]chan struct{}
+	workflowMu   sync.Mutex
 }
 
 // ConfigureGitHubApp enables GitHub App installation authentication.
@@ -385,6 +386,14 @@ func (s *Server) Router() http.Handler {
 		r.Put("/automations/{id}", s.updateAutomation)
 		r.Delete("/automations/{id}", s.deleteAutomation)
 		r.Post("/automations/{id}/run", s.runAutomation)
+
+		r.Get("/workflows", s.listWorkflows)
+		r.Post("/workflows", s.createWorkflow)
+		r.Get("/workflows/{id}", s.getWorkflow)
+		r.Post("/workflows/{id}/runs", s.startWorkflow)
+		r.Get("/workflow-runs", s.listWorkflowRuns)
+		r.Get("/workflow-runs/{id}", s.getWorkflowRun)
+		r.Post("/workflow-runs/{id}/gate", s.gateWorkflowRun)
 
 		r.Get("/agentd/lease", s.lease)
 		r.Post("/agentd/runs/{id}/renew", s.renewLease)

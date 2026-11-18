@@ -639,6 +639,50 @@ export interface Automation {
   createdAt: string
 }
 
+export interface WorkflowNode {
+  id: string
+  kind: 'script' | 'gate' | 'agent'
+  name: string
+  agentId?: string
+  prompt?: string
+  command?: string
+  next?: string
+}
+
+export interface Workflow {
+  id: string
+  workspaceId: string
+  name: string
+  description: string
+  nodes: WorkflowNode[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WorkflowNodeRun {
+  nodeId: string
+  kind: string
+  name: string
+  status: string
+  output?: string
+  error?: string
+  runId?: string
+  startedAt?: string
+  finishedAt?: string
+}
+
+export interface WorkflowRun {
+  id: string
+  workflowId: string
+  workspaceId: string
+  taskId?: string
+  status: string
+  currentNode?: string
+  nodes: WorkflowNodeRun[]
+  error?: string
+  createdAt: string
+  updatedAt: string
+}
 export interface UnifiedAutomation {
   id: string
   kind: 'schedule' | 'event'
@@ -1478,6 +1522,18 @@ export const api = {
       method: 'DELETE',
     }),
 
+  workflows: (workspace: string) =>
+    request<List<Workflow>>(`/api/v1/workflows?workspace=${workspace}`),
+  createWorkflow: (body: { workspaceId: string; name: string; description?: string; nodes: WorkflowNode[] }) =>
+    request<Workflow>('/api/v1/workflows', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) }),
+  startWorkflow: (id: string, body: { taskId?: string }) =>
+    request<WorkflowRun>(`/api/v1/workflows/${id}/runs`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) }),
+  workflowRuns: (workspace: string) =>
+    request<List<WorkflowRun>>(`/api/v1/workflow-runs?workspace=${workspace}`),
+  workflowRun: (id: string) =>
+    request<WorkflowRun>(`/api/v1/workflow-runs/${id}`),
+  gateWorkflowRun: (id: string, body: { nodeId?: string; action: 'approve' | 'reject' | 'retry'; target?: string; note?: string }) =>
+    request<WorkflowRun>(`/api/v1/workflow-runs/${id}/gate`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) }),
   automations: (workspace: string) =>
     request<List<UnifiedAutomation>>(`/api/v1/automations?workspace=${workspace}`),
   createAutomation: (body: {

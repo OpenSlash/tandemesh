@@ -26,6 +26,7 @@ import {
   LayoutDashboard,
   History,
   ScrollText,
+  Workflow,
   MoreHorizontal,
   Menu,
   Plus,
@@ -453,6 +454,7 @@ function WorkspaceNav({ onNavigate }: { onNavigate?: () => void }) {
       <NavItem to="/groups" label={t('nav.groups')} icon={UsersRound} onClick={onNavigate} />
       <NavItem to="/agents" label={t('nav.agents')} icon={Bot} onClick={onNavigate} />
       <NavItem to="/automations" label={t('nav.automations')} icon={Activity} onClick={onNavigate} />
+      <NavItem to="/workflows" label="Workflows" icon={Workflow} onClick={onNavigate} />
       <NavItem to="/runs" label={t('nav.runs')} icon={Activity} onClick={onNavigate} />
       <NavItem to="/documents" label={t('nav.documents')} icon={FileText} onClick={onNavigate} />
     </div>
