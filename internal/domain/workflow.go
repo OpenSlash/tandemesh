@@ -30,6 +30,7 @@ type WorkflowNode struct {
 	Next       string `json:"next,omitempty"`
 	OnFail     string `json:"onFail,omitempty"`
 	Retries    int    `json:"retries,omitempty"`
+	When       string `json:"when,omitempty"`
 }
 
 type Workflow struct {

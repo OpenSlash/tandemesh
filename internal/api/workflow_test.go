@@ -140,3 +140,25 @@ func TestWorkflowCancelCascades(t *testing.T) {
 		t.Fatalf("child status = %s", childRun.Status)
 	}
 }
+
+func TestWorkflowCondition(t *testing.T) {
+	ts := newTestServer(t)
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "condition",
+		"nodes": []map[string]any{
+			{"id": "first", "kind": "script", "name": "First", "command": "echo HELLO", "next": "check"},
+			{"id": "check", "kind": "condition", "name": "Check", "when": "contains:HELLO", "next": "yes", "onFail": "no"},
+			{"id": "yes", "kind": "script", "name": "Yes", "command": "echo YES"},
+			{"id": "no", "kind": "script", "name": "No", "command": "echo NO"},
+		},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wf.ID+"/runs", map[string]any{})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	yes, no := findNodeRun(&final, "yes"), findNodeRun(&final, "no")
+	if yes == nil || no == nil || yes.Status != domain.WorkflowNodeSucceeded || no.Status != domain.WorkflowNodePending {
+		t.Fatalf("condition nodes = %+v", final.Nodes)
+	}
+	if strings.TrimSpace(yes.Output) != "YES" {
+		t.Fatalf("yes output = %q", yes.Output)
+	}
+}

@@ -641,11 +641,12 @@ export interface Automation {
 
 export interface WorkflowNode {
   id: string
-  kind: 'script' | 'gate' | 'agent'
+  kind: 'script' | 'gate' | 'agent' | 'workflow' | 'condition'
   name: string
   agentId?: string
   prompt?: string
   command?: string
+  when?: string
   next?: string
 }
 

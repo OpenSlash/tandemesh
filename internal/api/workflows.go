@@ -449,6 +449,15 @@ func (s *Server) executeWorkflow(runID, start string) {
 			go s.executeWorkflow(child.ID, childWF.Nodes[0].ID)
 			go s.watchWorkflowChild(run.ID, current, child.ID)
 			return
+		case "condition":
+			matched := conditionMatches(def.When, previousOutput(run, current))
+			node.Status = domain.WorkflowNodeSucceeded
+			node.Output = fmt.Sprintf("condition=%t", matched)
+			if matched {
+				current = def.Next
+			} else {
+				current = def.OnFail
+			}
 		case "gate":
 			node.Status = domain.WorkflowNodeWaiting
 			run.Status = domain.WorkflowWaiting
@@ -590,6 +599,46 @@ func (s *Server) watchWorkflowChild(runID, nodeID, childID string) {
 		return
 	}
 }
+func previousOutput(run *domain.WorkflowRun, nodeID string) string {
+	last := ""
+	for _, node := range run.Nodes {
+		if node.NodeID == nodeID {
+			return last
+		}
+		if node.Status == domain.WorkflowNodeSucceeded {
+			last = node.Output
+		}
+	}
+	return last
+}
+
+func conditionMatches(expr, input string) bool {
+	expr = strings.TrimSpace(expr)
+	parts := strings.SplitN(expr, ":", 2)
+	if len(parts) != 2 {
+		return false
+	}
+	op := strings.ToLower(strings.TrimSpace(parts[0]))
+	want := strings.TrimSpace(parts[1])
+	got := strings.ToLower(input)
+	wantLower := strings.ToLower(want)
+	switch op {
+	case "contains":
+		return strings.Contains(got, wantLower)
+	case "not_contains":
+		return !strings.Contains(got, wantLower)
+	case "equals":
+		return strings.EqualFold(strings.TrimSpace(input), want)
+	case "prefix":
+		return strings.HasPrefix(got, wantLower)
+	case "suffix":
+		return strings.HasSuffix(got, wantLower)
+	case "nonempty":
+		return strings.TrimSpace(input) != ""
+	default:
+		return false
+	}
+}
 func (s *Server) workflowArtifactDir(runID, nodeID string) string {
 	dir := filepath.Join(filepath.Dir(s.cfg.DBPath), "artifacts", runID, nodeID)
 	_ = os.MkdirAll(dir, 0o755)
@@ -658,6 +707,10 @@ func validateWorkflowNodes(nodes []domain.WorkflowNode) error {
 				return fmt.Errorf("script node %s needs a command", node.ID)
 			}
 		case "gate":
+		case "condition":
+			if strings.TrimSpace(node.When) == "" {
+				return fmt.Errorf("condition node %s needs a when expression", node.ID)
+			}
 		case "workflow":
 			if strings.TrimSpace(node.WorkflowID) == "" {
 				return fmt.Errorf("workflow node %s needs a workflowId", node.ID)
