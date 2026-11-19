@@ -143,6 +143,13 @@ export default function WorkflowsPage() {
                       <details key={artifact.path} className="mt-1 rounded border border-line2/60 px-1.5 py-1 text-[10px]">
                         <summary className="cursor-pointer text-muted">{artifact.name} · {artifact.size} bytes</summary>
                         <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap text-[10px] text-muted">{artifact.content}</pre>
+                        <a
+                          className="mt-1 inline-block text-[10px] text-accent2 hover:underline"
+                          href={`/api/v1/workflow-runs/${run.id}/artifacts/${node.nodeId}/${artifact.path.split('/').map(encodeURIComponent).join('/')}`}
+                          download={artifact.name}
+                        >
+                          Download
+                        </a>
                       </details>
                     ))}
                     {node.kind === 'agent' && node.runId && <p className="mt-1 font-mono text-[10px] text-muted">run {node.runId}</p>}

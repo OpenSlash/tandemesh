@@ -234,6 +234,33 @@ func (s *Server) gateWorkflowRun(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, run)
 }
 
+func (s *Server) downloadWorkflowArtifact(w http.ResponseWriter, r *http.Request) {
+	run, err := s.store.GetWorkflowRun(r.Context(), chi.URLParam(r, "id"))
+	if err != nil || run == nil {
+		writeErr(w, http.StatusNotFound, "E_RUN", "workflow run not found")
+		return
+	}
+	if !s.requireWorkspace(w, r, run.WorkspaceID) {
+		return
+	}
+	nodeID := chi.URLParam(r, "nodeId")
+	path := strings.TrimPrefix(chi.URLParam(r, "*"), "/")
+	node := findNodeRun(run, nodeID)
+	if node == nil {
+		writeErr(w, http.StatusNotFound, "E_NODE", "node not found")
+		return
+	}
+	for _, artifact := range node.Artifacts {
+		if artifact.Path != path {
+			continue
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Content-Disposition", `attachment; filename="`+artifact.Name+`"`)
+		_, _ = w.Write([]byte(artifact.Content))
+		return
+	}
+	writeErr(w, http.StatusNotFound, "E_ARTIFACT", "artifact not found")
+}
 func (s *Server) retryWorkflowRun(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		NodeID string `json:"nodeId"`

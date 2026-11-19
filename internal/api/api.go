@@ -396,6 +396,7 @@ func (s *Server) Router() http.Handler {
 		r.Post("/workflow-runs/{id}/gate", s.gateWorkflowRun)
 		r.Post("/workflow-runs/{id}/retry", s.retryWorkflowRun)
 		r.Post("/workflow-runs/{id}/cancel", s.cancelWorkflowRun)
+		r.Get("/workflow-runs/{id}/artifacts/{nodeId}/*", s.downloadWorkflowArtifact)
 
 		r.Get("/agentd/lease", s.lease)
 		r.Post("/agentd/runs/{id}/renew", s.renewLease)
