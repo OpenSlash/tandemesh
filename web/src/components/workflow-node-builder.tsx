@@ -1,4 +1,4 @@
-﻿import type { WorkflowNode } from '../lib/api'
+import type { WorkflowNode } from '../lib/api'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 
@@ -41,6 +41,7 @@ export function WorkflowNodeBuilder({ nodes, onChange }: { nodes: WorkflowNode[]
               <label className="text-[10px] text-muted">Next<Input className="mt-0.5 h-7 w-24" value={node.next ?? ''} onChange={(e) => update(index, { next: e.target.value })} /></label>
               <label className="text-[10px] text-muted">On fail<Input className="mt-0.5 h-7 w-24" value={node.onFail ?? ''} onChange={(e) => update(index, { onFail: e.target.value })} /></label>
               <label className="text-[10px] text-muted">Retries<Input className="mt-0.5 h-7 w-16" type="number" value={node.retries ?? 0} onChange={(e) => update(index, { retries: Number(e.target.value) })} /></label>
+              <label className="text-[10px] text-muted">Timeout (s)<Input className="mt-0.5 h-7 w-16" type="number" value={node.timeoutSeconds ?? 0} onChange={(e) => update(index, { timeoutSeconds: Number(e.target.value) })} /></label>
               <button type="button" className="ml-auto text-muted hover:text-err" onClick={() => remove(index)}>Remove</button>
             </div>
             {node.kind === 'agent' && <Input className="mt-1" placeholder="Prompt" value={node.prompt ?? ''} onChange={(e) => update(index, { prompt: e.target.value })} />}

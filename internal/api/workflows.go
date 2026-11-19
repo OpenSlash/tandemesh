@@ -480,11 +480,15 @@ func (s *Server) executeWorkflow(runID, start string) {
 			}
 			var out string
 			var err error
+			timeout := 10 * time.Minute
+			if def.TimeoutSeconds > 0 {
+				timeout = time.Duration(def.TimeoutSeconds) * time.Second
+			}
 			for attempt := 0; attempt < attempts; attempt++ {
 				if attempt > 0 && def.RetryDelaySeconds > 0 {
 					time.Sleep(time.Duration(def.RetryDelaySeconds) * time.Second)
 				}
-				out, err = runScript(def.Command, artifactDir)
+				out, err = runScript(def.Command, artifactDir, timeout)
 				if err == nil {
 					break
 				}
@@ -602,6 +606,13 @@ func (s *Server) executeWorkflow(runID, start string) {
 
 func (s *Server) watchWorkflowAgent(runID, nodeID, agentRunID string) {
 	deadline := time.Now().Add(30 * time.Minute)
+	if run, _ := s.store.GetWorkflowRun(context.Background(), runID); run != nil {
+		if wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID); wf != nil {
+			if def := findNode(wf.Nodes, nodeID); def != nil && def.TimeoutSeconds > 0 {
+				deadline = time.Now().Add(time.Duration(def.TimeoutSeconds) * time.Second)
+			}
+		}
+	}
 	for time.Now().Before(deadline) {
 		time.Sleep(2 * time.Second)
 		agentRun, err := s.store.GetRun(context.Background(), agentRunID)
@@ -661,6 +672,41 @@ func (s *Server) watchWorkflowAgent(runID, nodeID, agentRunID string) {
 			s.executeWorkflow(runID, next)
 		}
 		return
+	}
+	s.finishAgentTimeout(runID, nodeID, agentRunID)
+}
+func (s *Server) finishAgentTimeout(runID, nodeID, agentRunID string) {
+	s.workflowMu.Lock()
+	defer s.workflowMu.Unlock()
+	run, _ := s.store.GetWorkflowRun(context.Background(), runID)
+	if run == nil {
+		return
+	}
+	wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+	if wf == nil {
+		return
+	}
+	node := findNodeRun(run, nodeID)
+	def := findNode(wf.Nodes, nodeID)
+	if node == nil || def == nil {
+		return
+	}
+	now := time.Now().UTC()
+	node.Status = domain.WorkflowNodeFailed
+	node.Error = "node timed out"
+	node.FinishedAt = &now
+	_, _ = s.store.CancelRun(context.Background(), agentRunID)
+	next := def.OnFail
+	if next == "" {
+		run.Status = domain.WorkflowFailed
+		run.Error = node.Error
+	} else {
+		run.Status = domain.WorkflowRunning
+		run.CurrentNode = next
+	}
+	_ = s.store.UpdateWorkflowRun(context.Background(), run)
+	if run.Status == domain.WorkflowRunning && next != "" {
+		go s.executeWorkflow(runID, next)
 	}
 }
 func (s *Server) watchWorkflowChild(runID, nodeID, childID string) {
@@ -852,11 +898,14 @@ func collectArtifacts(dir string) []domain.WorkflowArtifact {
 	})
 	return out
 }
-func runScript(command, artifactDir string) (string, error) {
+func runScript(command, artifactDir string, timeout time.Duration) (string, error) {
 	if strings.TrimSpace(command) == "" {
 		return "", fmt.Errorf("command is required")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	if timeout <= 0 {
+		timeout = 10 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {

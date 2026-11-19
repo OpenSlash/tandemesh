@@ -654,6 +654,7 @@ export interface WorkflowNode {
   onFail?: string
   retries?: number
   retryDelaySeconds?: number
+  timeoutSeconds?: number
 }
 
 export interface WorkflowTemplate {
