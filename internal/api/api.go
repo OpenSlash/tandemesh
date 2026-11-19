@@ -387,6 +387,7 @@ func (s *Server) Router() http.Handler {
 		r.Delete("/automations/{id}", s.deleteAutomation)
 		r.Post("/automations/{id}/run", s.runAutomation)
 
+		r.Get("/workflow-templates", s.listWorkflowTemplates)
 		r.Get("/workflows", s.listWorkflows)
 		r.Post("/workflows", s.createWorkflow)
 		r.Get("/workflows/{id}", s.getWorkflow)

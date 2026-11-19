@@ -1003,3 +1003,18 @@ CREATE TABLE IF NOT EXISTS workflow_runs (
 
 CREATE INDEX IF NOT EXISTS workflow_runs_workspace_idx ON workflow_runs(workspace_id, created_at_ms);
 CREATE INDEX IF NOT EXISTS workflow_runs_task_idx ON workflow_runs(task_id);
+
+CREATE TABLE IF NOT EXISTS workflow_artifacts (
+    id             TEXT PRIMARY KEY,
+    run_id         TEXT NOT NULL,
+    node_id        TEXT NOT NULL,
+    name           TEXT NOT NULL,
+    path           TEXT NOT NULL,
+    content        BLOB NOT NULL,
+    size           INTEGER NOT NULL,
+    content_type   TEXT NOT NULL DEFAULT 'application/octet-stream',
+    created_at_ms  INTEGER NOT NULL,
+    UNIQUE(run_id, node_id, path)
+);
+
+CREATE INDEX IF NOT EXISTS workflow_artifacts_run_idx ON workflow_artifacts(run_id, node_id);

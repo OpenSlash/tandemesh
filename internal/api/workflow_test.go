@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"runtime"
 	"strings"
@@ -98,6 +99,15 @@ func TestWorkflowArtifacts(t *testing.T) {
 	}
 	if final.Nodes[0].Artifacts[0].Name != "report.txt" || strings.TrimSpace(final.Nodes[0].Artifacts[0].Content) != "hello" {
 		t.Fatalf("artifact = %+v", final.Nodes[0].Artifacts[0])
+	}
+	resp, err := http.Get(ts.URL + "/api/v1/workflow-runs/" + run.ID + "/artifacts/report/report.txt")
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("download: %v %v", err, resp)
+	}
+	raw, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if strings.TrimSpace(string(raw)) != "hello" {
+		t.Fatalf("download body = %q", string(raw))
 	}
 }
 func artifactCommand() string {
@@ -215,4 +225,14 @@ func TestWorkflowUpdateDelete(t *testing.T) {
 		t.Fatalf("delete: %v %v", err, resp.StatusCode)
 	}
 	resp.Body.Close()
+}
+
+func TestWorkflowTemplates(t *testing.T) {
+	ts := newTestServer(t)
+	list := getJSON[struct {
+		Items []workflowTemplate `json:"items"`
+	}](t, ts.URL+"/api/v1/workflow-templates")
+	if len(list.Items) < 3 {
+		t.Fatalf("templates = %+v", list.Items)
+	}
 }

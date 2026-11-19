@@ -644,10 +644,23 @@ export interface WorkflowNode {
   kind: 'script' | 'gate' | 'agent' | 'workflow' | 'condition'
   name: string
   agentId?: string
+  role?: string
+  model?: string
+  workflowId?: string
   prompt?: string
   command?: string
   when?: string
   next?: string
+  onFail?: string
+  retries?: number
+  retryDelaySeconds?: number
+}
+
+export interface WorkflowTemplate {
+  id: string
+  name: string
+  description: string
+  nodes: WorkflowNode[]
 }
 
 export interface Workflow {
@@ -1531,6 +1544,7 @@ export const api = {
       method: 'DELETE',
     }),
 
+  workflowTemplates: () => request<List<WorkflowTemplate>>('/api/v1/workflow-templates'),
   workflows: (workspace: string) =>
     request<List<Workflow>>(`/api/v1/workflows?workspace=${workspace}`),
   createWorkflow: (body: { workspaceId: string; name: string; description?: string; nodes: WorkflowNode[] }) =>

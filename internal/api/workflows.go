@@ -16,6 +16,12 @@ import (
 	"github.com/OpenSlash/tandemesh/internal/domain"
 )
 
+type workflowTemplate struct {
+	ID          string                `json:"id"`
+	Name        string                `json:"name"`
+	Description string                `json:"description"`
+	Nodes       []domain.WorkflowNode `json:"nodes"`
+}
 type workflowRequest struct {
 	WorkspaceID string                `json:"workspaceId"`
 	Name        string                `json:"name"`
@@ -23,6 +29,35 @@ type workflowRequest struct {
 	Nodes       []domain.WorkflowNode `json:"nodes"`
 }
 
+func (s *Server) listWorkflowTemplates(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"items": []workflowTemplate{
+		{
+			ID: "script-approval", Name: "Script + approval", Description: "Run a script, pause for a human, then finish.",
+			Nodes: []domain.WorkflowNode{
+				{ID: "run", Kind: "script", Name: "Run", Command: "echo step-one", Next: "approve"},
+				{ID: "approve", Kind: "gate", Name: "Approve", Next: "finish"},
+				{ID: "finish", Kind: "script", Name: "Finish", Command: "echo done"},
+			},
+		},
+		{
+			ID: "build-test", Name: "Build and test", Description: "Build, test, then wait for release approval.",
+			Nodes: []domain.WorkflowNode{
+				{ID: "build", Kind: "script", Name: "Build", Command: "echo build", Retries: 1, RetryDelaySeconds: 2, Next: "test"},
+				{ID: "test", Kind: "script", Name: "Test", Command: "echo test", Next: "approve"},
+				{ID: "approve", Kind: "gate", Name: "Release approval"},
+			},
+		},
+		{
+			ID: "conditional-recovery", Name: "Conditional recovery", Description: "Check output and route to success or recovery.",
+			Nodes: []domain.WorkflowNode{
+				{ID: "probe", Kind: "script", Name: "Probe", Command: "echo OK", Next: "check"},
+				{ID: "check", Kind: "condition", Name: "Check", When: "contains:OK", Next: "good", OnFail: "recover"},
+				{ID: "good", Kind: "script", Name: "Good", Command: "echo accepted"},
+				{ID: "recover", Kind: "script", Name: "Recover", Command: "echo recovered"},
+			},
+		},
+	}})
+}
 func (s *Server) listWorkflows(w http.ResponseWriter, r *http.Request) {
 	workspaceID := r.URL.Query().Get("workspace")
 	if workspaceID == "" {
@@ -297,6 +332,16 @@ func (s *Server) downloadWorkflowArtifact(w http.ResponseWriter, r *http.Request
 		writeErr(w, http.StatusNotFound, "E_NODE", "node not found")
 		return
 	}
+	if stored, err := s.store.GetWorkflowArtifact(r.Context(), run.ID, nodeID, path); err == nil && stored != nil {
+		contentType := stored.ContentType
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Content-Disposition", `attachment; filename="`+stored.Name+`"`)
+		_, _ = w.Write([]byte(stored.Content))
+		return
+	}
 	for _, artifact := range node.Artifacts {
 		if artifact.Path != path {
 			continue
@@ -436,6 +481,9 @@ func (s *Server) executeWorkflow(runID, start string) {
 			var out string
 			var err error
 			for attempt := 0; attempt < attempts; attempt++ {
+				if attempt > 0 && def.RetryDelaySeconds > 0 {
+					time.Sleep(time.Duration(def.RetryDelaySeconds) * time.Second)
+				}
 				out, err = runScript(def.Command, artifactDir)
 				if err == nil {
 					break
@@ -444,7 +492,7 @@ func (s *Server) executeWorkflow(runID, start string) {
 			finish := time.Now().UTC()
 			node.FinishedAt = &finish
 			node.Output = out
-			node.Artifacts = collectArtifacts(artifactDir)
+			node.Artifacts = s.persistArtifacts(context.Background(), run.ID, current, collectArtifacts(artifactDir))
 			if err != nil {
 				node.Status = domain.WorkflowNodeFailed
 				node.Error = err.Error()
@@ -586,7 +634,7 @@ func (s *Server) watchWorkflowAgent(runID, nodeID, agentRunID string) {
 		if agentRun.Status == domain.RunSucceeded {
 			node.Status = domain.WorkflowNodeSucceeded
 			node.Output = "agent run " + agentRun.ID + " succeeded"
-			node.Artifacts = s.agentRunArtifacts(context.Background(), agentRun.ID)
+			node.Artifacts = s.persistArtifacts(context.Background(), run.ID, nodeID, s.agentRunArtifacts(context.Background(), agentRun.ID))
 			run.CurrentNode = def.Next
 			run.Status = domain.WorkflowRunning
 		} else {
@@ -765,6 +813,19 @@ func (s *Server) agentRunArtifacts(ctx context.Context, runID string) []domain.W
 	}
 	return []domain.WorkflowArtifact{{Name: "agent-output.md", Path: "agent-output.md", Size: len(content), Content: content}}
 }
+func (s *Server) persistArtifacts(ctx context.Context, runID, nodeID string, artifacts []domain.WorkflowArtifact) []domain.WorkflowArtifact {
+	out := make([]domain.WorkflowArtifact, 0, len(artifacts))
+	for _, artifact := range artifacts {
+		if err := s.store.SaveWorkflowArtifact(ctx, runID, nodeID, &artifact); err != nil {
+			continue
+		}
+		if artifact.Size > 64*1024 || !(strings.HasPrefix(artifact.ContentType, "text/") || artifact.ContentType == "application/json") {
+			artifact.Content = ""
+		}
+		out = append(out, artifact)
+	}
+	return out
+}
 func (s *Server) workflowArtifactDir(runID, nodeID string) string {
 	dir := filepath.Join(filepath.Dir(s.cfg.DBPath), "artifacts", runID, nodeID)
 	_ = os.MkdirAll(dir, 0o755)
@@ -778,14 +839,15 @@ func collectArtifacts(dir string) []domain.WorkflowArtifact {
 		}
 		rel, _ := filepath.Rel(dir, path)
 		info, infoErr := entry.Info()
-		if infoErr != nil || info.Size() > 64*1024 {
+		if infoErr != nil || info.Size() > 5*1024*1024 {
 			return nil
 		}
 		raw, readErr := os.ReadFile(path)
 		if readErr != nil {
 			return nil
 		}
-		out = append(out, domain.WorkflowArtifact{Name: entry.Name(), Path: rel, Size: int(info.Size()), Content: string(raw)})
+		contentType := http.DetectContentType(raw)
+		out = append(out, domain.WorkflowArtifact{Name: entry.Name(), Path: rel, Size: int(info.Size()), Content: string(raw), ContentType: contentType})
 		return nil
 	})
 	return out

@@ -7,7 +7,16 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Dialog, DialogContent } from '../components/ui/dialog'
 import { cn } from '../lib/utils'
+import { WorkflowNodeBuilder } from '../components/workflow-node-builder'
 
+function parseNodes(text: string): WorkflowNode[] {
+  try {
+    const parsed = JSON.parse(text)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
 const DEFAULT_NODES = `[
   {"id":"review","kind":"gate","name":"Review","next":"run"},
   {"id":"run","kind":"script","name":"Run","command":"echo workflow ok"}
@@ -30,6 +39,7 @@ export default function WorkflowsPage() {
   const [message, setMessage] = useState('')
 
   const { data: workflowsData } = useQuery({ queryKey: ['workflows', workspaceId], queryFn: () => api.workflows(workspaceId) })
+  const { data: templatesData } = useQuery({ queryKey: ['workflow-templates'], queryFn: api.workflowTemplates })
   const { data: runsData } = useQuery({ queryKey: ['workflow-runs', workspaceId], queryFn: () => api.workflowRuns(workspaceId), refetchInterval: 3000 })
   const { data: tasksData } = useQuery({ queryKey: ['tasks', workspaceId, 'workflow'], queryFn: () => api.tasks({ workspace: workspaceId }) })
   const { data: run } = useQuery({
@@ -39,6 +49,7 @@ export default function WorkflowsPage() {
     refetchInterval: 2000,
   })
   const workflows = workflowsData?.items ?? []
+  const templates = templatesData?.items ?? []
   const runs = runsData?.items ?? []
   const tasks = tasksData?.items ?? []
 
@@ -175,7 +186,7 @@ export default function WorkflowsPage() {
                     {node.error && <p className="mt-1 text-[10.5px] text-err">{node.error}</p>}
                     {(node.artifacts ?? []).map((artifact) => (
                       <details key={artifact.path} className="mt-1 rounded border border-line2/60 px-1.5 py-1 text-[10px]">
-                        <summary className="cursor-pointer text-muted">{artifact.name} · {artifact.size} bytes</summary>
+                        <summary className="cursor-pointer text-muted">{artifact.name} 路 {artifact.size} bytes</summary>
                         <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap text-[10px] text-muted">{artifact.content}</pre>
                         <a
                           className="mt-1 inline-block text-[10px] text-accent2 hover:underline"
@@ -210,8 +221,25 @@ export default function WorkflowsPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent title="New workflow" description="Nodes are a linear list connected by next.">
           <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); create.mutate() }}>
+            <div className="flex flex-wrap gap-1">
+              {templates.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  className="rounded border border-line2 px-2 py-1 text-[10.5px] text-muted hover:text-fg"
+                  onClick={() => {
+                    setName(template.name)
+                    setDescription(template.description)
+                    setNodesText(JSON.stringify(template.nodes, null, 2))
+                  }}
+                >
+                  {template.name}
+                </button>
+              ))}
+            </div>
             <Input autoFocus placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
             <Input placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <WorkflowNodeBuilder nodes={parseNodes(nodesText)} onChange={(next) => setNodesText(JSON.stringify(next, null, 2))} />
             <textarea className="min-h-48 rounded-md border border-line2 bg-panel p-2 font-mono text-[11px]" value={nodesText} onChange={(e) => setNodesText(e.target.value)} />
             <div className="flex justify-end"><Button type="submit" variant="primary" disabled={!name || create.isPending}>Create</Button></div>
           </form>
@@ -223,6 +251,7 @@ export default function WorkflowsPage() {
           <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); update.mutate() }}>
             <Input autoFocus placeholder="Name" value={editName} onChange={(e) => setEditName(e.target.value)} />
             <Input placeholder="Description" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+            <WorkflowNodeBuilder nodes={parseNodes(editNodes)} onChange={(next) => setEditNodes(JSON.stringify(next, null, 2))} />
             <textarea className="min-h-48 rounded-md border border-line2 bg-panel p-2 font-mono text-[11px]" value={editNodes} onChange={(e) => setEditNodes(e.target.value)} />
             <div className="flex justify-end"><Button type="submit" variant="primary" disabled={!editName || update.isPending}>Save</Button></div>
           </form>

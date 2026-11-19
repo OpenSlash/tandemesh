@@ -18,19 +18,20 @@ const (
 )
 
 type WorkflowNode struct {
-	ID         string `json:"id"`
-	Kind       string `json:"kind"`
-	Name       string `json:"name"`
-	AgentID    string `json:"agentId,omitempty"`
-	Role       string `json:"role,omitempty"`
-	Model      string `json:"model,omitempty"`
-	WorkflowID string `json:"workflowId,omitempty"`
-	Prompt     string `json:"prompt,omitempty"`
-	Command    string `json:"command,omitempty"`
-	Next       string `json:"next,omitempty"`
-	OnFail     string `json:"onFail,omitempty"`
-	Retries    int    `json:"retries,omitempty"`
-	When       string `json:"when,omitempty"`
+	ID                string `json:"id"`
+	Kind              string `json:"kind"`
+	Name              string `json:"name"`
+	AgentID           string `json:"agentId,omitempty"`
+	Role              string `json:"role,omitempty"`
+	Model             string `json:"model,omitempty"`
+	WorkflowID        string `json:"workflowId,omitempty"`
+	Prompt            string `json:"prompt,omitempty"`
+	Command           string `json:"command,omitempty"`
+	Next              string `json:"next,omitempty"`
+	OnFail            string `json:"onFail,omitempty"`
+	Retries           int    `json:"retries,omitempty"`
+	RetryDelaySeconds int    `json:"retryDelaySeconds,omitempty"`
+	When              string `json:"when,omitempty"`
 }
 
 type Workflow struct {
@@ -44,10 +45,11 @@ type Workflow struct {
 }
 
 type WorkflowArtifact struct {
-	Name    string `json:"name"`
-	Path    string `json:"path"`
-	Size    int    `json:"size"`
-	Content string `json:"content,omitempty"`
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	Size        int    `json:"size"`
+	Content     string `json:"content,omitempty"`
+	ContentType string `json:"contentType,omitempty"`
 }
 type WorkflowNodeRun struct {
 	NodeID     string             `json:"nodeId"`
