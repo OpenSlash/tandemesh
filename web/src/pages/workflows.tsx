@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Play, Plus, RotateCcw, Workflow as WorkflowIcon, X } from 'lucide-react'
+import { Check, Pencil, Play, Plus, RotateCcw, Trash2, Workflow as WorkflowIcon, X } from 'lucide-react'
 import { api, type Workflow, type WorkflowNode } from '../lib/api'
 import { useWorkspace } from '../lib/workspace'
 import { Button } from '../components/ui/button'
@@ -21,6 +21,10 @@ export default function WorkflowsPage() {
   const [description, setDescription] = useState('')
   const [nodesText, setNodesText] = useState(DEFAULT_NODES)
   const [runFor, setRunFor] = useState<Workflow | null>(null)
+  const [editFor, setEditFor] = useState<Workflow | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editNodes, setEditNodes] = useState('')
   const [taskId, setTaskId] = useState('')
   const [selected, setSelected] = useState(() => new URLSearchParams(window.location.search).get('run') ?? '')
   const [message, setMessage] = useState('')
@@ -53,6 +57,21 @@ export default function WorkflowsPage() {
   const start = useMutation({
     mutationFn: () => api.startWorkflow(runFor!.id, { taskId: taskId || undefined }),
     onSuccess: (result) => { invalidate(); setSelected(result.id); setRunFor(null); setTaskId('') },
+    onError: (err) => setMessage(String(err)),
+  })
+  const update = useMutation({
+    mutationFn: () => api.updateWorkflow(editFor!.id, {
+      workspaceId,
+      name: editName,
+      description: editDescription,
+      nodes: JSON.parse(editNodes) as WorkflowNode[],
+    }),
+    onSuccess: () => { invalidate(); setEditFor(null) },
+    onError: (err) => setMessage(String(err)),
+  })
+  const remove = useMutation({
+    mutationFn: (id: string) => api.deleteWorkflow(id),
+    onSuccess: () => { invalidate(); setSelected('') },
     onError: (err) => setMessage(String(err)),
   })
   const retry = useMutation({
@@ -94,6 +113,21 @@ export default function WorkflowsPage() {
                     <WorkflowIcon className="h-3.5 w-3.5 text-muted" />
                     <span className="text-[12px] font-medium">{wf.name}</span>
                     <Button className="ml-auto" size="sm" variant="secondary" onClick={() => setRunFor(wf)}>Run</Button>
+                    <button
+                      className="text-muted hover:text-fg"
+                      title="Edit"
+                      onClick={() => {
+                        setEditFor(wf)
+                        setEditName(wf.name)
+                        setEditDescription(wf.description ?? '')
+                        setEditNodes(JSON.stringify(wf.nodes, null, 2))
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button className="text-muted hover:text-err" title="Delete" onClick={() => remove.mutate(wf.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                   <p className="mt-1 text-[10.5px] text-muted">{wf.nodes.map((n) => n.name || n.id).join(' -> ')}</p>
                 </div>
@@ -180,6 +214,17 @@ export default function WorkflowsPage() {
             <Input placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
             <textarea className="min-h-48 rounded-md border border-line2 bg-panel p-2 font-mono text-[11px]" value={nodesText} onChange={(e) => setNodesText(e.target.value)} />
             <div className="flex justify-end"><Button type="submit" variant="primary" disabled={!name || create.isPending}>Create</Button></div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editFor} onOpenChange={(open) => !open && setEditFor(null)}>
+        <DialogContent title="Edit workflow" description="Update the definition; existing runs keep their snapshot.">
+          <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); update.mutate() }}>
+            <Input autoFocus placeholder="Name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+            <Input placeholder="Description" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+            <textarea className="min-h-48 rounded-md border border-line2 bg-panel p-2 font-mono text-[11px]" value={editNodes} onChange={(e) => setEditNodes(e.target.value)} />
+            <div className="flex justify-end"><Button type="submit" variant="primary" disabled={!editName || update.isPending}>Save</Button></div>
           </form>
         </DialogContent>
       </Dialog>

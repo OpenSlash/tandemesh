@@ -26,6 +26,18 @@ func (s *Store) CreateWorkflow(ctx context.Context, wf *domain.Workflow) error {
 	return err
 }
 
+func (s *Store) UpdateWorkflow(ctx context.Context, wf *domain.Workflow) error {
+	wf.UpdatedAt = time.Now().UTC()
+	nodes, _ := json.Marshal(wf.Nodes)
+	_, err := s.db.ExecContext(ctx, `UPDATE workflows SET name = ?, description = ?, nodes_json = ?, updated_at_ms = ? WHERE id = ?`,
+		wf.Name, wf.Description, string(nodes), ms(wf.UpdatedAt), wf.ID)
+	return err
+}
+
+func (s *Store) DeleteWorkflow(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM workflows WHERE id = ?`, id)
+	return err
+}
 func (s *Store) GetWorkflow(ctx context.Context, id string) (*domain.Workflow, error) {
 	var wf domain.Workflow
 	var nodes string

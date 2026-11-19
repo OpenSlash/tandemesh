@@ -1,6 +1,9 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
 	"runtime"
 	"strings"
 	"testing"
@@ -183,4 +186,33 @@ func TestConditionMatches(t *testing.T) {
 			t.Fatalf("conditionMatches(%q, %q) = %v, want %v", tc.expr, tc.input, got, tc.want)
 		}
 	}
+}
+
+func TestWorkflowUpdateDelete(t *testing.T) {
+	ts := newTestServer(t)
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "editable",
+		"nodes": []map[string]any{{"id": "one", "kind": "script", "name": "One", "command": "echo one"}},
+	})
+	body, _ := json.Marshal(map[string]any{
+		"workspaceId": "ws_default", "name": "renamed",
+		"nodes": []map[string]any{{"id": "two", "kind": "script", "name": "Two", "command": "echo two"}},
+	})
+	req, _ := http.NewRequest(http.MethodPut, ts.URL+"/api/v1/workflows/"+wf.ID, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("update: %v %v", err, resp.StatusCode)
+	}
+	resp.Body.Close()
+	updated := getJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows/"+wf.ID)
+	if updated.Name != "renamed" || len(updated.Nodes) != 1 || updated.Nodes[0].ID != "two" {
+		t.Fatalf("updated = %+v", updated)
+	}
+	req, _ = http.NewRequest(http.MethodDelete, ts.URL+"/api/v1/workflows/"+wf.ID, nil)
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("delete: %v %v", err, resp.StatusCode)
+	}
+	resp.Body.Close()
 }

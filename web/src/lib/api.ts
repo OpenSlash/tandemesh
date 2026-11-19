@@ -1535,6 +1535,10 @@ export const api = {
     request<List<Workflow>>(`/api/v1/workflows?workspace=${workspace}`),
   createWorkflow: (body: { workspaceId: string; name: string; description?: string; nodes: WorkflowNode[] }) =>
     request<Workflow>('/api/v1/workflows', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) }),
+  updateWorkflow: (id: string, body: { workspaceId: string; name: string; description?: string; nodes: WorkflowNode[] }) =>
+    request<Workflow>(`/api/v1/workflows/${id}`, { method: 'PUT', headers: JSON_HEADERS, body: JSON.stringify(body) }),
+  deleteWorkflow: (id: string) =>
+    request<void>(`/api/v1/workflows/${id}`, { method: 'DELETE' }),
   startWorkflow: (id: string, body: { taskId?: string }) =>
     request<WorkflowRun>(`/api/v1/workflows/${id}/runs`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) }),
   workflowRuns: (workspace: string, task?: string) =>

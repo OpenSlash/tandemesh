@@ -80,6 +80,53 @@ func (s *Server) getWorkflow(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, wf)
 }
 
+func (s *Server) updateWorkflow(w http.ResponseWriter, r *http.Request) {
+	wf, err := s.store.GetWorkflow(r.Context(), chi.URLParam(r, "id"))
+	if err != nil || wf == nil {
+		writeErr(w, http.StatusNotFound, "E_WORKFLOW", "workflow not found")
+		return
+	}
+	if !s.requireWorkspace(w, r, wf.WorkspaceID) {
+		return
+	}
+	var req workflowRequest
+	if err := decodeJSON(w, r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "E_BODY", err.Error())
+		return
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		writeErr(w, http.StatusBadRequest, "E_NAME", "name is required")
+		return
+	}
+	if err := validateWorkflowNodes(req.Nodes); err != nil {
+		writeErr(w, http.StatusBadRequest, "E_WORKFLOW", err.Error())
+		return
+	}
+	wf.Name = req.Name
+	wf.Description = req.Description
+	wf.Nodes = req.Nodes
+	if err := s.store.UpdateWorkflow(r.Context(), wf); err != nil {
+		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, wf)
+}
+
+func (s *Server) deleteWorkflow(w http.ResponseWriter, r *http.Request) {
+	wf, err := s.store.GetWorkflow(r.Context(), chi.URLParam(r, "id"))
+	if err != nil || wf == nil {
+		writeErr(w, http.StatusNotFound, "E_WORKFLOW", "workflow not found")
+		return
+	}
+	if !s.requireWorkspace(w, r, wf.WorkspaceID) {
+		return
+	}
+	if err := s.store.DeleteWorkflow(r.Context(), wf.ID); err != nil {
+		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 func (s *Server) startWorkflow(w http.ResponseWriter, r *http.Request) {
 	wf, err := s.store.GetWorkflow(r.Context(), chi.URLParam(r, "id"))
 	if err != nil || wf == nil {

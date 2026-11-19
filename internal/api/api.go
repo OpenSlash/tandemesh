@@ -390,6 +390,8 @@ func (s *Server) Router() http.Handler {
 		r.Get("/workflows", s.listWorkflows)
 		r.Post("/workflows", s.createWorkflow)
 		r.Get("/workflows/{id}", s.getWorkflow)
+		r.Put("/workflows/{id}", s.updateWorkflow)
+		r.Delete("/workflows/{id}", s.deleteWorkflow)
 		r.Post("/workflows/{id}/runs", s.startWorkflow)
 		r.Get("/workflow-runs", s.listWorkflowRuns)
 		r.Get("/workflow-runs/{id}", s.getWorkflowRun)
