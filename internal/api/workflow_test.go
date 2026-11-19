@@ -162,3 +162,25 @@ func TestWorkflowCondition(t *testing.T) {
 		t.Fatalf("yes output = %q", yes.Output)
 	}
 }
+
+func TestConditionMatches(t *testing.T) {
+	cases := []struct {
+		expr  string
+		input string
+		want  bool
+	}{
+		{"contains:HELLO", "hello world", true},
+		{"not_contains:ERROR", "all good", true},
+		{"equals:APPROVED", " approved ", true},
+		{"prefix:ERR", "error: bad", true},
+		{"and:contains:a|contains:b", "a and b", true},
+		{"and:contains:a|contains:z", "a and b", false},
+		{"or:contains:a|contains:z", "a and b", true},
+		{"not:contains:z", "a and b", true},
+	}
+	for _, tc := range cases {
+		if got := conditionMatches(tc.expr, tc.input); got != tc.want {
+			t.Fatalf("conditionMatches(%q, %q) = %v, want %v", tc.expr, tc.input, got, tc.want)
+		}
+	}
+}

@@ -642,6 +642,28 @@ func previousOutput(run *domain.WorkflowRun, nodeID string) string {
 
 func conditionMatches(expr, input string) bool {
 	expr = strings.TrimSpace(expr)
+	lower := strings.ToLower(expr)
+	if strings.HasPrefix(lower, "and:") || strings.HasPrefix(lower, "or:") {
+		parts := strings.SplitN(expr, ":", 2)
+		clauses := strings.Split(parts[1], "|")
+		if strings.HasPrefix(lower, "and:") {
+			for _, clause := range clauses {
+				if !conditionMatches(clause, input) {
+					return false
+				}
+			}
+			return true
+		}
+		for _, clause := range clauses {
+			if conditionMatches(clause, input) {
+				return true
+			}
+		}
+		return false
+	}
+	if strings.HasPrefix(lower, "not:") {
+		return !conditionMatches(strings.TrimSpace(expr[4:]), input)
+	}
 	parts := strings.SplitN(expr, ":", 2)
 	if len(parts) != 2 {
 		return false
