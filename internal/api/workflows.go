@@ -512,6 +512,7 @@ func (s *Server) watchWorkflowAgent(runID, nodeID, agentRunID string) {
 		if agentRun.Status == domain.RunSucceeded {
 			node.Status = domain.WorkflowNodeSucceeded
 			node.Output = "agent run " + agentRun.ID + " succeeded"
+			node.Artifacts = s.agentRunArtifacts(context.Background(), agentRun.ID)
 			run.CurrentNode = def.Next
 			run.Status = domain.WorkflowRunning
 		} else {
@@ -638,6 +639,35 @@ func conditionMatches(expr, input string) bool {
 	default:
 		return false
 	}
+}
+func (s *Server) agentRunArtifacts(ctx context.Context, runID string) []domain.WorkflowArtifact {
+	events, err := s.store.ListEventsTail(ctx, runID, 500)
+	if err != nil {
+		return nil
+	}
+	var out strings.Builder
+	for _, event := range events {
+		if event.Type != "agent.message.complete" {
+			continue
+		}
+		if role, _ := event.Payload["role"].(string); role != "assistant" {
+			continue
+		}
+		if text, _ := event.Payload["text"].(string); text != "" {
+			if out.Len() > 0 {
+				out.WriteString("\n\n")
+			}
+			out.WriteString(text)
+		}
+	}
+	content := out.String()
+	if content == "" {
+		return nil
+	}
+	if len(content) > 64*1024 {
+		content = content[len(content)-64*1024:]
+	}
+	return []domain.WorkflowArtifact{{Name: "agent-output.md", Path: "agent-output.md", Size: len(content), Content: content}}
 }
 func (s *Server) workflowArtifactDir(runID, nodeID string) string {
 	dir := filepath.Join(filepath.Dir(s.cfg.DBPath), "artifacts", runID, nodeID)
