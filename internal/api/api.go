@@ -388,6 +388,7 @@ func (s *Server) Router() http.Handler {
 		r.Post("/automations/{id}/run", s.runAutomation)
 
 		r.Get("/workflow-templates", s.listWorkflowTemplates)
+		r.Get("/usage", s.usageSummary)
 		r.Get("/workflows", s.listWorkflows)
 		r.Post("/workflows", s.createWorkflow)
 		r.Get("/workflows/{id}", s.getWorkflow)

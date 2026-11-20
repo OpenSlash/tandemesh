@@ -13,6 +13,7 @@ import RunDetailPage from './pages/run-detail'
 import ApprovalsPage from './pages/approvals'
 import AutomationsPage from './pages/automations'
 import WorkflowsPage from './pages/workflows'
+import UsagePage from './pages/usage'
 import AgentsPage from './pages/agents'
 import GroupsPage from './pages/groups'
 import WorkspacePage from './pages/workspace'
@@ -90,6 +91,7 @@ export default function App() {
             <Route path="approvals" element={<ApprovalsPage />} />
             <Route path="automations" element={<AutomationsPage />} />
             <Route path="workflows" element={<WorkflowsPage />} />
+            <Route path="usage" element={<UsagePage />} />
             <Route path="agents" element={<AgentsPage />} />
             <Route path="groups" element={<GroupsPage />} />
             <Route path="workspace" element={<WorkspacePage />} />

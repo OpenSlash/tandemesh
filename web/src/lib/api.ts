@@ -658,6 +658,21 @@ export interface WorkflowNode {
   timeoutSeconds?: number
 }
 
+export interface UsageRow {
+  agentId: string
+  model: string
+  runs: number
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+}
+
+export interface UsageSummary extends UsageRow {
+  from: number
+  to: number
+  items: UsageRow[]
+}
 export interface WorkflowTemplate {
   id: string
   name: string
@@ -1547,6 +1562,7 @@ export const api = {
     }),
 
   workflowTemplates: () => request<List<WorkflowTemplate>>('/api/v1/workflow-templates'),
+  usage: (workspace: string, days = 30) => request<UsageSummary>(`/api/v1/usage?workspace=${workspace}&days=${days}`),
   workflows: (workspace: string) =>
     request<List<Workflow>>(`/api/v1/workflows?workspace=${workspace}`),
   createWorkflow: (body: { workspaceId: string; name: string; description?: string; nodes: WorkflowNode[] }) =>
