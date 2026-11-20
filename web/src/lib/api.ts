@@ -659,6 +659,7 @@ export interface WorkflowNode {
   when?: string
   next?: string
   needs?: string[]
+  position?: { x: number; y: number }
   onFail?: string
   retries?: number
   retryDelaySeconds?: number

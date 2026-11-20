@@ -9,6 +9,7 @@ import { Dialog, DialogContent } from '../components/ui/dialog'
 import { cn } from '../lib/utils'
 import { WorkflowNodeBuilder } from '../components/workflow-node-builder'
 import { WorkflowGraph } from '../components/workflow-graph'
+import { WorkflowCanvas } from '../components/workflow-canvas'
 
 function parseNodes(text: string): WorkflowNode[] {
   try {
@@ -254,6 +255,7 @@ export default function WorkflowsPage() {
           <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); update.mutate() }}>
             <Input autoFocus placeholder="Name" value={editName} onChange={(e) => setEditName(e.target.value)} />
             <Input placeholder="Description" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+            <WorkflowCanvas nodes={parseNodes(editNodes)} onChange={(next) => setEditNodes(JSON.stringify(next, null, 2))} />
             <WorkflowNodeBuilder nodes={parseNodes(editNodes)} onChange={(next) => setEditNodes(JSON.stringify(next, null, 2))} />
             <textarea className="min-h-48 rounded-md border border-line2 bg-panel p-2 font-mono text-[11px]" value={editNodes} onChange={(e) => setEditNodes(e.target.value)} />
             <div className="flex justify-end"><Button type="submit" variant="primary" disabled={!editName || update.isPending}>Save</Button></div>
