@@ -329,3 +329,22 @@ func TestWorkflowDAG(t *testing.T) {
 		}
 	}
 }
+
+func TestWorkflowDAGParallelMerge(t *testing.T) {
+	ts := newTestServer(t)
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "dag parallel",
+		"nodes": []map[string]any{
+			{"id": "a", "kind": "script", "name": "A", "command": "echo A"},
+			{"id": "b", "kind": "script", "name": "B", "command": "echo B"},
+			{"id": "merge", "kind": "merge", "name": "Merge", "needs": []string{"a", "b"}, "next": "done"},
+			{"id": "done", "kind": "script", "name": "Done", "command": "echo DONE"},
+		},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wf.ID+"/runs", map[string]any{})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	merge := findNodeRun(&final, "merge")
+	if merge == nil || !strings.Contains(merge.Output, "A") || !strings.Contains(merge.Output, "B") {
+		t.Fatalf("merge output = %+v", merge)
+	}
+}

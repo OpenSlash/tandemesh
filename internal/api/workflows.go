@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -439,9 +440,150 @@ func (s *Server) cancelWorkflowTree(ctx context.Context, run *domain.WorkflowRun
 		}
 	}
 }
-func (s *Server) executeWorkflow(runID, start string) {
+func isScriptDAG(nodes []domain.WorkflowNode) bool {
+	hasNeeds := false
+	for _, node := range nodes {
+		if len(node.Needs) > 0 {
+			hasNeeds = true
+		}
+		if node.Kind != "script" && node.Kind != "merge" {
+			return false
+		}
+	}
+	return hasNeeds
+}
+
+func (s *Server) executeScriptDAG(runID string) {
+	for {
+		s.workflowMu.Lock()
+		run, _ := s.store.GetWorkflowRun(context.Background(), runID)
+		if run == nil || run.Status == domain.WorkflowSucceeded || run.Status == domain.WorkflowFailed || run.Status == domain.WorkflowCancelled {
+			s.workflowMu.Unlock()
+			return
+		}
+		wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+		if wf == nil {
+			s.workflowMu.Unlock()
+			return
+		}
+		ready := make([]string, 0)
+		pending := 0
+		for _, node := range wf.Nodes {
+			state := findNodeRun(run, node.ID)
+			if state == nil {
+				continue
+			}
+			if state.Status != domain.WorkflowNodePending {
+				continue
+			}
+			pending++
+			ok := true
+			for _, need := range node.Needs {
+				parent := findNodeRun(run, need)
+				if parent == nil || parent.Status != domain.WorkflowNodeSucceeded {
+					ok = false
+					break
+				}
+			}
+			if ok {
+				ready = append(ready, node.ID)
+			}
+		}
+		if len(ready) == 0 {
+			if pending > 0 {
+				run.Status = domain.WorkflowFailed
+				run.Error = "workflow dependencies cannot make progress"
+				_ = s.store.UpdateWorkflowRun(context.Background(), run)
+			} else {
+				run.Status = domain.WorkflowSucceeded
+				run.CurrentNode = ""
+				_ = s.store.UpdateWorkflowRun(context.Background(), run)
+			}
+			s.workflowMu.Unlock()
+			return
+		}
+		for _, id := range ready {
+			node := findNodeRun(run, id)
+			node.Status = domain.WorkflowNodeRunning
+		}
+		run.CurrentNode = ready[0]
+		_ = s.store.UpdateWorkflowRun(context.Background(), run)
+		s.workflowMu.Unlock()
+
+		var wg sync.WaitGroup
+		for _, id := range ready {
+			wg.Add(1)
+			go func(nodeID string) {
+				defer wg.Done()
+				s.runDAGScriptNode(runID, nodeID)
+			}(id)
+		}
+		wg.Wait()
+	}
+}
+
+func (s *Server) runDAGScriptNode(runID, nodeID string) {
+	run, _ := s.store.GetWorkflowRun(context.Background(), runID)
+	if run == nil {
+		return
+	}
+	wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+	if wf == nil {
+		return
+	}
+	def := findNode(wf.Nodes, nodeID)
+	node := findNodeRun(run, nodeID)
+	if def == nil || node == nil {
+		return
+	}
+	started := time.Now().UTC()
+	node.StartedAt = &started
+	if def.Kind == "script" {
+		artifactDir := s.workflowArtifactDir(runID, nodeID)
+		timeout := 10 * time.Minute
+		if def.TimeoutSeconds > 0 {
+			timeout = time.Duration(def.TimeoutSeconds) * time.Second
+		}
+		out, err := runScript(def.Command, artifactDir, timeout)
+		node.Output = out
+		artifacts := s.persistArtifacts(context.Background(), runID, nodeID, collectArtifacts(artifactDir))
+		s.finishDAGNode(runID, nodeID, out, artifacts, err)
+		return
+	}
+	if def.Kind == "merge" {
+		s.finishDAGNode(runID, nodeID, mergeInput(run, def), nil, nil)
+	}
+}
+
+func (s *Server) finishDAGNode(runID, nodeID, output string, artifacts []domain.WorkflowArtifact, runErr error) {
 	s.workflowMu.Lock()
 	defer s.workflowMu.Unlock()
+	run, _ := s.store.GetWorkflowRun(context.Background(), runID)
+	if run == nil {
+		return
+	}
+	node := findNodeRun(run, nodeID)
+	if node == nil {
+		return
+	}
+	now := time.Now().UTC()
+	node.FinishedAt = &now
+	node.Output = output
+	if artifacts != nil {
+		node.Artifacts = artifacts
+	}
+	if runErr != nil {
+		node.Status = domain.WorkflowNodeFailed
+		node.Error = runErr.Error()
+		run.Status = domain.WorkflowFailed
+		run.Error = runErr.Error()
+	} else {
+		node.Status = domain.WorkflowNodeSucceeded
+	}
+	_ = s.store.UpdateWorkflowRun(context.Background(), run)
+}
+func (s *Server) executeWorkflow(runID, start string) {
+	s.workflowMu.Lock()
 	run, err := s.store.GetWorkflowRun(context.Background(), runID)
 	if err != nil || run == nil {
 		return
@@ -450,6 +592,12 @@ func (s *Server) executeWorkflow(runID, start string) {
 	if wf == nil {
 		return
 	}
+	if isScriptDAG(wf.Nodes) {
+		s.workflowMu.Unlock()
+		s.executeScriptDAG(runID)
+		return
+	}
+	defer s.workflowMu.Unlock()
 	wf.Nodes = linearizeDAG(wf.Nodes)
 	current := start
 	for current != "" {
@@ -697,15 +845,7 @@ func (s *Server) executeWorkflow(runID, start string) {
 					_ = s.store.UpdateWorkflowRun(context.Background(), run)
 					return
 				}
-				base := ""
-				if previous != nil {
-					base = previous.Output
-					for _, artifact := range previous.Artifacts {
-						if artifact.Content != "" {
-							base += "\n\n## " + artifact.Name + "\n\n" + artifact.Content
-						}
-					}
-				}
+				base := mergeInput(run, def)
 				instruction := strings.TrimSpace(def.Prompt)
 				if instruction == "" {
 					instruction = "Synthesize the previous agent outputs into one concise result."
@@ -739,21 +879,8 @@ func (s *Server) executeWorkflow(runID, start string) {
 				_ = s.store.UpdateWorkflowRun(context.Background(), run)
 				return
 			}
-			var merged strings.Builder
-			for _, artifact := range previous.Artifacts {
-				if artifact.Content == "" {
-					continue
-				}
-				if merged.Len() > 0 {
-					merged.WriteString("\n\n")
-				}
-				merged.WriteString("## " + artifact.Name + "\n\n" + artifact.Content)
-			}
-			if merged.Len() == 0 {
-				merged.WriteString(previous.Output)
-			}
 			node.Status = domain.WorkflowNodeSucceeded
-			node.Output = merged.String()
+			node.Output = mergeInput(run, def)
 			current = def.Next
 		case "condition":
 			matched := conditionMatches(def.When, previousOutput(run, current))
@@ -1036,6 +1163,35 @@ func previousNodeRun(run *domain.WorkflowRun, nodeID string) *domain.WorkflowNod
 		}
 	}
 	return previous
+}
+func mergeInput(run *domain.WorkflowRun, def *domain.WorkflowNode) string {
+	ids := def.Needs
+	if len(ids) == 0 {
+		if previous := previousNodeRun(run, def.ID); previous != nil {
+			ids = []string{previous.NodeID}
+		}
+	}
+	var out strings.Builder
+	for _, id := range ids {
+		node := findNodeRun(run, id)
+		if node == nil {
+			continue
+		}
+		part := node.Output
+		for _, artifact := range node.Artifacts {
+			if artifact.Content != "" {
+				part += "\n\n## " + artifact.Name + "\n\n" + artifact.Content
+			}
+		}
+		if strings.TrimSpace(part) == "" {
+			continue
+		}
+		if out.Len() > 0 {
+			out.WriteString("\n\n")
+		}
+		out.WriteString(part)
+	}
+	return out.String()
 }
 func previousOutput(run *domain.WorkflowRun, nodeID string) string {
 	last := ""
