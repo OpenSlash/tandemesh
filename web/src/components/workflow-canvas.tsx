@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react'
+import { useMemo } from 'react'
 import {
   Background,
   Controls,
@@ -6,6 +6,7 @@ import {
   MiniMap,
   Position,
   ReactFlow,
+  type Connection,
   type Edge,
   type Node,
   type NodeProps,
@@ -49,6 +50,23 @@ export function WorkflowCanvas({ nodes, onChange }: { nodes: WorkflowNode[]; onC
     return out
   }, [nodes])
 
+  const connect = (connection: Connection) => {
+    if (!connection.source || !connection.target || connection.source === connection.target) return
+    onChange(nodes.map((node) => {
+      if (node.id !== connection.target) return node
+      const needs = node.needs ?? []
+      if (needs.includes(connection.source)) return node
+      return { ...node, needs: [...needs, connection.source] }
+    }))
+  }
+  const removeEdges = (removed: Edge[]) => {
+    const pairs = new Set(removed.map((edge) => `${edge.source}->${edge.target}`))
+    onChange(nodes.map((node) => ({
+      ...node,
+      next: pairs.has(`${node.id}->${node.next}`) ? '' : node.next,
+      needs: (node.needs ?? []).filter((need) => !pairs.has(`${need}->${node.id}`)),
+    })))
+  }
   const savePosition = (_event: unknown, moved: Node) => {
     const index = nodes.findIndex((node) => node.id === moved.id)
     if (index < 0) return
@@ -64,7 +82,9 @@ export function WorkflowCanvas({ nodes, onChange }: { nodes: WorkflowNode[]; onC
         nodeTypes={nodeTypes}
         fitView
         onNodeDragStop={savePosition}
-        nodesConnectable={false}
+        onConnect={connect}
+        onEdgesDelete={removeEdges}
+        nodesConnectable
         proOptions={{ hideAttribution: true }}
       >
         <Background gap={18} size={1} />
