@@ -162,12 +162,61 @@ func (s *Server) runDAGNode(runID, nodeID string) {
 	case "fanout":
 		s.runDAGFanout(runID, nodeID, def)
 	case "workflow":
-		s.finishDAGNode(runID, nodeID, "", nil, errorf("child workflows are not supported inside DAG yet"))
+		s.runDAGChildWorkflow(runID, nodeID, def)
 	default:
 		s.finishDAGNode(runID, nodeID, "", nil, errorf("unsupported DAG node kind: %s", def.Kind))
 	}
 }
 
+func (s *Server) runDAGChildWorkflow(runID, nodeID string, def *domain.WorkflowNode) {
+	parent, _ := s.store.GetWorkflowRun(context.Background(), runID)
+	if parent == nil {
+		return
+	}
+	childWF, err := s.store.GetWorkflow(context.Background(), def.WorkflowID)
+	if err != nil || childWF == nil || childWF.WorkspaceID != parent.WorkspaceID {
+		s.finishDAGNode(runID, nodeID, "", nil, errorf("child workflow not found"))
+		return
+	}
+	child := &domain.WorkflowRun{
+		WorkflowID: childWF.ID, WorkspaceID: parent.WorkspaceID, TaskID: parent.TaskID,
+		Status: domain.WorkflowRunning, Nodes: initialNodeRuns(childWF.Nodes),
+	}
+	if len(childWF.Nodes) > 0 {
+		child.CurrentNode = childWF.Nodes[0].ID
+	}
+	if err := s.store.CreateWorkflowRun(context.Background(), child); err != nil {
+		s.finishDAGNode(runID, nodeID, "", nil, err)
+		return
+	}
+	s.workflowMu.Lock()
+	if current, _ := s.store.GetWorkflowRun(context.Background(), runID); current != nil {
+		if state := findNodeRun(current, nodeID); state != nil {
+			state.RunID = child.ID
+		}
+		_ = s.store.UpdateWorkflowRun(context.Background(), current)
+	}
+	s.workflowMu.Unlock()
+	go s.executeWorkflow(child.ID, childWF.Nodes[0].ID)
+
+	deadline := time.Now().Add(2 * time.Hour)
+	for time.Now().Before(deadline) {
+		time.Sleep(2 * time.Second)
+		current, _ := s.store.GetWorkflowRun(context.Background(), child.ID)
+		if current == nil {
+			continue
+		}
+		if current.Status == domain.WorkflowSucceeded {
+			s.finishDAGNode(runID, nodeID, "child workflow "+child.ID+" succeeded", nil, nil)
+			return
+		}
+		if current.Status == domain.WorkflowFailed || current.Status == domain.WorkflowCancelled {
+			s.finishDAGNode(runID, nodeID, "", nil, errorf("child workflow %s", current.Status))
+			return
+		}
+	}
+	s.finishDAGNode(runID, nodeID, "", nil, errorf("child workflow timed out"))
+}
 func (s *Server) runDAGAgent(runID, nodeID string, def *domain.WorkflowNode) {
 	run, _ := s.store.GetWorkflowRun(context.Background(), runID)
 	task, _ := s.store.GetTask(context.Background(), run.TaskID)

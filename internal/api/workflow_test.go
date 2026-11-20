@@ -366,3 +366,24 @@ func TestWorkflowDAGGate(t *testing.T) {
 		t.Fatalf("gate = %+v", final.Nodes)
 	}
 }
+
+func TestWorkflowDAGChild(t *testing.T) {
+	ts := newTestServer(t)
+	child := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "child",
+		"nodes": []map[string]any{{"id": "c", "kind": "script", "name": "Child", "command": "echo CHILD"}},
+	})
+	parent := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "parent",
+		"nodes": []map[string]any{
+			{"id": "sub", "kind": "workflow", "name": "Sub", "workflowId": child.ID},
+			{"id": "after", "kind": "script", "name": "After", "command": "echo AFTER", "needs": []string{"sub"}},
+		},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+parent.ID+"/runs", map[string]any{})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	sub := findNodeRun(&final, "sub")
+	if sub == nil || sub.Status != domain.WorkflowNodeSucceeded || sub.RunID == "" {
+		t.Fatalf("sub = %+v", sub)
+	}
+}
