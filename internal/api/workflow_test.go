@@ -348,3 +348,21 @@ func TestWorkflowDAGParallelMerge(t *testing.T) {
 		t.Fatalf("merge output = %+v", merge)
 	}
 }
+
+func TestWorkflowDAGGate(t *testing.T) {
+	ts := newTestServer(t)
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "dag gate",
+		"nodes": []map[string]any{
+			{"id": "one", "kind": "script", "name": "One", "command": "echo ONE"},
+			{"id": "gate", "kind": "gate", "name": "Gate", "needs": []string{"one"}},
+		},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wf.ID+"/runs", map[string]any{})
+	waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowWaiting, "gate")
+	postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflow-runs/"+run.ID+"/gate", map[string]any{"nodeId": "gate", "action": "approve"})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	if findNodeRun(&final, "gate").Status != domain.WorkflowNodeSucceeded {
+		t.Fatalf("gate = %+v", final.Nodes)
+	}
+}

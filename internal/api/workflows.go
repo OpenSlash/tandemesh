@@ -282,6 +282,11 @@ func (s *Server) gateWorkflowRun(w http.ResponseWriter, r *http.Request) {
 		node.Output = strings.TrimSpace(node.Output + "\n" + req.Note)
 		node.FinishedAt = &now
 		run.Status = domain.WorkflowRunning
+		if isDAG(wf.Nodes) {
+			_ = s.store.UpdateWorkflowRun(r.Context(), run)
+			go s.executeDAG(run.ID)
+			break
+		}
 		next := def.Next
 		if next == "" {
 			run.Status = domain.WorkflowSucceeded
@@ -310,7 +315,11 @@ func (s *Server) gateWorkflowRun(w http.ResponseWriter, r *http.Request) {
 		run.Status = domain.WorkflowRunning
 		run.CurrentNode = target
 		_ = s.store.UpdateWorkflowRun(r.Context(), run)
-		go s.executeWorkflow(run.ID, target)
+		if isDAG(wf.Nodes) {
+			go s.executeDAG(run.ID)
+		} else {
+			go s.executeWorkflow(run.ID, target)
+		}
 	default:
 		writeErr(w, http.StatusBadRequest, "E_ACTION", "action must be approve, reject or retry")
 		return
@@ -440,17 +449,13 @@ func (s *Server) cancelWorkflowTree(ctx context.Context, run *domain.WorkflowRun
 		}
 	}
 }
-func isScriptDAG(nodes []domain.WorkflowNode) bool {
-	hasNeeds := false
+func isDAG(nodes []domain.WorkflowNode) bool {
 	for _, node := range nodes {
 		if len(node.Needs) > 0 {
-			hasNeeds = true
-		}
-		if node.Kind != "script" && node.Kind != "merge" {
-			return false
+			return true
 		}
 	}
-	return hasNeeds
+	return false
 }
 
 func (s *Server) executeScriptDAG(runID string) {
@@ -592,9 +597,9 @@ func (s *Server) executeWorkflow(runID, start string) {
 	if wf == nil {
 		return
 	}
-	if isScriptDAG(wf.Nodes) {
+	if isDAG(wf.Nodes) {
 		s.workflowMu.Unlock()
-		s.executeScriptDAG(runID)
+		s.executeDAG(runID)
 		return
 	}
 	defer s.workflowMu.Unlock()
