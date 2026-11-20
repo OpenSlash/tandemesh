@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -114,6 +115,35 @@ func (s *Server) runDAGNode(runID, nodeID string) {
 		s.finishDAGNode(runID, nodeID, out, artifacts, err)
 	case "merge":
 		s.finishDAGNode(runID, nodeID, mergeInput(run, def), nil, nil)
+	case "parallel":
+		artifactDir := s.workflowArtifactDir(runID, nodeID)
+		timeout := 10 * time.Minute
+		if def.TimeoutSeconds > 0 {
+			timeout = time.Duration(def.TimeoutSeconds) * time.Second
+		}
+		type result struct {
+			index int
+			out   string
+			err   error
+		}
+		ch := make(chan result, len(def.Commands))
+		for i, command := range def.Commands {
+			go func(index int, cmd string) {
+				out, err := runScript(cmd, artifactDir, timeout)
+				ch <- result{index: index, out: out, err: err}
+			}(i, command)
+		}
+		outputs := make([]string, len(def.Commands))
+		var firstErr error
+		for range def.Commands {
+			item := <-ch
+			outputs[item.index] = item.out
+			if item.err != nil && firstErr == nil {
+				firstErr = item.err
+			}
+		}
+		artifacts := s.persistArtifacts(context.Background(), runID, nodeID, collectArtifacts(artifactDir))
+		s.finishDAGNode(runID, nodeID, strings.Join(outputs, "\n"), artifacts, firstErr)
 	case "gate":
 		s.workflowMu.Lock()
 		current, _ := s.store.GetWorkflowRun(context.Background(), runID)
