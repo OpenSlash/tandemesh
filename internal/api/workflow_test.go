@@ -309,3 +309,23 @@ func TestWorkflowMerge(t *testing.T) {
 		t.Fatalf("merge output = %+v", merge)
 	}
 }
+
+func TestWorkflowDAG(t *testing.T) {
+	ts := newTestServer(t)
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "dag",
+		"nodes": []map[string]any{
+			{"id": "a", "kind": "script", "name": "A", "command": "echo A"},
+			{"id": "b", "kind": "script", "name": "B", "command": "echo B", "needs": []string{"a"}},
+			{"id": "c", "kind": "script", "name": "C", "command": "echo C", "needs": []string{"a", "b"}},
+		},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wf.ID+"/runs", map[string]any{})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	for _, id := range []string{"a", "b", "c"} {
+		node := findNodeRun(&final, id)
+		if node == nil || node.Status != domain.WorkflowNodeSucceeded {
+			t.Fatalf("node %s = %+v", id, node)
+		}
+	}
+}

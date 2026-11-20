@@ -43,6 +43,8 @@ export function WorkflowNodeBuilder({ nodes, onChange }: { nodes: WorkflowNode[]
               </>}
               {node.kind === 'workflow' && <label className="text-[10px] text-muted">Workflow<Input className="mt-0.5 h-7 w-48" value={node.workflowId ?? ''} onChange={(e) => update(index, { workflowId: e.target.value })} /></label>}
               {node.kind === 'condition' && <label className="text-[10px] text-muted">When<Input className="mt-0.5 h-7 w-56" value={node.when ?? ''} onChange={(e) => update(index, { when: e.target.value })} /></label>}
+              {node.kind === 'merge' && <label className="text-[10px] text-muted">Merge agent<Input className="mt-0.5 h-7 w-44" value={node.agentId ?? ''} onChange={(e) => update(index, { agentId: e.target.value })} /></label>}
+              <label className="text-[10px] text-muted">Needs (comma)<Input className="mt-0.5 h-7 w-40" value={(node.needs ?? []).join(', ')} onChange={(e) => update(index, { needs: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} /></label>
               <label className="text-[10px] text-muted">Next<Input className="mt-0.5 h-7 w-24" value={node.next ?? ''} onChange={(e) => update(index, { next: e.target.value })} /></label>
               <label className="text-[10px] text-muted">On fail<Input className="mt-0.5 h-7 w-24" value={node.onFail ?? ''} onChange={(e) => update(index, { onFail: e.target.value })} /></label>
               <label className="text-[10px] text-muted">Retries<Input className="mt-0.5 h-7 w-16" type="number" value={node.retries ?? 0} onChange={(e) => update(index, { retries: Number(e.target.value) })} /></label>

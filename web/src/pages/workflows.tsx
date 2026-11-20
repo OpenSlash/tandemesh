@@ -8,6 +8,7 @@ import { Input } from '../components/ui/input'
 import { Dialog, DialogContent } from '../components/ui/dialog'
 import { cn } from '../lib/utils'
 import { WorkflowNodeBuilder } from '../components/workflow-node-builder'
+import { WorkflowGraph } from '../components/workflow-graph'
 
 function parseNodes(text: string): WorkflowNode[] {
   try {
@@ -170,6 +171,7 @@ export default function WorkflowsPage() {
                 <span className="text-[13px] font-medium">{run.id}</span>
                 <span className={cn('rounded px-1.5 py-0.5 text-[10px]', run.status === 'succeeded' ? 'bg-ok/10 text-ok' : run.status === 'failed' ? 'bg-err/10 text-err' : 'bg-warn/10 text-warn')}>{run.status}</span>
                 {run.taskId && <span className="font-mono text-[10px] text-muted">{run.taskId}</span>}
+                <WorkflowGraph nodes={workflows.find((wf) => wf.id === run.workflowId)?.nodes ?? []} run={run} />
                 {(run.status === 'running' || run.status === 'waiting') && (
                   <Button className="ml-auto" size="sm" variant="secondary" onClick={() => cancel.mutate()}><X className="h-3 w-3" /> Cancel</Button>
                 )}

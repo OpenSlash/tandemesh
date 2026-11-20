@@ -268,6 +268,7 @@ func (s *Server) gateWorkflowRun(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "E_WORKFLOW", "workflow not found")
 		return
 	}
+	wf.Nodes = linearizeDAG(wf.Nodes)
 	def := findNode(wf.Nodes, req.NodeID)
 	if def == nil {
 		writeErr(w, http.StatusBadRequest, "E_NODE", "node not found")
@@ -375,6 +376,7 @@ func (s *Server) retryWorkflowRun(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "E_WORKFLOW", "workflow not found")
 		return
 	}
+	wf.Nodes = linearizeDAG(wf.Nodes)
 	target := req.NodeID
 	if target == "" {
 		target = run.CurrentNode
@@ -448,6 +450,7 @@ func (s *Server) executeWorkflow(runID, start string) {
 	if wf == nil {
 		return
 	}
+	wf.Nodes = linearizeDAG(wf.Nodes)
 	current := start
 	for current != "" {
 		def := findNode(wf.Nodes, current)
@@ -684,6 +687,50 @@ func (s *Server) executeWorkflow(runID, start string) {
 			}
 		case "merge":
 			previous := previousNodeRun(run, current)
+			if def.AgentID != "" {
+				task, err := s.store.GetTask(context.Background(), run.TaskID)
+				if err != nil || task == nil {
+					node.Status = domain.WorkflowNodeFailed
+					node.Error = "task is required for merge agent"
+					run.Status = domain.WorkflowFailed
+					run.Error = node.Error
+					_ = s.store.UpdateWorkflowRun(context.Background(), run)
+					return
+				}
+				base := ""
+				if previous != nil {
+					base = previous.Output
+					for _, artifact := range previous.Artifacts {
+						if artifact.Content != "" {
+							base += "\n\n## " + artifact.Name + "\n\n" + artifact.Content
+						}
+					}
+				}
+				instruction := strings.TrimSpace(def.Prompt)
+				if instruction == "" {
+					instruction = "Synthesize the previous agent outputs into one concise result."
+				}
+				prompt, _ := s.taskPrompt(context.Background(), task, instruction+"\n\nPrevious results:\n"+base)
+				role := def.Role
+				if role == "" {
+					role = "lead"
+				}
+				agentRun, err := s.createTaskRunModel(context.Background(), task, def.AgentID, role, "", "", prompt, def.Model)
+				if err != nil {
+					node.Status = domain.WorkflowNodeFailed
+					node.Error = err.Error()
+					run.Status = domain.WorkflowFailed
+					run.Error = err.Error()
+					_ = s.store.UpdateWorkflowRun(context.Background(), run)
+					return
+				}
+				node.RunID = agentRun.ID
+				node.Status = domain.WorkflowNodeRunning
+				run.Status = domain.WorkflowWaiting
+				_ = s.store.UpdateWorkflowRun(context.Background(), run)
+				go s.watchWorkflowAgent(run.ID, current, agentRun.ID)
+				return
+			}
 			if previous == nil {
 				node.Status = domain.WorkflowNodeFailed
 				node.Error = "merge node has no previous node"
@@ -1147,6 +1194,76 @@ func runScript(command, artifactDir string, timeout time.Duration) (string, erro
 	return text, nil
 }
 
+func topologicalOrder(nodes []domain.WorkflowNode) ([]domain.WorkflowNode, error) {
+	byID := map[string]domain.WorkflowNode{}
+	hasNeeds := false
+	for _, node := range nodes {
+		byID[node.ID] = node
+		if len(node.Needs) > 0 {
+			hasNeeds = true
+		}
+	}
+	if !hasNeeds {
+		return nodes, nil
+	}
+	indegree := map[string]int{}
+	children := map[string][]string{}
+	for _, node := range nodes {
+		indegree[node.ID] = len(node.Needs)
+		for _, need := range node.Needs {
+			children[need] = append(children[need], node.ID)
+		}
+	}
+	queue := make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		if indegree[node.ID] == 0 {
+			queue = append(queue, node.ID)
+		}
+	}
+	order := make([]domain.WorkflowNode, 0, len(nodes))
+	for len(queue) > 0 {
+		id := queue[0]
+		queue = queue[1:]
+		order = append(order, byID[id])
+		for _, child := range children[id] {
+			indegree[child]--
+			if indegree[child] == 0 {
+				queue = append(queue, child)
+			}
+		}
+	}
+	if len(order) != len(nodes) {
+		return nil, fmt.Errorf("workflow dependencies contain a cycle")
+	}
+	return order, nil
+}
+
+func linearizeDAG(nodes []domain.WorkflowNode) []domain.WorkflowNode {
+	hasNeeds := false
+	for _, node := range nodes {
+		if len(node.Needs) > 0 {
+			hasNeeds = true
+			break
+		}
+	}
+	if !hasNeeds {
+		return nodes
+	}
+	order, err := topologicalOrder(nodes)
+	if err != nil {
+		return nodes
+	}
+	out := make([]domain.WorkflowNode, len(order))
+	copy(out, order)
+	for i := range out {
+		if i+1 < len(out) {
+			out[i].Next = out[i+1].ID
+		} else {
+			out[i].Next = ""
+		}
+	}
+	return out
+}
 func validateWorkflowNodes(nodes []domain.WorkflowNode) error {
 	if len(nodes) == 0 {
 		return fmt.Errorf("at least one node is required")
@@ -1196,12 +1313,20 @@ func validateWorkflowNodes(nodes []domain.WorkflowNode) error {
 			return fmt.Errorf("unsupported node kind: %s", node.Kind)
 		}
 	}
+	if _, err := topologicalOrder(nodes); err != nil {
+		return err
+	}
 	for _, node := range nodes {
 		if node.Next != "" && !seen[node.Next] {
 			return fmt.Errorf("node %s references missing next node %s", node.ID, node.Next)
 		}
 		if node.OnFail != "" && !seen[node.OnFail] {
 			return fmt.Errorf("node %s references missing onFail node %s", node.ID, node.OnFail)
+		}
+		for _, need := range node.Needs {
+			if !seen[need] {
+				return fmt.Errorf("node %s references missing dependency %s", node.ID, need)
+			}
 		}
 	}
 	return nil
