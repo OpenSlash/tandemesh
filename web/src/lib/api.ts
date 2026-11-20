@@ -143,6 +143,7 @@ export interface Dispatch {
   workspaceId: string
   runId?: string
   agentId?: string
+  agentIds?: string[]
   attempt: number
   status: string
   outcome?: string
@@ -577,6 +578,7 @@ export interface TaskActivityItem {
   actor?: string
   runId?: string
   agentId?: string
+  agentIds?: string[]
   seq?: number
   payload?: Record<string, unknown>
 }
@@ -641,9 +643,10 @@ export interface Automation {
 
 export interface WorkflowNode {
   id: string
-  kind: 'script' | 'parallel' | 'gate' | 'agent' | 'workflow' | 'condition'
+  kind: 'script' | 'parallel' | 'fanout' | 'gate' | 'agent' | 'workflow' | 'condition'
   name: string
   agentId?: string
+  agentIds?: string[]
   role?: string
   model?: string
   workflowId?: string
@@ -705,6 +708,7 @@ export interface WorkflowNodeRun {
   output?: string
   error?: string
   runId?: string
+  childRunIds?: string[]
   artifacts?: WorkflowArtifact[]
   startedAt?: string
   finishedAt?: string
@@ -834,6 +838,7 @@ export interface Connection {
   automationId?: string
   transition?: string
   agentId?: string
+  agentIds?: string[]
   createdAt: string
   updatedAt: string
   bindings?: { id: string; externalId: string; name: string; kind: string; enabled: boolean }[]
@@ -1290,6 +1295,7 @@ export const api = {
     baseUrl?: string
     instance?: string
     agentId?: string
+  agentIds?: string[]
     name?: string
     workspaceId?: string
     comment?: boolean
@@ -1339,6 +1345,7 @@ export const api = {
     instance?: string
     label?: string
     agentId?: string
+  agentIds?: string[]
     groupId?: string
     repo?: string
     autoDispatch: boolean

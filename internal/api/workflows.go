@@ -575,6 +575,41 @@ func (s *Server) executeWorkflow(runID, start string) {
 			go s.executeWorkflow(child.ID, childWF.Nodes[0].ID)
 			go s.watchWorkflowChild(run.ID, current, child.ID)
 			return
+		case "fanout":
+			task, err := s.store.GetTask(context.Background(), run.TaskID)
+			if err != nil || task == nil {
+				node.Status = domain.WorkflowNodeFailed
+				node.Error = "task is required for fanout nodes"
+				run.Status = domain.WorkflowFailed
+				run.Error = node.Error
+				_ = s.store.UpdateWorkflowRun(context.Background(), run)
+				return
+			}
+			prompt := strings.TrimSpace(def.Prompt)
+			if prompt == "" {
+				prompt, _ = s.taskPrompt(context.Background(), task, "")
+			}
+			role := def.Role
+			if role == "" {
+				role = "lead"
+			}
+			for _, agentID := range def.AgentIDs {
+				agentRun, createErr := s.createTaskRunModel(context.Background(), task, agentID, role, "", "", prompt, def.Model)
+				if createErr != nil {
+					node.Status = domain.WorkflowNodeFailed
+					node.Error = createErr.Error()
+					run.Status = domain.WorkflowFailed
+					run.Error = createErr.Error()
+					_ = s.store.UpdateWorkflowRun(context.Background(), run)
+					return
+				}
+				node.ChildRunIDs = append(node.ChildRunIDs, agentRun.ID)
+			}
+			node.Status = domain.WorkflowNodeRunning
+			run.Status = domain.WorkflowWaiting
+			_ = s.store.UpdateWorkflowRun(context.Background(), run)
+			go s.watchWorkflowFanout(run.ID, current, node.ChildRunIDs)
+			return
 		case "parallel":
 			artifactDir := s.workflowArtifactDir(run.ID, current)
 			timeout := 10 * time.Minute
@@ -719,6 +754,83 @@ func (s *Server) watchWorkflowAgent(runID, nodeID, agentRunID string) {
 		return
 	}
 	s.finishAgentTimeout(runID, nodeID, agentRunID)
+}
+func (s *Server) watchWorkflowFanout(runID, nodeID string, runIDs []string) {
+	deadline := time.Now().Add(30 * time.Minute)
+	for time.Now().Before(deadline) {
+		time.Sleep(2 * time.Second)
+		done := 0
+		failed := 0
+		for _, runID := range runIDs {
+			agentRun, err := s.store.GetRun(context.Background(), runID)
+			if err != nil || agentRun == nil {
+				continue
+			}
+			switch agentRun.Status {
+			case domain.RunSucceeded:
+				done++
+			case domain.RunFailed, domain.RunCancelled:
+				done++
+				failed++
+			}
+		}
+		if done < len(runIDs) {
+			continue
+		}
+		s.workflowMu.Lock()
+		run, _ := s.store.GetWorkflowRun(context.Background(), runID)
+		if run == nil {
+			s.workflowMu.Unlock()
+			return
+		}
+		wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+		if wf == nil {
+			s.workflowMu.Unlock()
+			return
+		}
+		node := findNodeRun(run, nodeID)
+		def := findNode(wf.Nodes, nodeID)
+		if node == nil || def == nil {
+			s.workflowMu.Unlock()
+			return
+		}
+		now := time.Now().UTC()
+		node.FinishedAt = &now
+		next := def.Next
+		if failed > 0 {
+			node.Status = domain.WorkflowNodeFailed
+			node.Error = "one or more fanout agents failed"
+			if def.OnFail != "" {
+				next = def.OnFail
+				run.Status = domain.WorkflowRunning
+			} else {
+				run.Status = domain.WorkflowFailed
+				run.Error = node.Error
+			}
+		} else {
+			node.Status = domain.WorkflowNodeSucceeded
+			for i, runID := range runIDs {
+				artifacts := s.agentRunArtifacts(context.Background(), runID)
+				for j := range artifacts {
+					artifacts[j].Name = fmt.Sprintf("agent-%d-%s", i+1, artifacts[j].Name)
+					artifacts[j].Path = artifacts[j].Name
+				}
+				node.Artifacts = append(node.Artifacts, s.persistArtifacts(context.Background(), run.ID, nodeID, artifacts)...)
+			}
+			node.Output = fmt.Sprintf("%d agents completed", len(runIDs))
+			run.Status = domain.WorkflowRunning
+		}
+		if run.Status == domain.WorkflowRunning && next == "" {
+			run.Status = domain.WorkflowSucceeded
+			run.CurrentNode = ""
+		}
+		_ = s.store.UpdateWorkflowRun(context.Background(), run)
+		s.workflowMu.Unlock()
+		if run.Status == domain.WorkflowRunning && next != "" {
+			s.executeWorkflow(runID, next)
+		}
+		return
+	}
 }
 func (s *Server) finishAgentTimeout(runID, nodeID, agentRunID string) {
 	s.workflowMu.Lock()
@@ -989,6 +1101,10 @@ func validateWorkflowNodes(nodes []domain.WorkflowNode) error {
 				return fmt.Errorf("script node %s needs a command", node.ID)
 			}
 		case "gate":
+		case "fanout":
+			if len(node.AgentIDs) == 0 {
+				return fmt.Errorf("fanout node %s needs agentIds", node.ID)
+			}
 		case "parallel":
 			if len(node.Commands) == 0 {
 				return fmt.Errorf("parallel node %s needs commands", node.ID)

@@ -198,6 +198,7 @@ export default function WorkflowsPage() {
                       </details>
                     ))}
                     {node.kind === 'agent' && node.runId && <p className="mt-1 font-mono text-[10px] text-muted">run {node.runId}</p>}
+                    {node.childRunIds && node.childRunIds.length > 0 && <p className="mt-1 font-mono text-[10px] text-muted">{node.childRunIds.length} agent runs</p>}
                     {node.status === 'failed' && (
                       <div className="mt-1 flex gap-1">
                         <Button size="sm" variant="secondary" onClick={() => retry.mutate(node.nodeId)}><RotateCcw className="h-3 w-3" /> Retry</Button>

@@ -22,6 +22,7 @@ type WorkflowNode struct {
 	Kind              string   `json:"kind"`
 	Name              string   `json:"name"`
 	AgentID           string   `json:"agentId,omitempty"`
+	AgentIDs          []string `json:"agentIds,omitempty"`
 	Role              string   `json:"role,omitempty"`
 	Model             string   `json:"model,omitempty"`
 	WorkflowID        string   `json:"workflowId,omitempty"`
@@ -54,16 +55,17 @@ type WorkflowArtifact struct {
 	ContentType string `json:"contentType,omitempty"`
 }
 type WorkflowNodeRun struct {
-	NodeID     string             `json:"nodeId"`
-	Kind       string             `json:"kind"`
-	Name       string             `json:"name"`
-	Status     string             `json:"status"`
-	Output     string             `json:"output,omitempty"`
-	Error      string             `json:"error,omitempty"`
-	RunID      string             `json:"runId,omitempty"`
-	Artifacts  []WorkflowArtifact `json:"artifacts,omitempty"`
-	StartedAt  *time.Time         `json:"startedAt,omitempty"`
-	FinishedAt *time.Time         `json:"finishedAt,omitempty"`
+	NodeID      string             `json:"nodeId"`
+	Kind        string             `json:"kind"`
+	Name        string             `json:"name"`
+	Status      string             `json:"status"`
+	Output      string             `json:"output,omitempty"`
+	Error       string             `json:"error,omitempty"`
+	RunID       string             `json:"runId,omitempty"`
+	ChildRunIDs []string           `json:"childRunIds,omitempty"`
+	Artifacts   []WorkflowArtifact `json:"artifacts,omitempty"`
+	StartedAt   *time.Time         `json:"startedAt,omitempty"`
+	FinishedAt  *time.Time         `json:"finishedAt,omitempty"`
 }
 
 type WorkflowRun struct {

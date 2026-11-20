@@ -24,6 +24,7 @@ export function WorkflowNodeBuilder({ nodes, onChange }: { nodes: WorkflowNode[]
                 <select className="mt-0.5 h-7 rounded border border-line2 bg-panel px-1 text-[11px]" value={node.kind} onChange={(e) => update(index, { kind: e.target.value as WorkflowNode['kind'] })}>
                   <option value="script">script</option>
                   <option value="parallel">parallel</option>
+                  <option value="fanout">fanout</option>
                   <option value="agent">agent</option>
                   <option value="gate">gate</option>
                   <option value="condition">condition</option>
@@ -33,6 +34,7 @@ export function WorkflowNodeBuilder({ nodes, onChange }: { nodes: WorkflowNode[]
               <label className="text-[10px] text-muted">Name<Input className="mt-0.5 h-7 w-32" value={node.name} onChange={(e) => update(index, { name: e.target.value })} /></label>
               {node.kind === 'script' && <label className="text-[10px] text-muted">Command<Input className="mt-0.5 h-7 w-64" value={node.command ?? ''} onChange={(e) => update(index, { command: e.target.value })} /></label>}
               {node.kind === 'parallel' && <label className="text-[10px] text-muted">Commands (comma separated)<Input className="mt-0.5 h-7 w-80" value={(node.commands ?? []).join(', ')} onChange={(e) => update(index, { commands: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} /></label>}
+              {node.kind === 'fanout' && <label className="text-[10px] text-muted">Agent IDs (comma separated)<Input className="mt-0.5 h-7 w-80" value={(node.agentIds ?? []).join(', ')} onChange={(e) => update(index, { agentIds: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} /></label>}
               {node.kind === 'agent' && <>
                 <label className="text-[10px] text-muted">Agent<Input className="mt-0.5 h-7 w-44" value={node.agentId ?? ''} onChange={(e) => update(index, { agentId: e.target.value })} /></label>
                 <label className="text-[10px] text-muted">Role<Input className="mt-0.5 h-7 w-24" value={node.role ?? ''} onChange={(e) => update(index, { role: e.target.value })} /></label>

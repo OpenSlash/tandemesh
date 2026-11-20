@@ -273,3 +273,21 @@ func TestTaskRunCreatesSession(t *testing.T) {
 		t.Fatalf("sessions = %+v", list.Sessions)
 	}
 }
+
+func TestWorkflowFanout(t *testing.T) {
+	ts := newTestServer(t)
+	a1 := postJSON[domain.Agent](t, ts.URL+"/api/v1/agents", map[string]any{"workspaceId": "ws_default", "name": "fan one", "backend": "claude"})
+	a2 := postJSON[domain.Agent](t, ts.URL+"/api/v1/agents", map[string]any{"workspaceId": "ws_default", "name": "fan two", "backend": "claude"})
+	task := postJSON[domain.Task](t, ts.URL+"/api/v1/tasks", map[string]any{"workspaceId": "ws_default", "title": "fan task", "body": "work"})
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "fanout",
+		"nodes": []map[string]any{{"id": "fan", "kind": "fanout", "name": "Fan", "agentIds": []string{a1.ID, a2.ID}}},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wf.ID+"/runs", map[string]any{"taskId": task.ID})
+	current := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowWaiting, "fan")
+	fan := findNodeRun(&current, "fan")
+	if fan == nil || len(fan.ChildRunIDs) != 2 {
+		t.Fatalf("fanout node = %+v", fan)
+	}
+	postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflow-runs/"+run.ID+"/cancel", map[string]any{})
+}
