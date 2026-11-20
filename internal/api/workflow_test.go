@@ -253,3 +253,23 @@ func TestWorkflowParallel(t *testing.T) {
 		t.Fatalf("parallel output = %+v", fan)
 	}
 }
+
+func TestTaskRunCreatesSession(t *testing.T) {
+	ts := newTestServer(t)
+	agent := postJSON[domain.Agent](t, ts.URL+"/api/v1/agents", map[string]any{
+		"workspaceId": "ws_default", "name": "session agent", "backend": "claude", "sessionMode": "off",
+	})
+	task := postJSON[domain.Task](t, ts.URL+"/api/v1/tasks", map[string]any{
+		"workspaceId": "ws_default", "title": "session task", "body": "hello",
+	})
+	run := postJSON[domain.Run](t, ts.URL+"/api/v1/tasks/"+task.ID+"/runs", map[string]any{"agentId": agent.ID, "repo": "", "role": "lead"})
+	if run.SessionID == "" {
+		t.Fatalf("run has no session: %+v", run)
+	}
+	list := getJSON[struct {
+		Sessions []domain.AgentSession `json:"sessions"`
+	}](t, ts.URL+"/api/v1/sessions?workspaceId=ws_default&taskId="+task.ID)
+	if len(list.Sessions) != 1 || list.Sessions[0].ID != run.SessionID || list.Sessions[0].TaskID != task.ID {
+		t.Fatalf("sessions = %+v", list.Sessions)
+	}
+}

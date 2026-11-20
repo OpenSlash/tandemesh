@@ -350,23 +350,31 @@ func (s *Server) taskPrompt(ctx context.Context, task *domain.Task, override str
 // task or agent level context. Empty means a fresh ACP session per run.
 func (s *Server) ensureTaskRunSession(ctx context.Context, task *domain.Task, agentID, repo, base string) string {
 	agent, _ := s.store.GetAgent(ctx, agentID)
-	if agent == nil || agent.SessionMode == "" || agent.SessionMode == "off" {
-		return ""
+	mode := "off"
+	backend, model, agentName := "", "", ""
+	if agent != nil {
+		mode = agent.SessionMode
+		if mode == "" {
+			mode = "off"
+		}
+		backend, model, agentName = agent.Backend, agent.Model, agent.Name
 	}
 	taskID := task.ID
-	if agent.SessionMode == "agent" {
+	if mode == "agent" {
 		taskID = ""
 	}
-	if existing, _ := s.store.FindReusableAgentSession(ctx, task.WorkspaceID, taskID, agentID); existing != nil {
-		return existing.ID
+	if mode == "task" || mode == "agent" {
+		if existing, _ := s.store.FindReusableAgentSession(ctx, task.WorkspaceID, taskID, agentID); existing != nil {
+			return existing.ID
+		}
 	}
 	title := task.Title
-	if agent.SessionMode == "agent" {
-		title = agent.Name + " context"
+	if mode == "agent" && agentName != "" {
+		title = agentName + " context"
 	}
 	sess, err := s.store.CreateAgentSession(ctx, &domain.AgentSession{
 		WorkspaceID: task.WorkspaceID, TaskID: taskID, AgentID: agentID,
-		Backend: agent.Backend, Model: agent.Model, Mode: "chat", Title: title,
+		Backend: backend, Model: model, Mode: "chat", Title: title,
 		Repo: repo, Base: base, Status: "active", CreatedBy: "system",
 	})
 	if err != nil {

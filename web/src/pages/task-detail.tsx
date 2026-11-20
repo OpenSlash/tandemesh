@@ -12,6 +12,7 @@ import { StatusBadge, statusLabel } from '../components/status'
 import { TaskExecutionPanel } from '../components/task-execution-panel'
 import { TaskDiffPanel } from '../components/task-diff-panel'
 import { TaskWorkflowsPanel } from '../components/task-workflows-panel'
+import { TaskSessionsPanel } from '../components/task-sessions-panel'
 
 export default function TaskDetailPage() {
   const { t } = useI18n()
@@ -84,7 +85,7 @@ export default function TaskDetailPage() {
   useEffect(() => {
     const value = (key: string, prefix: string) =>
       task?.fields?.[key]?.[0] ??
-      task?.labels.find((label) => label.toLowerCase().startsWith(prefix))?.slice(prefix.length) ??
+      task?.labels?.find((label) => label.toLowerCase().startsWith(prefix))?.slice(prefix.length) ??
       ''
     if (!task) return
     setFieldPriority(value('priority', 'priority:'))
@@ -820,6 +821,8 @@ export default function TaskDetailPage() {
               <TaskExecutionPanel taskId={id} runs={runs} executionState={task.executionState} />
 
               <TaskWorkflowsPanel taskId={id} workspaceId={task.workspaceId} />
+
+              <TaskSessionsPanel taskId={id} workspaceId={task.workspaceId} />
 
               <div className="rounded-lg border border-line bg-panel/40 p-4">
                 <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted">
