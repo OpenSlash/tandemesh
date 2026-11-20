@@ -641,7 +641,7 @@ export interface Automation {
 
 export interface WorkflowNode {
   id: string
-  kind: 'script' | 'gate' | 'agent' | 'workflow' | 'condition'
+  kind: 'script' | 'parallel' | 'gate' | 'agent' | 'workflow' | 'condition'
   name: string
   agentId?: string
   role?: string
@@ -649,6 +649,7 @@ export interface WorkflowNode {
   workflowId?: string
   prompt?: string
   command?: string
+  commands?: string[]
   when?: string
   next?: string
   onFail?: string

@@ -575,6 +575,51 @@ func (s *Server) executeWorkflow(runID, start string) {
 			go s.executeWorkflow(child.ID, childWF.Nodes[0].ID)
 			go s.watchWorkflowChild(run.ID, current, child.ID)
 			return
+		case "parallel":
+			artifactDir := s.workflowArtifactDir(run.ID, current)
+			timeout := 10 * time.Minute
+			if def.TimeoutSeconds > 0 {
+				timeout = time.Duration(def.TimeoutSeconds) * time.Second
+			}
+			type parallelResult struct {
+				index int
+				out   string
+				err   error
+			}
+			results := make(chan parallelResult, len(def.Commands))
+			for i, cmd := range def.Commands {
+				go func(index int, command string) {
+					out, err := runScript(command, artifactDir, timeout)
+					results <- parallelResult{index: index, out: out, err: err}
+				}(i, cmd)
+			}
+			outputs := make([]string, len(def.Commands))
+			var parallelErr error
+			for range def.Commands {
+				result := <-results
+				outputs[result.index] = result.out
+				if result.err != nil && parallelErr == nil {
+					parallelErr = result.err
+				}
+			}
+			node.Output = strings.Join(outputs, "\n")
+			node.Artifacts = s.persistArtifacts(context.Background(), run.ID, current, collectArtifacts(artifactDir))
+			if parallelErr != nil {
+				node.Status = domain.WorkflowNodeFailed
+				node.Error = parallelErr.Error()
+				if def.OnFail != "" {
+					current = def.OnFail
+					run.Status = domain.WorkflowRunning
+				} else {
+					run.Status = domain.WorkflowFailed
+					run.Error = node.Error
+					_ = s.store.UpdateWorkflowRun(context.Background(), run)
+					return
+				}
+			} else {
+				node.Status = domain.WorkflowNodeSucceeded
+				current = def.Next
+			}
 		case "condition":
 			matched := conditionMatches(def.When, previousOutput(run, current))
 			node.Status = domain.WorkflowNodeSucceeded
@@ -944,6 +989,10 @@ func validateWorkflowNodes(nodes []domain.WorkflowNode) error {
 				return fmt.Errorf("script node %s needs a command", node.ID)
 			}
 		case "gate":
+		case "parallel":
+			if len(node.Commands) == 0 {
+				return fmt.Errorf("parallel node %s needs commands", node.ID)
+			}
 		case "condition":
 			if strings.TrimSpace(node.When) == "" {
 				return fmt.Errorf("condition node %s needs a when expression", node.ID)

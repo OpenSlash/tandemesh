@@ -236,3 +236,20 @@ func TestWorkflowTemplates(t *testing.T) {
 		t.Fatalf("templates = %+v", list.Items)
 	}
 }
+
+func TestWorkflowParallel(t *testing.T) {
+	ts := newTestServer(t)
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "parallel",
+		"nodes": []map[string]any{
+			{"id": "fan", "kind": "parallel", "name": "Fan", "commands": []string{"echo A", "echo B"}, "next": "after"},
+			{"id": "after", "kind": "script", "name": "After", "command": "echo DONE"},
+		},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wf.ID+"/runs", map[string]any{})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	fan := findNodeRun(&final, "fan")
+	if fan == nil || !strings.Contains(fan.Output, "A") || !strings.Contains(fan.Output, "B") {
+		t.Fatalf("parallel output = %+v", fan)
+	}
+}
