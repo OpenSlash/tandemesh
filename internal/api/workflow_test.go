@@ -291,3 +291,21 @@ func TestWorkflowFanout(t *testing.T) {
 	}
 	postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflow-runs/"+run.ID+"/cancel", map[string]any{})
 }
+
+func TestWorkflowMerge(t *testing.T) {
+	ts := newTestServer(t)
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "merge",
+		"nodes": []map[string]any{
+			{"id": "one", "kind": "script", "name": "One", "command": "echo MERGED", "next": "merge"},
+			{"id": "merge", "kind": "merge", "name": "Merge", "next": "after"},
+			{"id": "after", "kind": "script", "name": "After", "command": "echo AFTER"},
+		},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wf.ID+"/runs", map[string]any{})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	merge := findNodeRun(&final, "merge")
+	if merge == nil || !strings.Contains(merge.Output, "MERGED") {
+		t.Fatalf("merge output = %+v", merge)
+	}
+}

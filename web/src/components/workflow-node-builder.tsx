@@ -25,6 +25,7 @@ export function WorkflowNodeBuilder({ nodes, onChange }: { nodes: WorkflowNode[]
                   <option value="script">script</option>
                   <option value="parallel">parallel</option>
                   <option value="fanout">fanout</option>
+                  <option value="merge">merge</option>
                   <option value="agent">agent</option>
                   <option value="gate">gate</option>
                   <option value="condition">condition</option>

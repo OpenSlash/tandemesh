@@ -593,8 +593,35 @@ func (s *Server) executeWorkflow(runID, start string) {
 			if role == "" {
 				role = "lead"
 			}
+			type fanoutSpec struct {
+				agentID string
+				prompt  string
+				model   string
+				role    string
+			}
+			specs := make([]fanoutSpec, 0, len(def.AgentIDs)+len(def.Agents))
 			for _, agentID := range def.AgentIDs {
-				agentRun, createErr := s.createTaskRunModel(context.Background(), task, agentID, role, "", "", prompt, def.Model)
+				specs = append(specs, fanoutSpec{agentID: agentID, prompt: prompt, model: def.Model, role: role})
+			}
+			for _, spec := range def.Agents {
+				nextPrompt := spec.Prompt
+				if strings.TrimSpace(nextPrompt) == "" {
+					nextPrompt = prompt
+				} else {
+					nextPrompt, _ = s.taskPrompt(context.Background(), task, nextPrompt)
+				}
+				nextRole := spec.Role
+				if nextRole == "" {
+					nextRole = role
+				}
+				nextModel := spec.Model
+				if nextModel == "" {
+					nextModel = def.Model
+				}
+				specs = append(specs, fanoutSpec{agentID: spec.AgentID, prompt: nextPrompt, model: nextModel, role: nextRole})
+			}
+			for _, spec := range specs {
+				agentRun, createErr := s.createTaskRunModel(context.Background(), task, spec.agentID, spec.role, "", "", spec.prompt, spec.model)
 				if createErr != nil {
 					node.Status = domain.WorkflowNodeFailed
 					node.Error = createErr.Error()
@@ -655,6 +682,32 @@ func (s *Server) executeWorkflow(runID, start string) {
 				node.Status = domain.WorkflowNodeSucceeded
 				current = def.Next
 			}
+		case "merge":
+			previous := previousNodeRun(run, current)
+			if previous == nil {
+				node.Status = domain.WorkflowNodeFailed
+				node.Error = "merge node has no previous node"
+				run.Status = domain.WorkflowFailed
+				run.Error = node.Error
+				_ = s.store.UpdateWorkflowRun(context.Background(), run)
+				return
+			}
+			var merged strings.Builder
+			for _, artifact := range previous.Artifacts {
+				if artifact.Content == "" {
+					continue
+				}
+				if merged.Len() > 0 {
+					merged.WriteString("\n\n")
+				}
+				merged.WriteString("## " + artifact.Name + "\n\n" + artifact.Content)
+			}
+			if merged.Len() == 0 {
+				merged.WriteString(previous.Output)
+			}
+			node.Status = domain.WorkflowNodeSucceeded
+			node.Output = merged.String()
+			current = def.Next
 		case "condition":
 			matched := conditionMatches(def.When, previousOutput(run, current))
 			node.Status = domain.WorkflowNodeSucceeded
@@ -925,6 +978,18 @@ func (s *Server) watchWorkflowChild(runID, nodeID, childID string) {
 		return
 	}
 }
+func previousNodeRun(run *domain.WorkflowRun, nodeID string) *domain.WorkflowNodeRun {
+	var previous *domain.WorkflowNodeRun
+	for i := range run.Nodes {
+		if run.Nodes[i].NodeID == nodeID {
+			return previous
+		}
+		if run.Nodes[i].Status == domain.WorkflowNodeSucceeded {
+			previous = &run.Nodes[i]
+		}
+	}
+	return previous
+}
 func previousOutput(run *domain.WorkflowRun, nodeID string) string {
 	last := ""
 	for _, node := range run.Nodes {
@@ -1102,9 +1167,15 @@ func validateWorkflowNodes(nodes []domain.WorkflowNode) error {
 			}
 		case "gate":
 		case "fanout":
-			if len(node.AgentIDs) == 0 {
-				return fmt.Errorf("fanout node %s needs agentIds", node.ID)
+			if len(node.AgentIDs) == 0 && len(node.Agents) == 0 {
+				return fmt.Errorf("fanout node %s needs agentIds or agents", node.ID)
 			}
+			for _, spec := range node.Agents {
+				if strings.TrimSpace(spec.AgentID) == "" {
+					return fmt.Errorf("fanout node %s has an empty agentId", node.ID)
+				}
+			}
+		case "merge":
 		case "parallel":
 			if len(node.Commands) == 0 {
 				return fmt.Errorf("parallel node %s needs commands", node.ID)

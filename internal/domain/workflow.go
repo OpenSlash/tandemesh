@@ -17,24 +17,31 @@ const (
 	WorkflowNodeSkipped   = "skipped"
 )
 
+type WorkflowAgentSpec struct {
+	AgentID string `json:"agentId"`
+	Prompt  string `json:"prompt,omitempty"`
+	Model   string `json:"model,omitempty"`
+	Role    string `json:"role,omitempty"`
+}
 type WorkflowNode struct {
-	ID                string   `json:"id"`
-	Kind              string   `json:"kind"`
-	Name              string   `json:"name"`
-	AgentID           string   `json:"agentId,omitempty"`
-	AgentIDs          []string `json:"agentIds,omitempty"`
-	Role              string   `json:"role,omitempty"`
-	Model             string   `json:"model,omitempty"`
-	WorkflowID        string   `json:"workflowId,omitempty"`
-	Prompt            string   `json:"prompt,omitempty"`
-	Command           string   `json:"command,omitempty"`
-	Commands          []string `json:"commands,omitempty"`
-	Next              string   `json:"next,omitempty"`
-	OnFail            string   `json:"onFail,omitempty"`
-	Retries           int      `json:"retries,omitempty"`
-	RetryDelaySeconds int      `json:"retryDelaySeconds,omitempty"`
-	TimeoutSeconds    int      `json:"timeoutSeconds,omitempty"`
-	When              string   `json:"when,omitempty"`
+	ID                string              `json:"id"`
+	Kind              string              `json:"kind"`
+	Name              string              `json:"name"`
+	AgentID           string              `json:"agentId,omitempty"`
+	AgentIDs          []string            `json:"agentIds,omitempty"`
+	Agents            []WorkflowAgentSpec `json:"agents,omitempty"`
+	Role              string              `json:"role,omitempty"`
+	Model             string              `json:"model,omitempty"`
+	WorkflowID        string              `json:"workflowId,omitempty"`
+	Prompt            string              `json:"prompt,omitempty"`
+	Command           string              `json:"command,omitempty"`
+	Commands          []string            `json:"commands,omitempty"`
+	Next              string              `json:"next,omitempty"`
+	OnFail            string              `json:"onFail,omitempty"`
+	Retries           int                 `json:"retries,omitempty"`
+	RetryDelaySeconds int                 `json:"retryDelaySeconds,omitempty"`
+	TimeoutSeconds    int                 `json:"timeoutSeconds,omitempty"`
+	When              string              `json:"when,omitempty"`
 }
 
 type Workflow struct {

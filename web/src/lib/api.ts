@@ -144,6 +144,7 @@ export interface Dispatch {
   runId?: string
   agentId?: string
   agentIds?: string[]
+  agents?: { agentId: string; prompt?: string; model?: string; role?: string }[]
   attempt: number
   status: string
   outcome?: string
@@ -579,6 +580,7 @@ export interface TaskActivityItem {
   runId?: string
   agentId?: string
   agentIds?: string[]
+  agents?: { agentId: string; prompt?: string; model?: string; role?: string }[]
   seq?: number
   payload?: Record<string, unknown>
 }
@@ -643,10 +645,11 @@ export interface Automation {
 
 export interface WorkflowNode {
   id: string
-  kind: 'script' | 'parallel' | 'fanout' | 'gate' | 'agent' | 'workflow' | 'condition'
+  kind: 'script' | 'parallel' | 'fanout' | 'merge' | 'gate' | 'agent' | 'workflow' | 'condition'
   name: string
   agentId?: string
   agentIds?: string[]
+  agents?: { agentId: string; prompt?: string; model?: string; role?: string }[]
   role?: string
   model?: string
   workflowId?: string
@@ -839,6 +842,7 @@ export interface Connection {
   transition?: string
   agentId?: string
   agentIds?: string[]
+  agents?: { agentId: string; prompt?: string; model?: string; role?: string }[]
   createdAt: string
   updatedAt: string
   bindings?: { id: string; externalId: string; name: string; kind: string; enabled: boolean }[]
@@ -1296,6 +1300,7 @@ export const api = {
     instance?: string
     agentId?: string
   agentIds?: string[]
+  agents?: { agentId: string; prompt?: string; model?: string; role?: string }[]
     name?: string
     workspaceId?: string
     comment?: boolean
@@ -1346,6 +1351,7 @@ export const api = {
     label?: string
     agentId?: string
   agentIds?: string[]
+  agents?: { agentId: string; prompt?: string; model?: string; role?: string }[]
     groupId?: string
     repo?: string
     autoDispatch: boolean
