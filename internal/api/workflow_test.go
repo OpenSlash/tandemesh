@@ -387,3 +387,22 @@ func TestWorkflowDAGChild(t *testing.T) {
 		t.Fatalf("sub = %+v", sub)
 	}
 }
+
+func TestWorkflowDAGCondition(t *testing.T) {
+	ts := newTestServer(t)
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "dag condition",
+		"nodes": []map[string]any{
+			{"id": "a", "kind": "script", "name": "A", "command": "echo GOOD"},
+			{"id": "check", "kind": "condition", "name": "Check", "needs": []string{"a"}, "when": "contains:GOOD", "next": "yes", "onFail": "no"},
+			{"id": "yes", "kind": "script", "name": "Yes", "command": "echo YES", "needs": []string{"check"}},
+			{"id": "no", "kind": "script", "name": "No", "command": "echo NO", "needs": []string{"check"}},
+		},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wf.ID+"/runs", map[string]any{})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	yes, no := findNodeRun(&final, "yes"), findNodeRun(&final, "no")
+	if yes == nil || yes.Status != domain.WorkflowNodeSucceeded || no == nil || no.Status != domain.WorkflowNodeSkipped {
+		t.Fatalf("condition nodes = %+v", final.Nodes)
+	}
+}

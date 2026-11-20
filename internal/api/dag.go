@@ -36,6 +36,18 @@ func (s *Server) executeDAG(runID string) {
 				waiting++
 				continue
 			case domain.WorkflowNodePending:
+				skipped := false
+				for _, need := range node.Needs {
+					parent := findNodeRun(run, need)
+					if parent != nil && parent.Status == domain.WorkflowNodeSkipped {
+						state.Status = domain.WorkflowNodeSkipped
+						skipped = true
+						break
+					}
+				}
+				if skipped {
+					continue
+				}
 				pending++
 			default:
 				continue
@@ -115,6 +127,29 @@ func (s *Server) runDAGNode(runID, nodeID string) {
 		s.finishDAGNode(runID, nodeID, out, artifacts, err)
 	case "merge":
 		s.finishDAGNode(runID, nodeID, mergeInput(run, def), nil, nil)
+	case "condition":
+		source := mergeInput(run, def)
+		matched := conditionMatches(def.When, source)
+		selected, unselected := def.OnFail, def.Next
+		if matched {
+			selected, unselected = def.Next, def.OnFail
+		}
+		_ = selected
+		s.workflowMu.Lock()
+		if current, _ := s.store.GetWorkflowRun(context.Background(), runID); current != nil {
+			if state := findNodeRun(current, nodeID); state != nil {
+				state.Status = domain.WorkflowNodeSucceeded
+				state.Output = "condition=" + fmt.Sprintf("%t", matched)
+			}
+			if unselected != "" {
+				if state := findNodeRun(current, unselected); state != nil && state.Status == domain.WorkflowNodePending {
+					state.Status = domain.WorkflowNodeSkipped
+				}
+			}
+			_ = s.store.UpdateWorkflowRun(context.Background(), current)
+		}
+		s.workflowMu.Unlock()
+		return
 	case "parallel":
 		artifactDir := s.workflowArtifactDir(runID, nodeID)
 		timeout := 10 * time.Minute
