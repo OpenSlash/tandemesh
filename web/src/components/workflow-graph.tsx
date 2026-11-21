@@ -30,6 +30,15 @@ export function WorkflowGraph({ nodes, run }: { nodes: WorkflowNode[]; run: Work
     }
   }
 
+  for (const node of nodes) {
+    if (node.kind !== 'condition') continue
+    for (const target of [node.next, node.onFail]) {
+      if (!target) continue
+      const parents = incoming.get(target) ?? []
+      if (!parents.includes(node.id)) parents.push(node.id)
+      incoming.set(target, parents)
+    }
+  }
   const level = new Map<string, number>()
   const visiting = new Set<string>()
   const depth = (id: string): number => {
@@ -90,7 +99,7 @@ export function WorkflowGraph({ nodes, run }: { nodes: WorkflowNode[]; run: Work
             <g key={node.id}>
               <rect x={pos.x} y={pos.y} width={NODE_W} height={NODE_H} rx={6} className={cn('stroke', statusClass(status))} strokeWidth={1} />
               <text x={pos.x + 8} y={pos.y + 18} className="fill-fg text-[10px]">{node.name || node.id}</text>
-              <text x={pos.x + 8} y={pos.y + 33} className="fill-muted text-[9px]">{node.kind} · {status ?? 'pending'}</text>
+              <text x={pos.x + 8} y={pos.y + 33} className="fill-muted text-[9px]">{node.kind} 路 {status ?? 'pending'}</text>
             </g>
           )
         })}

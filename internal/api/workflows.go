@@ -460,15 +460,15 @@ func isDAG(nodes []domain.WorkflowNode) bool {
 
 func (s *Server) executeScriptDAG(runID string) {
 	for {
-		s.workflowMu.Lock()
+		unlock := s.lockWorkflowRun(runID)
 		run, _ := s.store.GetWorkflowRun(context.Background(), runID)
 		if run == nil || run.Status == domain.WorkflowSucceeded || run.Status == domain.WorkflowFailed || run.Status == domain.WorkflowCancelled {
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		wf := s.workflowForRun(context.Background(), run)
 		if wf == nil {
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		ready := make([]string, 0)
@@ -504,7 +504,7 @@ func (s *Server) executeScriptDAG(runID string) {
 				run.CurrentNode = ""
 				_ = s.store.UpdateWorkflowRun(context.Background(), run)
 			}
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		for _, id := range ready {
@@ -513,7 +513,7 @@ func (s *Server) executeScriptDAG(runID string) {
 		}
 		run.CurrentNode = ready[0]
 		_ = s.store.UpdateWorkflowRun(context.Background(), run)
-		s.workflowMu.Unlock()
+		unlock()
 
 		var wg sync.WaitGroup
 		for _, id := range ready {
@@ -561,8 +561,8 @@ func (s *Server) runDAGScriptNode(runID, nodeID string) {
 }
 
 func (s *Server) finishDAGNode(runID, nodeID, output string, artifacts []domain.WorkflowArtifact, runErr error) {
-	s.workflowMu.Lock()
-	defer s.workflowMu.Unlock()
+	unlock := s.lockWorkflowRun(runID)
+	defer unlock()
 	run, _ := s.store.GetWorkflowRun(context.Background(), runID)
 	if run == nil {
 		return
@@ -598,7 +598,7 @@ func (s *Server) workflowForRun(ctx context.Context, run *domain.WorkflowRun) *d
 	return wf
 }
 func (s *Server) executeWorkflow(runID, start string) {
-	s.workflowMu.Lock()
+	unlock := s.lockWorkflowRun(runID)
 	run, err := s.store.GetWorkflowRun(context.Background(), runID)
 	if err != nil || run == nil {
 		return
@@ -608,11 +608,11 @@ func (s *Server) executeWorkflow(runID, start string) {
 		return
 	}
 	if isDAG(wf.Nodes) {
-		s.workflowMu.Unlock()
+		unlock()
 		s.executeDAG(runID)
 		return
 	}
-	defer s.workflowMu.Unlock()
+	defer unlock()
 	wf.Nodes = linearizeDAG(wf.Nodes)
 	current := start
 	for current != "" {
@@ -944,21 +944,21 @@ func (s *Server) watchWorkflowAgent(runID, nodeID, agentRunID string) {
 		if agentRun.Status != domain.RunSucceeded && agentRun.Status != domain.RunFailed {
 			continue
 		}
-		s.workflowMu.Lock()
+		unlock := s.lockWorkflowRun(runID)
 		run, _ := s.store.GetWorkflowRun(context.Background(), runID)
 		if run == nil {
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		wf := s.workflowForRun(context.Background(), run)
 		if wf == nil {
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		node := findNodeRun(run, nodeID)
 		def := findNode(wf.Nodes, nodeID)
 		if node == nil || def == nil {
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		now := time.Now().UTC()
@@ -989,7 +989,7 @@ func (s *Server) watchWorkflowAgent(runID, nodeID, agentRunID string) {
 			run.CurrentNode = ""
 		}
 		_ = s.store.UpdateWorkflowRun(context.Background(), run)
-		s.workflowMu.Unlock()
+		unlock()
 		if run.Status == domain.WorkflowRunning && next != "" {
 			s.executeWorkflow(runID, next)
 		}
@@ -1019,21 +1019,21 @@ func (s *Server) watchWorkflowFanout(runID, nodeID string, runIDs []string) {
 		if done < len(runIDs) {
 			continue
 		}
-		s.workflowMu.Lock()
+		unlock := s.lockWorkflowRun(runID)
 		run, _ := s.store.GetWorkflowRun(context.Background(), runID)
 		if run == nil {
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		wf := s.workflowForRun(context.Background(), run)
 		if wf == nil {
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		node := findNodeRun(run, nodeID)
 		def := findNode(wf.Nodes, nodeID)
 		if node == nil || def == nil {
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		now := time.Now().UTC()
@@ -1067,7 +1067,7 @@ func (s *Server) watchWorkflowFanout(runID, nodeID string, runIDs []string) {
 			run.CurrentNode = ""
 		}
 		_ = s.store.UpdateWorkflowRun(context.Background(), run)
-		s.workflowMu.Unlock()
+		unlock()
 		if run.Status == domain.WorkflowRunning && next != "" {
 			s.executeWorkflow(runID, next)
 		}
@@ -1075,8 +1075,8 @@ func (s *Server) watchWorkflowFanout(runID, nodeID string, runIDs []string) {
 	}
 }
 func (s *Server) finishAgentTimeout(runID, nodeID, agentRunID string) {
-	s.workflowMu.Lock()
-	defer s.workflowMu.Unlock()
+	unlock := s.lockWorkflowRun(runID)
+	defer unlock()
 	run, _ := s.store.GetWorkflowRun(context.Background(), runID)
 	if run == nil {
 		return
@@ -1119,21 +1119,21 @@ func (s *Server) watchWorkflowChild(runID, nodeID, childID string) {
 		if child.Status != domain.WorkflowSucceeded && child.Status != domain.WorkflowFailed && child.Status != domain.WorkflowCancelled {
 			continue
 		}
-		s.workflowMu.Lock()
+		unlock := s.lockWorkflowRun(runID)
 		run, _ := s.store.GetWorkflowRun(context.Background(), runID)
 		if run == nil {
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		wf := s.workflowForRun(context.Background(), run)
 		if wf == nil {
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		node := findNodeRun(run, nodeID)
 		def := findNode(wf.Nodes, nodeID)
 		if node == nil || def == nil {
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		now := time.Now().UTC()
@@ -1160,7 +1160,7 @@ func (s *Server) watchWorkflowChild(runID, nodeID, childID string) {
 			run.CurrentNode = ""
 		}
 		_ = s.store.UpdateWorkflowRun(context.Background(), run)
-		s.workflowMu.Unlock()
+		unlock()
 		if run.Status == domain.WorkflowRunning && next != "" {
 			s.executeWorkflow(runID, next)
 		}
