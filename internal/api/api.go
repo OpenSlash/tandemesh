@@ -48,12 +48,13 @@ type Server struct {
 	log          *slog.Logger
 	debounceState
 	reminderState
-	metricsMu    sync.Mutex
-	httpCounts   map[string]int
-	importSlots  chan struct{}
-	importConnMu sync.Mutex
-	importConns  map[string]chan struct{}
-	workflowMu   sync.Mutex
+	metricsMu     sync.Mutex
+	httpCounts    map[string]int
+	importSlots   chan struct{}
+	importConnMu  sync.Mutex
+	importConns   map[string]chan struct{}
+	workflowMu    sync.Mutex
+	workflowLocks sync.Map
 }
 
 // ConfigureGitHubApp enables GitHub App installation authentication.

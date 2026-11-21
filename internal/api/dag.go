@@ -41,17 +41,23 @@ func ensureConditionNeeds(nodes []domain.WorkflowNode) []domain.WorkflowNode {
 	}
 	return nodes
 }
+func (s *Server) lockWorkflowRun(runID string) func() {
+	value, _ := s.workflowLocks.LoadOrStore(runID, &sync.Mutex{})
+	mu := value.(*sync.Mutex)
+	mu.Lock()
+	return mu.Unlock
+}
 func (s *Server) executeDAG(runID string) {
 	for {
-		s.workflowMu.Lock()
+		unlock := s.lockWorkflowRun(runID)
 		run, _ := s.store.GetWorkflowRun(context.Background(), runID)
 		if run == nil || run.Status == domain.WorkflowSucceeded || run.Status == domain.WorkflowFailed || run.Status == domain.WorkflowCancelled {
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		wf := s.workflowForRun(context.Background(), run)
 		if wf == nil {
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		wf.Nodes = ensureConditionNeeds(wf.Nodes)
@@ -124,7 +130,7 @@ func (s *Server) executeDAG(runID string) {
 				run.CurrentNode = ""
 			}
 			_ = s.store.UpdateWorkflowRun(context.Background(), run)
-			s.workflowMu.Unlock()
+			unlock()
 			return
 		}
 		for _, id := range ready {
@@ -136,7 +142,7 @@ func (s *Server) executeDAG(runID string) {
 		run.CurrentNode = ready[0]
 		run.Status = domain.WorkflowRunning
 		_ = s.store.UpdateWorkflowRun(context.Background(), run)
-		s.workflowMu.Unlock()
+		unlock()
 
 		var wg sync.WaitGroup
 		for _, id := range ready {
@@ -202,7 +208,7 @@ func (s *Server) runDAGNode(runID, nodeID string) {
 			selected, unselected = def.Next, def.OnFail
 		}
 		_ = selected
-		s.workflowMu.Lock()
+		unlock := s.lockWorkflowRun(runID)
 		if current, _ := s.store.GetWorkflowRun(context.Background(), runID); current != nil {
 			if state := findNodeRun(current, nodeID); state != nil {
 				state.Status = domain.WorkflowNodeSucceeded
@@ -215,7 +221,7 @@ func (s *Server) runDAGNode(runID, nodeID string) {
 			}
 			_ = s.store.UpdateWorkflowRun(context.Background(), current)
 		}
-		s.workflowMu.Unlock()
+		unlock()
 		return
 	case "parallel":
 		artifactDir := s.workflowArtifactDir(runID, nodeID)
@@ -245,9 +251,13 @@ func (s *Server) runDAGNode(runID, nodeID string) {
 			}
 		}
 		artifacts := s.persistArtifacts(context.Background(), runID, nodeID, collectArtifacts(artifactDir))
-		s.finishDAGNode(runID, nodeID, strings.Join(outputs, "\n"), artifacts, firstErr)
+		if firstErr != nil {
+			s.finishDAGFailure(runID, nodeID, def, strings.Join(outputs, "\n"), artifacts, firstErr)
+		} else {
+			s.finishDAGNode(runID, nodeID, strings.Join(outputs, "\n"), artifacts, nil)
+		}
 	case "gate":
-		s.workflowMu.Lock()
+		unlock := s.lockWorkflowRun(runID)
 		current, _ := s.store.GetWorkflowRun(context.Background(), runID)
 		if current != nil {
 			state := findNodeRun(current, nodeID)
@@ -258,7 +268,7 @@ func (s *Server) runDAGNode(runID, nodeID string) {
 			current.CurrentNode = nodeID
 			_ = s.store.UpdateWorkflowRun(context.Background(), current)
 		}
-		s.workflowMu.Unlock()
+		unlock()
 	case "agent":
 		s.runDAGAgent(runID, nodeID, def)
 	case "fanout":
@@ -277,7 +287,7 @@ func (s *Server) runDAGChildWorkflow(runID, nodeID string, def *domain.WorkflowN
 	}
 	childWF, err := s.store.GetWorkflow(context.Background(), def.WorkflowID)
 	if err != nil || childWF == nil || childWF.WorkspaceID != parent.WorkspaceID {
-		s.finishDAGNode(runID, nodeID, "", nil, errorf("child workflow not found"))
+		s.finishDAGFailure(runID, nodeID, def, "", nil, errorf("child workflow not found"))
 		return
 	}
 	child := &domain.WorkflowRun{
@@ -288,17 +298,17 @@ func (s *Server) runDAGChildWorkflow(runID, nodeID string, def *domain.WorkflowN
 		child.CurrentNode = childWF.Nodes[0].ID
 	}
 	if err := s.store.CreateWorkflowRun(context.Background(), child); err != nil {
-		s.finishDAGNode(runID, nodeID, "", nil, err)
+		s.finishDAGFailure(runID, nodeID, def, "", nil, err)
 		return
 	}
-	s.workflowMu.Lock()
+	unlock := s.lockWorkflowRun(runID)
 	if current, _ := s.store.GetWorkflowRun(context.Background(), runID); current != nil {
 		if state := findNodeRun(current, nodeID); state != nil {
 			state.RunID = child.ID
 		}
 		_ = s.store.UpdateWorkflowRun(context.Background(), current)
 	}
-	s.workflowMu.Unlock()
+	unlock()
 	go s.executeWorkflow(child.ID, childWF.Nodes[0].ID)
 
 	deadline := time.Now().Add(2 * time.Hour)
@@ -317,13 +327,20 @@ func (s *Server) runDAGChildWorkflow(runID, nodeID string, def *domain.WorkflowN
 			return
 		}
 	}
-	s.finishDAGNode(runID, nodeID, "", nil, errorf("child workflow timed out"))
+	s.finishDAGFailure(runID, nodeID, def, "", nil, errorf("child workflow timed out"))
+}
+func (s *Server) finishDAGFailure(runID, nodeID string, def *domain.WorkflowNode, output string, artifacts []domain.WorkflowArtifact, err error) {
+	if def != nil && def.OnFail != "" {
+		s.finishDAGNodeContinue(runID, nodeID, output, artifacts, err.Error())
+		return
+	}
+	s.finishDAGNode(runID, nodeID, output, artifacts, err)
 }
 func (s *Server) runDAGAgent(runID, nodeID string, def *domain.WorkflowNode) {
 	run, _ := s.store.GetWorkflowRun(context.Background(), runID)
 	task, _ := s.store.GetTask(context.Background(), run.TaskID)
 	if task == nil {
-		s.finishDAGNode(runID, nodeID, "", nil, errorf("task is required for agent nodes"))
+		s.finishDAGFailure(runID, nodeID, def, "", nil, errorf("task is required for agent nodes"))
 		return
 	}
 	prompt := def.Prompt
@@ -336,17 +353,17 @@ func (s *Server) runDAGAgent(runID, nodeID string, def *domain.WorkflowNode) {
 	}
 	agentRun, err := s.createTaskRunModel(context.Background(), task, def.AgentID, role, "", "", prompt, def.Model)
 	if err != nil {
-		s.finishDAGNode(runID, nodeID, "", nil, err)
+		s.finishDAGFailure(runID, nodeID, def, "", nil, err)
 		return
 	}
-	s.workflowMu.Lock()
+	unlock := s.lockWorkflowRun(runID)
 	if current, _ := s.store.GetWorkflowRun(context.Background(), runID); current != nil {
 		if state := findNodeRun(current, nodeID); state != nil {
 			state.RunID = agentRun.ID
 		}
 		_ = s.store.UpdateWorkflowRun(context.Background(), current)
 	}
-	s.workflowMu.Unlock()
+	unlock()
 
 	timeout := 30 * time.Minute
 	if def.TimeoutSeconds > 0 {
@@ -370,14 +387,14 @@ func (s *Server) runDAGAgent(runID, nodeID string, def *domain.WorkflowNode) {
 		}
 	}
 	_, _ = s.store.CancelRun(context.Background(), agentRun.ID)
-	s.finishDAGNode(runID, nodeID, "", nil, errorf("agent node timed out"))
+	s.finishDAGFailure(runID, nodeID, def, "", nil, errorf("agent node timed out"))
 }
 
 func (s *Server) runDAGFanout(runID, nodeID string, def *domain.WorkflowNode) {
 	run, _ := s.store.GetWorkflowRun(context.Background(), runID)
 	task, _ := s.store.GetTask(context.Background(), run.TaskID)
 	if task == nil {
-		s.finishDAGNode(runID, nodeID, "", nil, errorf("task is required for fanout nodes"))
+		s.finishDAGFailure(runID, nodeID, def, "", nil, errorf("task is required for fanout nodes"))
 		return
 	}
 	agentIDs := append([]string{}, def.AgentIDs...)
@@ -385,7 +402,7 @@ func (s *Server) runDAGFanout(runID, nodeID string, def *domain.WorkflowNode) {
 		agentIDs = append(agentIDs, spec.AgentID)
 	}
 	if len(agentIDs) == 0 {
-		s.finishDAGNode(runID, nodeID, "", nil, errorf("fanout needs agents"))
+		s.finishDAGFailure(runID, nodeID, def, "", nil, errorf("fanout needs agents"))
 		return
 	}
 	prompt, _ := s.taskPrompt(context.Background(), task, def.Prompt)
@@ -393,19 +410,19 @@ func (s *Server) runDAGFanout(runID, nodeID string, def *domain.WorkflowNode) {
 	for _, agentID := range agentIDs {
 		child, err := s.createTaskRunModel(context.Background(), task, agentID, "lead", "", "", prompt, def.Model)
 		if err != nil {
-			s.finishDAGNode(runID, nodeID, "", nil, err)
+			s.finishDAGFailure(runID, nodeID, def, "", nil, err)
 			return
 		}
 		runIDs = append(runIDs, child.ID)
 	}
-	s.workflowMu.Lock()
+	unlock := s.lockWorkflowRun(runID)
 	if current, _ := s.store.GetWorkflowRun(context.Background(), runID); current != nil {
 		if state := findNodeRun(current, nodeID); state != nil {
 			state.ChildRunIDs = runIDs
 		}
 		_ = s.store.UpdateWorkflowRun(context.Background(), current)
 	}
-	s.workflowMu.Unlock()
+	unlock()
 
 	deadline := time.Now().Add(30 * time.Minute)
 	for time.Now().Before(deadline) {
@@ -427,7 +444,7 @@ func (s *Server) runDAGFanout(runID, nodeID string, def *domain.WorkflowNode) {
 			continue
 		}
 		if failed > 0 {
-			s.finishDAGNode(runID, nodeID, "", nil, errorf("one or more fanout agents failed"))
+			s.finishDAGFailure(runID, nodeID, def, "", nil, errorf("one or more fanout agents failed"))
 			return
 		}
 		var artifacts []domain.WorkflowArtifact
@@ -442,11 +459,11 @@ func (s *Server) runDAGFanout(runID, nodeID string, def *domain.WorkflowNode) {
 		s.finishDAGNode(runID, nodeID, "agents completed", artifacts, nil)
 		return
 	}
-	s.finishDAGNode(runID, nodeID, "", nil, errorf("fanout timed out"))
+	s.finishDAGFailure(runID, nodeID, def, "", nil, errorf("fanout timed out"))
 }
 func (s *Server) finishDAGNodeContinue(runID, nodeID, output string, artifacts []domain.WorkflowArtifact, message string) {
-	s.workflowMu.Lock()
-	defer s.workflowMu.Unlock()
+	unlock := s.lockWorkflowRun(runID)
+	defer unlock()
 	run, _ := s.store.GetWorkflowRun(context.Background(), runID)
 	if run == nil {
 		return
