@@ -94,6 +94,8 @@ export function WorkflowCanvas({ nodes, onChange }: { nodes: WorkflowNode[]; onC
   const removeEdges = (removed: Edge[]) => {
     const pairs = new Set(removed.filter((edge) => !edge.id.startsWith('fail:')).map((edge) => `${edge.source}->${edge.target}`))
     const failPairs = new Set(removed.filter((edge) => edge.id.startsWith('fail:')).map((edge) => `${edge.source}->${edge.target}`))
+    const truePairs = new Set(removed.filter((edge) => edge.id.startsWith('condtrue:')).map((edge) => `${edge.source}->${edge.target}`))
+    const falsePairs = new Set(removed.filter((edge) => edge.id.startsWith('condfalse:')).map((edge) => `${edge.source}->${edge.target}`))
     onChange(nodes.map((node) => ({
       ...node,
       next: pairs.has(`${node.id}->${node.next}`) ? '' : node.next,

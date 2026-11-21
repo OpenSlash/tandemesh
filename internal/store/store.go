@@ -158,6 +158,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 		`ALTER TABLE automations ADD COLUMN connection_id TEXT NOT NULL DEFAULT ''''`,
 		`ALTER TABLE connections ADD COLUMN sync_direction TEXT NOT NULL DEFAULT 'read_write'`,
 		`ALTER TABLE agents ADD COLUMN session_mode TEXT NOT NULL DEFAULT 'off'`,
+		`ALTER TABLE workflow_runs ADD COLUMN definition_json TEXT NOT NULL DEFAULT '[]'`,
 		`ALTER TABLE connections ADD COLUMN automation_id TEXT NOT NULL DEFAULT ''''`,
 		`ALTER TABLE resource_bindings ADD COLUMN account_id TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE connection_accounts ADD COLUMN member_id TEXT NOT NULL DEFAULT ''`,

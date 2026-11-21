@@ -95,25 +95,27 @@ func (s *Store) CreateWorkflowRun(ctx context.Context, run *domain.WorkflowRun) 
 	}
 	run.UpdatedAt = now
 	nodes, _ := json.Marshal(run.Nodes)
-	_, err := s.db.ExecContext(ctx, `INSERT INTO workflow_runs (id, workflow_id, workspace_id, task_id, status, current_node, nodes_json, error, created_at_ms, updated_at_ms)
-		VALUES (?,?,?,?,?,?,?,?,?,?)`, run.ID, run.WorkflowID, run.WorkspaceID, run.TaskID, run.Status, run.CurrentNode, string(nodes), run.Error, ms(run.CreatedAt), ms(run.UpdatedAt))
+	definition, _ := json.Marshal(run.Definition)
+	_, err := s.db.ExecContext(ctx, `INSERT INTO workflow_runs (id, workflow_id, workspace_id, task_id, status, current_node, nodes_json, definition_json, error, created_at_ms, updated_at_ms)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?)`, run.ID, run.WorkflowID, run.WorkspaceID, run.TaskID, run.Status, run.CurrentNode, string(nodes), string(definition), run.Error, ms(run.CreatedAt), ms(run.UpdatedAt))
 	return err
 }
 
 func (s *Store) UpdateWorkflowRun(ctx context.Context, run *domain.WorkflowRun) error {
 	run.UpdatedAt = time.Now().UTC()
 	nodes, _ := json.Marshal(run.Nodes)
-	_, err := s.db.ExecContext(ctx, `UPDATE workflow_runs SET status = ?, current_node = ?, nodes_json = ?, error = ?, updated_at_ms = ? WHERE id = ?`,
-		run.Status, run.CurrentNode, string(nodes), run.Error, ms(run.UpdatedAt), run.ID)
+	definition, _ := json.Marshal(run.Definition)
+	_, err := s.db.ExecContext(ctx, `UPDATE workflow_runs SET status = ?, current_node = ?, nodes_json = ?, definition_json = ?, error = ?, updated_at_ms = ? WHERE id = ?`,
+		run.Status, run.CurrentNode, string(nodes), string(definition), run.Error, ms(run.UpdatedAt), run.ID)
 	return err
 }
 
 func (s *Store) GetWorkflowRun(ctx context.Context, id string) (*domain.WorkflowRun, error) {
 	var run domain.WorkflowRun
-	var nodes string
+	var nodes, definition string
 	var created, updated int64
-	err := s.db.QueryRowContext(ctx, `SELECT id, workflow_id, workspace_id, task_id, status, current_node, nodes_json, error, created_at_ms, updated_at_ms FROM workflow_runs WHERE id = ?`, id).
-		Scan(&run.ID, &run.WorkflowID, &run.WorkspaceID, &run.TaskID, &run.Status, &run.CurrentNode, &nodes, &run.Error, &created, &updated)
+	err := s.db.QueryRowContext(ctx, `SELECT id, workflow_id, workspace_id, task_id, status, current_node, nodes_json, definition_json, error, created_at_ms, updated_at_ms FROM workflow_runs WHERE id = ?`, id).
+		Scan(&run.ID, &run.WorkflowID, &run.WorkspaceID, &run.TaskID, &run.Status, &run.CurrentNode, &nodes, &definition, &run.Error, &created, &updated)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -121,6 +123,7 @@ func (s *Store) GetWorkflowRun(ctx context.Context, id string) (*domain.Workflow
 		return nil, err
 	}
 	_ = json.Unmarshal([]byte(nodes), &run.Nodes)
+	_ = json.Unmarshal([]byte(definition), &run.Definition)
 	run.CreatedAt = fromMS(created)
 	run.UpdatedAt = fromMS(updated)
 	return &run, nil
@@ -130,7 +133,7 @@ func (s *Store) ListWorkflowRuns(ctx context.Context, workspaceID, taskID string
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	q := `SELECT id, workflow_id, workspace_id, task_id, status, current_node, nodes_json, error, created_at_ms, updated_at_ms FROM workflow_runs`
+	q := `SELECT id, workflow_id, workspace_id, task_id, status, current_node, nodes_json, definition_json, error, created_at_ms, updated_at_ms FROM workflow_runs`
 	args := []any{}
 	if workspaceID != "" {
 		q += " WHERE workspace_id = ?"
@@ -150,12 +153,13 @@ func (s *Store) ListWorkflowRuns(ctx context.Context, workspaceID, taskID string
 	var out []*domain.WorkflowRun
 	for rows.Next() {
 		var run domain.WorkflowRun
-		var nodes string
+		var nodes, definition string
 		var created, updated int64
-		if err := rows.Scan(&run.ID, &run.WorkflowID, &run.WorkspaceID, &run.TaskID, &run.Status, &run.CurrentNode, &nodes, &run.Error, &created, &updated); err != nil {
+		if err := rows.Scan(&run.ID, &run.WorkflowID, &run.WorkspaceID, &run.TaskID, &run.Status, &run.CurrentNode, &nodes, &definition, &run.Error, &created, &updated); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(nodes), &run.Nodes)
+		_ = json.Unmarshal([]byte(definition), &run.Definition)
 		run.CreatedAt = fromMS(created)
 		run.UpdatedAt = fromMS(updated)
 		out = append(out, &run)

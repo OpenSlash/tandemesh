@@ -1,4 +1,4 @@
-﻿import type { WorkflowNode, WorkflowRun } from '../lib/api'
+import type { WorkflowNode, WorkflowRun } from '../lib/api'
 import { cn } from '../lib/utils'
 
 const NODE_W = 150
@@ -10,6 +10,7 @@ function statusClass(status?: string) {
   if (status === 'succeeded') return 'fill-ok/10 stroke-ok'
   if (status === 'failed') return 'fill-err/10 stroke-err'
   if (status === 'running' || status === 'waiting') return 'fill-warn/10 stroke-warn'
+  if (status === 'skipped') return 'fill-panel2 stroke-line2 opacity-50'
   return 'fill-panel stroke-line2'
 }
 

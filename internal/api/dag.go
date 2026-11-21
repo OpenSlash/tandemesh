@@ -11,6 +11,36 @@ import (
 )
 
 func errorf(format string, args ...any) error { return fmt.Errorf(format, args...) }
+func ensureConditionNeeds(nodes []domain.WorkflowNode) []domain.WorkflowNode {
+	byID := make(map[string]int, len(nodes))
+	for i := range nodes {
+		byID[nodes[i].ID] = i
+	}
+	for _, node := range nodes {
+		if node.Kind != "condition" {
+			continue
+		}
+		for _, target := range []string{node.Next, node.OnFail} {
+			if target == "" {
+				continue
+			}
+			index, ok := byID[target]
+			if !ok {
+				continue
+			}
+			found := false
+			for _, need := range nodes[index].Needs {
+				if need == node.ID {
+					found = true
+				}
+			}
+			if !found {
+				nodes[index].Needs = append(nodes[index].Needs, node.ID)
+			}
+		}
+	}
+	return nodes
+}
 func (s *Server) executeDAG(runID string) {
 	for {
 		s.workflowMu.Lock()
@@ -19,11 +49,12 @@ func (s *Server) executeDAG(runID string) {
 			s.workflowMu.Unlock()
 			return
 		}
-		wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+		wf := s.workflowForRun(context.Background(), run)
 		if wf == nil {
 			s.workflowMu.Unlock()
 			return
 		}
+		wf.Nodes = ensureConditionNeeds(wf.Nodes)
 		ready := make([]string, 0)
 		pending, waiting := 0, 0
 		for _, node := range wf.Nodes {
@@ -53,12 +84,30 @@ func (s *Server) executeDAG(runID string) {
 				continue
 			}
 			ok := true
+			skipped := false
 			for _, need := range node.Needs {
 				parent := findNodeRun(run, need)
-				if parent == nil || parent.Status != domain.WorkflowNodeSucceeded {
+				if parent == nil {
 					ok = false
 					break
 				}
+				if parent.Status == domain.WorkflowNodeSucceeded {
+					continue
+				}
+				if parent.Status == domain.WorkflowNodeFailed {
+					parentDef := findNode(wf.Nodes, need)
+					if parentDef != nil && parentDef.OnFail == node.ID {
+						continue
+					}
+					state.Status = domain.WorkflowNodeSkipped
+					skipped = true
+					break
+				}
+				ok = false
+				break
+			}
+			if skipped {
+				continue
 			}
 			if ok {
 				ready = append(ready, node.ID)
@@ -106,7 +155,7 @@ func (s *Server) runDAGNode(runID, nodeID string) {
 	if run == nil {
 		return
 	}
-	wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+	wf := s.workflowForRun(context.Background(), run)
 	if wf == nil {
 		return
 	}
@@ -122,9 +171,27 @@ func (s *Server) runDAGNode(runID, nodeID string) {
 		if def.TimeoutSeconds > 0 {
 			timeout = time.Duration(def.TimeoutSeconds) * time.Second
 		}
-		out, err := runScript(def.Command, artifactDir, timeout)
+		attempts := def.Retries + 1
+		if attempts < 1 {
+			attempts = 1
+		}
+		var out string
+		var err error
+		for attempt := 0; attempt < attempts; attempt++ {
+			if attempt > 0 && def.RetryDelaySeconds > 0 {
+				time.Sleep(time.Duration(def.RetryDelaySeconds) * time.Second)
+			}
+			out, err = runScript(def.Command, artifactDir, timeout)
+			if err == nil {
+				break
+			}
+		}
 		artifacts := s.persistArtifacts(context.Background(), runID, nodeID, collectArtifacts(artifactDir))
-		s.finishDAGNode(runID, nodeID, out, artifacts, err)
+		if err != nil && def.OnFail != "" {
+			s.finishDAGNodeContinue(runID, nodeID, out, artifacts, err.Error())
+		} else {
+			s.finishDAGNode(runID, nodeID, out, artifacts, err)
+		}
 	case "merge":
 		s.finishDAGNode(runID, nodeID, mergeInput(run, def), nil, nil)
 	case "condition":
@@ -376,4 +443,26 @@ func (s *Server) runDAGFanout(runID, nodeID string, def *domain.WorkflowNode) {
 		return
 	}
 	s.finishDAGNode(runID, nodeID, "", nil, errorf("fanout timed out"))
+}
+func (s *Server) finishDAGNodeContinue(runID, nodeID, output string, artifacts []domain.WorkflowArtifact, message string) {
+	s.workflowMu.Lock()
+	defer s.workflowMu.Unlock()
+	run, _ := s.store.GetWorkflowRun(context.Background(), runID)
+	if run == nil {
+		return
+	}
+	node := findNodeRun(run, nodeID)
+	if node == nil {
+		return
+	}
+	now := time.Now().UTC()
+	node.Status = domain.WorkflowNodeFailed
+	node.Error = message
+	node.Output = output
+	node.FinishedAt = &now
+	if artifacts != nil {
+		node.Artifacts = artifacts
+	}
+	run.Status = domain.WorkflowRunning
+	_ = s.store.UpdateWorkflowRun(context.Background(), run)
 }

@@ -84,6 +84,7 @@ type WorkflowRun struct {
 	Status      string            `json:"status"`
 	CurrentNode string            `json:"currentNode,omitempty"`
 	Nodes       []WorkflowNodeRun `json:"nodes"`
+	Definition  []WorkflowNode    `json:"definition,omitempty"`
 	Error       string            `json:"error,omitempty"`
 	CreatedAt   time.Time         `json:"createdAt"`
 	UpdatedAt   time.Time         `json:"updatedAt"`

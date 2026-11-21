@@ -996,6 +996,7 @@ CREATE TABLE IF NOT EXISTS workflow_runs (
     status         TEXT NOT NULL DEFAULT 'running',
     current_node   TEXT NOT NULL DEFAULT '',
     nodes_json     TEXT NOT NULL DEFAULT '[]',
+    definition_json TEXT NOT NULL DEFAULT '[]',
     error          TEXT NOT NULL DEFAULT '',
     created_at_ms  INTEGER NOT NULL,
     updated_at_ms  INTEGER NOT NULL

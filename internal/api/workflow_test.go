@@ -406,3 +406,73 @@ func TestWorkflowDAGCondition(t *testing.T) {
 		t.Fatalf("condition nodes = %+v", final.Nodes)
 	}
 }
+
+func TestWorkflowRunSnapshot(t *testing.T) {
+	ts := newTestServer(t)
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "snapshot",
+		"nodes": []map[string]any{
+			{"id": "one", "kind": "script", "name": "One", "command": "echo ONE", "next": "gate"},
+			{"id": "gate", "kind": "gate", "name": "Gate"},
+		},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wf.ID+"/runs", map[string]any{})
+	waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowWaiting, "gate")
+	body, _ := json.Marshal(map[string]any{
+		"workspaceId": "ws_default", "name": "changed",
+		"nodes": []map[string]any{{"id": "other", "kind": "script", "name": "Other", "command": "echo OTHER"}},
+	})
+	req, _ := http.NewRequest(http.MethodPut, ts.URL+"/api/v1/workflows/"+wf.ID, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("update: %v %v", err, resp)
+	}
+	resp.Body.Close()
+	postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflow-runs/"+run.ID+"/gate", map[string]any{"nodeId": "gate", "action": "approve"})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	if findNodeRun(&final, "one") == nil || findNodeRun(&final, "other") != nil {
+		t.Fatalf("run did not use snapshot: %+v", final.Nodes)
+	}
+}
+
+func TestWorkflowDAGOnFail(t *testing.T) {
+	ts := newTestServer(t)
+	wf := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "dag fallback",
+		"nodes": []map[string]any{
+			{"id": "bad", "kind": "script", "name": "Bad", "command": "tandemesh-nonexistent-command", "retries": 1, "onFail": "recover"},
+			{"id": "recover", "kind": "script", "name": "Recover", "command": "echo RECOVERED", "needs": []string{"bad"}},
+			{"id": "never", "kind": "script", "name": "Never", "command": "echo NEVER", "needs": []string{"bad"}},
+		},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wf.ID+"/runs", map[string]any{})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	bad, recover, never := findNodeRun(&final, "bad"), findNodeRun(&final, "recover"), findNodeRun(&final, "never")
+	if bad == nil || bad.Status != domain.WorkflowNodeFailed || recover == nil || recover.Status != domain.WorkflowNodeSucceeded || never == nil || never.Status != domain.WorkflowNodeSkipped {
+		t.Fatalf("dag fallback nodes = %+v", final.Nodes)
+	}
+}
+
+func TestWorkflowDAGCancelChild(t *testing.T) {
+	ts := newTestServer(t)
+	child := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "hold child",
+		"nodes": []map[string]any{{"id": "hold", "kind": "gate", "name": "Hold"}},
+	})
+	parent := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "cancel parent",
+		"nodes": []map[string]any{{"id": "sub", "kind": "workflow", "name": "Sub", "workflowId": child.ID}},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+parent.ID+"/runs", map[string]any{})
+	current := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowWaiting, "sub")
+	sub := findNodeRun(&current, "sub")
+	if sub == nil || sub.RunID == "" {
+		t.Fatalf("child run missing: %+v", current.Nodes)
+	}
+	postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflow-runs/"+run.ID+"/cancel", map[string]any{})
+	childRun := getJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflow-runs/"+sub.RunID)
+	if childRun.Status != domain.WorkflowCancelled {
+		t.Fatalf("child status = %s", childRun.Status)
+	}
+}

@@ -192,7 +192,7 @@ func (s *Server) startWorkflow(w http.ResponseWriter, r *http.Request) {
 	}
 	run := &domain.WorkflowRun{
 		WorkflowID: wf.ID, WorkspaceID: wf.WorkspaceID, TaskID: req.TaskID,
-		Status: domain.WorkflowRunning, Nodes: initialNodeRuns(wf.Nodes),
+		Status: domain.WorkflowRunning, Nodes: initialNodeRuns(wf.Nodes), Definition: wf.Nodes,
 	}
 	if len(wf.Nodes) > 0 {
 		run.CurrentNode = wf.Nodes[0].ID
@@ -264,7 +264,7 @@ func (s *Server) gateWorkflowRun(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusConflict, "E_NODE", "gate is not waiting")
 		return
 	}
-	wf, _ := s.store.GetWorkflow(r.Context(), run.WorkflowID)
+	wf := s.workflowForRun(r.Context(), run)
 	if wf == nil {
 		writeErr(w, http.StatusNotFound, "E_WORKFLOW", "workflow not found")
 		return
@@ -381,7 +381,7 @@ func (s *Server) retryWorkflowRun(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusConflict, "E_STATE", "workflow is already running")
 		return
 	}
-	wf, _ := s.store.GetWorkflow(r.Context(), run.WorkflowID)
+	wf := s.workflowForRun(r.Context(), run)
 	if wf == nil {
 		writeErr(w, http.StatusNotFound, "E_WORKFLOW", "workflow not found")
 		return
@@ -466,7 +466,7 @@ func (s *Server) executeScriptDAG(runID string) {
 			s.workflowMu.Unlock()
 			return
 		}
-		wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+		wf := s.workflowForRun(context.Background(), run)
 		if wf == nil {
 			s.workflowMu.Unlock()
 			return
@@ -532,7 +532,7 @@ func (s *Server) runDAGScriptNode(runID, nodeID string) {
 	if run == nil {
 		return
 	}
-	wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+	wf := s.workflowForRun(context.Background(), run)
 	if wf == nil {
 		return
 	}
@@ -587,13 +587,23 @@ func (s *Server) finishDAGNode(runID, nodeID, output string, artifacts []domain.
 	}
 	_ = s.store.UpdateWorkflowRun(context.Background(), run)
 }
+func (s *Server) workflowForRun(ctx context.Context, run *domain.WorkflowRun) *domain.Workflow {
+	if run == nil {
+		return nil
+	}
+	if len(run.Definition) > 0 {
+		return &domain.Workflow{ID: run.WorkflowID, WorkspaceID: run.WorkspaceID, Nodes: run.Definition}
+	}
+	wf, _ := s.store.GetWorkflow(ctx, run.WorkflowID)
+	return wf
+}
 func (s *Server) executeWorkflow(runID, start string) {
 	s.workflowMu.Lock()
 	run, err := s.store.GetWorkflowRun(context.Background(), runID)
 	if err != nil || run == nil {
 		return
 	}
-	wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+	wf := s.workflowForRun(context.Background(), run)
 	if wf == nil {
 		return
 	}
@@ -919,7 +929,7 @@ func (s *Server) executeWorkflow(runID, start string) {
 func (s *Server) watchWorkflowAgent(runID, nodeID, agentRunID string) {
 	deadline := time.Now().Add(30 * time.Minute)
 	if run, _ := s.store.GetWorkflowRun(context.Background(), runID); run != nil {
-		if wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID); wf != nil {
+		if wf := s.workflowForRun(context.Background(), run); wf != nil {
 			if def := findNode(wf.Nodes, nodeID); def != nil && def.TimeoutSeconds > 0 {
 				deadline = time.Now().Add(time.Duration(def.TimeoutSeconds) * time.Second)
 			}
@@ -940,7 +950,7 @@ func (s *Server) watchWorkflowAgent(runID, nodeID, agentRunID string) {
 			s.workflowMu.Unlock()
 			return
 		}
-		wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+		wf := s.workflowForRun(context.Background(), run)
 		if wf == nil {
 			s.workflowMu.Unlock()
 			return
@@ -1015,7 +1025,7 @@ func (s *Server) watchWorkflowFanout(runID, nodeID string, runIDs []string) {
 			s.workflowMu.Unlock()
 			return
 		}
-		wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+		wf := s.workflowForRun(context.Background(), run)
 		if wf == nil {
 			s.workflowMu.Unlock()
 			return
@@ -1071,7 +1081,7 @@ func (s *Server) finishAgentTimeout(runID, nodeID, agentRunID string) {
 	if run == nil {
 		return
 	}
-	wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+	wf := s.workflowForRun(context.Background(), run)
 	if wf == nil {
 		return
 	}
@@ -1115,7 +1125,7 @@ func (s *Server) watchWorkflowChild(runID, nodeID, childID string) {
 			s.workflowMu.Unlock()
 			return
 		}
-		wf, _ := s.store.GetWorkflow(context.Background(), run.WorkflowID)
+		wf := s.workflowForRun(context.Background(), run)
 		if wf == nil {
 			s.workflowMu.Unlock()
 			return
