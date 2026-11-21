@@ -476,3 +476,25 @@ func TestWorkflowDAGCancelChild(t *testing.T) {
 		t.Fatalf("child status = %s", childRun.Status)
 	}
 }
+
+func TestWorkflowConcurrentRuns(t *testing.T) {
+	ts := newTestServer(t)
+	makeWorkflow := func(name string) domain.Workflow {
+		return postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+			"workspaceId": "ws_default", "name": name,
+			"nodes": []map[string]any{{"id": "gate", "kind": "gate", "name": "Gate"}},
+		})
+	}
+	wfA, wfB := makeWorkflow("concurrent A"), makeWorkflow("concurrent B")
+	runA := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wfA.ID+"/runs", map[string]any{})
+	runB := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+wfB.ID+"/runs", map[string]any{})
+	waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+runA.ID, domain.WorkflowWaiting, "gate")
+	waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+runB.ID, domain.WorkflowWaiting, "gate")
+	postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflow-runs/"+runA.ID+"/cancel", map[string]any{})
+	postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflow-runs/"+runB.ID+"/gate", map[string]any{"nodeId": "gate", "action": "approve"})
+	finalB := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+runB.ID, domain.WorkflowSucceeded, "")
+	finalA := getJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflow-runs/"+runA.ID)
+	if finalA.Status != domain.WorkflowCancelled || finalB.Status != domain.WorkflowSucceeded {
+		t.Fatalf("A=%s B=%s", finalA.Status, finalB.Status)
+	}
+}

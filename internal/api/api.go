@@ -53,7 +53,6 @@ type Server struct {
 	importSlots   chan struct{}
 	importConnMu  sync.Mutex
 	importConns   map[string]chan struct{}
-	workflowMu    sync.Mutex
 	workflowLocks sync.Map
 }
 
