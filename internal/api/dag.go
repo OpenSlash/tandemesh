@@ -424,7 +424,11 @@ func (s *Server) runDAGFanout(runID, nodeID string, def *domain.WorkflowNode) {
 	}
 	unlock()
 
-	deadline := time.Now().Add(30 * time.Minute)
+	timeout := 30 * time.Minute
+	if def.TimeoutSeconds > 0 {
+		timeout = time.Duration(def.TimeoutSeconds) * time.Second
+	}
+	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		time.Sleep(2 * time.Second)
 		done, failed := 0, 0
@@ -458,6 +462,9 @@ func (s *Server) runDAGFanout(runID, nodeID string, def *domain.WorkflowNode) {
 		artifacts = s.persistArtifacts(context.Background(), runID, nodeID, artifacts)
 		s.finishDAGNode(runID, nodeID, "agents completed", artifacts, nil)
 		return
+	}
+	for _, id := range runIDs {
+		_, _ = s.store.CancelRun(context.Background(), id)
 	}
 	s.finishDAGFailure(runID, nodeID, def, "", nil, errorf("fanout timed out"))
 }
