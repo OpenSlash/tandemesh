@@ -498,3 +498,24 @@ func TestWorkflowConcurrentRuns(t *testing.T) {
 		t.Fatalf("A=%s B=%s", finalA.Status, finalB.Status)
 	}
 }
+
+func TestWorkflowDAGChildOnFail(t *testing.T) {
+	ts := newTestServer(t)
+	child := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "failing child",
+		"nodes": []map[string]any{{"id": "bad", "kind": "script", "name": "Bad", "command": "tandemesh-nonexistent-command"}},
+	})
+	parent := postJSON[domain.Workflow](t, ts.URL+"/api/v1/workflows", map[string]any{
+		"workspaceId": "ws_default", "name": "child fallback",
+		"nodes": []map[string]any{
+			{"id": "sub", "kind": "workflow", "name": "Sub", "workflowId": child.ID, "onFail": "recover"},
+			{"id": "recover", "kind": "script", "name": "Recover", "command": "echo CHILD_RECOVERED", "needs": []string{"sub"}},
+		},
+	})
+	run := postJSON[domain.WorkflowRun](t, ts.URL+"/api/v1/workflows/"+parent.ID+"/runs", map[string]any{})
+	final := waitWorkflow(t, ts.URL+"/api/v1/workflow-runs/"+run.ID, domain.WorkflowSucceeded, "")
+	sub, recover := findNodeRun(&final, "sub"), findNodeRun(&final, "recover")
+	if sub == nil || sub.Status != domain.WorkflowNodeFailed || recover == nil || recover.Status != domain.WorkflowNodeSucceeded {
+		t.Fatalf("child fallback nodes = %+v", final.Nodes)
+	}
+}

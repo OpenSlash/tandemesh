@@ -323,7 +323,7 @@ func (s *Server) runDAGChildWorkflow(runID, nodeID string, def *domain.WorkflowN
 			return
 		}
 		if current.Status == domain.WorkflowFailed || current.Status == domain.WorkflowCancelled {
-			s.finishDAGNode(runID, nodeID, "", nil, errorf("child workflow %s", current.Status))
+			s.finishDAGFailure(runID, nodeID, def, "", nil, errorf("child workflow %s", current.Status))
 			return
 		}
 	}
