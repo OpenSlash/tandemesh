@@ -25,6 +25,7 @@ import CredentialsPage from './pages/credentials'
 import SettingsLayout from './pages/settings'
 import SettingsAppearancePage from './pages/settings-appearance'
 import SettingsAccountPage from './pages/settings-account'
+import SettingsMobilePage from './pages/settings-mobile'
 import ACPRegistryPage from './pages/acp-registry'
 import SkillsPage from './pages/skills'
 import MachinesPage from './pages/machines'
@@ -114,6 +115,7 @@ export default function App() {
             <Route index element={<Navigate to="appearance" replace />} />
             <Route path="appearance" element={<SettingsAppearancePage />} />
             <Route path="account" element={<SettingsAccountPage />} />
+            <Route path="mobile" element={<SettingsMobilePage />} />
             <Route path="acp" element={<ACPRegistryPage />} />
           </Route>
         </Routes>

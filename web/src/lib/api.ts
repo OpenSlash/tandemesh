@@ -924,6 +924,15 @@ export interface ResourceBinding {
   updatedAt: string
 }
 
+export interface MobileDevice {
+  id: string
+  name: string
+  platform: string
+  createdAt: number
+  lastUsedAt: number
+  revokedAt: number
+}
+
 export const api = {
   runDiff: (runId: string) => request<{ runId: string; diff: string; truncated: boolean }>(`/api/v1/runs/${runId}/diff`),
   runTranscript: (id: string, before?: number) =>
@@ -1729,4 +1738,13 @@ installSkill: (body: { workspaceId: string; name?: string; body?: string; source
       headers: JSON_HEADERS,
       body: JSON.stringify({ vars }),
     }),
+  createMobilePairing: (workspaceId?: string) =>
+    request<{ id: string; code: string; expiresAt: number }>('/api/v1/mobile/pairings', {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ workspaceId: workspaceId ?? '' }),
+    }),
+  mobileDevices: () => request<{ items: MobileDevice[] }>('/api/v1/mobile/devices'),
+  revokeMobileDevice: (id: string) =>
+    request<void>(`/api/v1/mobile/devices/${id}`, { method: 'DELETE' }),
 }
