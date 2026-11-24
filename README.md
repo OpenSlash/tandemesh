@@ -37,7 +37,8 @@ Working today:
 - Web control panel: React 19, Vite, TanStack Query, React Flow workflow editor.
 - Desktop: Wails 3 shell, local plane/agentd lifecycle, tray, close-to-tray, autostart, local token,
   LAN mode, NSIS installer and installer-based update checks.
-- Mobile: React Native is planned; the local plane already exposes the HTTP API it will use.
+- Mobile: React Native 0.82 shell in `apps/mobile` with device pairing and a read-only task
+  list; HarmonyOS (RNOH) and iOS follow.
 
 Not included in the self-hosted core:
 
