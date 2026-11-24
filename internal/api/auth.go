@@ -13,6 +13,9 @@ type userContextKey struct{}
 func (s *Server) identify(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := s.identityUser(r)
+		if mobileUser, ok := mobileUserOf(r); ok {
+			user = mobileUser
+		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userContextKey{}, user)))
 	})
 }

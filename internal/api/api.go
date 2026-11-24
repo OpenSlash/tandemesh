@@ -124,6 +124,11 @@ func (s *Server) Router() http.Handler {
 		r.Get("/version", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]string{"version": Version})
 		})
+		r.Post("/mobile/pairings", s.createMobilePairing)
+		r.Get("/mobile/pairings/{id}", s.getMobilePairing)
+		r.Post("/mobile/pairings/exchange", s.exchangeMobilePairing)
+		r.Get("/mobile/devices", s.listMobileDevices)
+		r.Delete("/mobile/devices/{id}", s.revokeMobileDevice)
 		r.Get("/providers", s.listProviders)
 		r.Post("/providers/{id}/probe", s.probeProvider)
 		r.Get("/context/search", s.contextSearch)

@@ -1019,3 +1019,29 @@ CREATE TABLE IF NOT EXISTS workflow_artifacts (
 );
 
 CREATE INDEX IF NOT EXISTS workflow_artifacts_run_idx ON workflow_artifacts(run_id, node_id);
+
+CREATE TABLE IF NOT EXISTS mobile_pairings (
+    id             TEXT PRIMARY KEY,
+    code_hash      TEXT NOT NULL UNIQUE,
+    user_id        TEXT NOT NULL,
+    workspace_id   TEXT NOT NULL DEFAULT '',
+    expires_at_ms  INTEGER NOT NULL,
+    used_at_ms     INTEGER,
+    created_at_ms  INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS mobile_pairings_expiry_idx ON mobile_pairings(expires_at_ms);
+
+CREATE TABLE IF NOT EXISTS mobile_tokens (
+    id             TEXT PRIMARY KEY,
+    user_id        TEXT NOT NULL,
+    token_hash     TEXT NOT NULL UNIQUE,
+    device_name    TEXT NOT NULL DEFAULT '',
+    platform       TEXT NOT NULL DEFAULT '',
+    created_at_ms  INTEGER NOT NULL,
+    last_used_ms   INTEGER,
+    revoked_at_ms  INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS mobile_tokens_user_idx ON mobile_tokens(user_id);
+

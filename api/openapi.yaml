@@ -148,6 +148,80 @@ paths:
         "202": { description: Run created }
         "200": { description: Skipped or deduplicated }
         "401": { description: Bad signature }
+  /api/v1/mobile/pairings:
+    post:
+      summary: Create a single-use mobile pairing code
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                workspaceId: { type: string }
+      responses:
+        "201":
+          description: Pairing code
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MobilePairing" }
+        "401": { description: Local credential required }
+  /api/v1/mobile/pairings/{id}:
+    get:
+      summary: Get pairing status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Pairing status }
+        "404": { description: Not found }
+  /api/v1/mobile/pairings/exchange:
+    post:
+      summary: Exchange a pairing code for a device bearer token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+                deviceName: { type: string }
+                platform: { type: string }
+      responses:
+        "200":
+          description: Device token
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MobileTokenResponse" }
+        "401": { description: Pairing code invalid or expired }
+  /api/v1/mobile/devices:
+    get:
+      summary: List paired mobile devices
+      responses:
+        "200":
+          description: Devices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/MobileDevice" }
+  /api/v1/mobile/devices/{id}:
+    delete:
+      summary: Revoke a paired mobile device
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Revoked }
+        "404": { description: Not found }
 components:
   schemas:
     WorkRef:
@@ -229,3 +303,24 @@ components:
           items: { type: string }
         concurrency: { type: integer }
         version: { type: string }
+    MobilePairing:
+      type: object
+      properties:
+        id: { type: string }
+        code: { type: string }
+        expiresAt: { type: integer, format: int64 }
+    MobileDevice:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        platform: { type: string }
+        createdAt: { type: integer, format: int64 }
+        lastUsedAt: { type: integer, format: int64 }
+        revokedAt: { type: integer, format: int64 }
+    MobileTokenResponse:
+      type: object
+      properties:
+        token: { type: string }
+        device: { $ref: "#/components/schemas/MobileDevice" }
+        user: { type: string }
