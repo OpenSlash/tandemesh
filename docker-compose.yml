@@ -1,0 +1,35 @@
+services:
+  plane:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      TANDEMESH_LISTEN: ":8080"
+      TANDEMESH_DB_PATH: "/data/tandemesh.db"
+      TANDEMESH_BASE_URL: "http://localhost:8080"
+      TANDEMESH_MASTER_KEY: "${TANDEMESH_MASTER_KEY:?set TANDEMESH_MASTER_KEY}"
+      TANDEMESH_JOIN_TOKEN: "${TANDEMESH_JOIN_TOKEN:?set TANDEMESH_JOIN_TOKEN}"
+      TANDEMESH_USER: "${TANDEMESH_USER:-alice}"
+      TANDEMESH_MAX_ACTIVE_PER_WORKSPACE: "${TANDEMESH_MAX_ACTIVE_PER_WORKSPACE:-0}"
+      TANDEMESH_MAX_ACTIVE_PER_AGENT: "${TANDEMESH_MAX_ACTIVE_PER_AGENT:-0}"
+    volumes:
+      - tandemesh-data:/data
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    depends_on:
+      - plane
+    ports:
+      - "8081:80"
+
+volumes:
+  tandemesh-data:

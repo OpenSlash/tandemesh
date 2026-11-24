@@ -1,0 +1,37 @@
+{
+  "title": "Tandemesh — icon concepts",
+  "subtitle": "First round · three directions · pure black SVG on a 256 px grid, monochrome by design",
+  "meta": "2026-11-24 · logo-design skill · round 1 of 2",
+  "width": 1560,
+  "concepts": [
+    {
+      "letter": "A",
+      "name": "Fin",
+      "type": "Pictorial · orca pod",
+      "recommended": true,
+      "symbol": "concepts/a-fin.svg",
+      "tile": "concepts/tile-a.svg",
+      "idea": "A dorsal fin breaking a plane: a pod of machines running as one, all of them moving the same way.",
+      "risk": "Risk: reads as a sail or a wave until the orca story lands. Worth a check against Docker's whale."
+    },
+    {
+      "letter": "B",
+      "name": "Shear",
+      "type": "Letterform · the name",
+      "symbol": "concepts/b-shear.svg",
+      "tile": "concepts/tile-b.svg",
+      "idea": "The T of Tandemesh, cut on one 10° shear: a plane that is already in motion, legible at 16 px.",
+      "risk": "Risk: a sheared T can read as type rather than a mark; the cut has to be drawn, not typed."
+    },
+    {
+      "letter": "C",
+      "name": "Stream",
+      "type": "Abstract · runs advancing",
+      "symbol": "concepts/c-stream.svg",
+      "tile": "concepts/tile-c.svg",
+      "idea": "Two chevrons, one direction: runs entering the plane, clearing it, and handing off to the next.",
+      "risk": "Risk: fast-forward is a crowded sign, and it reads as rewind when mirrored."
+    }
+  ],
+  "footer": "Tests run on all three: 16 / 32 / 64 px, one-colour, dark app tile, mirror, 180° rotation, squint blur, and an SVG structural audit (no text, no raster, no filters, whole-degree angles — all three score 100).\nLockup type is provisional (Inter). Colour, variants and guidelines come with the kit for whichever direction you pick."
+}

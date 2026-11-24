@@ -1,0 +1,96 @@
+package domain
+
+import "time"
+
+const (
+	WorkflowRunning   = "running"
+	WorkflowWaiting   = "waiting"
+	WorkflowSucceeded = "succeeded"
+	WorkflowFailed    = "failed"
+	WorkflowCancelled = "cancelled"
+
+	WorkflowNodePending   = "pending"
+	WorkflowNodeRunning   = "running"
+	WorkflowNodeWaiting   = "waiting"
+	WorkflowNodeSucceeded = "succeeded"
+	WorkflowNodeFailed    = "failed"
+	WorkflowNodeSkipped   = "skipped"
+)
+
+type WorkflowAgentSpec struct {
+	AgentID string `json:"agentId"`
+	Prompt  string `json:"prompt,omitempty"`
+	Model   string `json:"model,omitempty"`
+	Role    string `json:"role,omitempty"`
+}
+type WorkflowPosition struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+type WorkflowNode struct {
+	ID                string              `json:"id"`
+	Kind              string              `json:"kind"`
+	Name              string              `json:"name"`
+	AgentID           string              `json:"agentId,omitempty"`
+	AgentIDs          []string            `json:"agentIds,omitempty"`
+	Agents            []WorkflowAgentSpec `json:"agents,omitempty"`
+	Role              string              `json:"role,omitempty"`
+	Model             string              `json:"model,omitempty"`
+	WorkflowID        string              `json:"workflowId,omitempty"`
+	Prompt            string              `json:"prompt,omitempty"`
+	Command           string              `json:"command,omitempty"`
+	Commands          []string            `json:"commands,omitempty"`
+	Next              string              `json:"next,omitempty"`
+	Needs             []string            `json:"needs,omitempty"`
+	OnFail            string              `json:"onFail,omitempty"`
+	Retries           int                 `json:"retries,omitempty"`
+	RetryDelaySeconds int                 `json:"retryDelaySeconds,omitempty"`
+	TimeoutSeconds    int                 `json:"timeoutSeconds,omitempty"`
+	When              string              `json:"when,omitempty"`
+	Position          *WorkflowPosition   `json:"position,omitempty"`
+}
+
+type Workflow struct {
+	ID          string         `json:"id"`
+	WorkspaceID string         `json:"workspaceId"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Nodes       []WorkflowNode `json:"nodes"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	UpdatedAt   time.Time      `json:"updatedAt"`
+}
+
+type WorkflowArtifact struct {
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	Size        int    `json:"size"`
+	Content     string `json:"content,omitempty"`
+	ContentType string `json:"contentType,omitempty"`
+}
+type WorkflowNodeRun struct {
+	NodeID      string             `json:"nodeId"`
+	Kind        string             `json:"kind"`
+	Name        string             `json:"name"`
+	Status      string             `json:"status"`
+	Output      string             `json:"output,omitempty"`
+	Error       string             `json:"error,omitempty"`
+	RunID       string             `json:"runId,omitempty"`
+	ChildRunIDs []string           `json:"childRunIds,omitempty"`
+	Artifacts   []WorkflowArtifact `json:"artifacts,omitempty"`
+	StartedAt   *time.Time         `json:"startedAt,omitempty"`
+	FinishedAt  *time.Time         `json:"finishedAt,omitempty"`
+}
+
+type WorkflowRun struct {
+	ID          string            `json:"id"`
+	WorkflowID  string            `json:"workflowId"`
+	WorkspaceID string            `json:"workspaceId"`
+	TaskID      string            `json:"taskId,omitempty"`
+	Status      string            `json:"status"`
+	CurrentNode string            `json:"currentNode,omitempty"`
+	Nodes       []WorkflowNodeRun `json:"nodes"`
+	Definition  []WorkflowNode    `json:"definition,omitempty"`
+	Error       string            `json:"error,omitempty"`
+	CreatedAt   time.Time         `json:"createdAt"`
+	UpdatedAt   time.Time         `json:"updatedAt"`
+}

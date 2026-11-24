@@ -1,0 +1,36 @@
+services:
+  plane:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      TANDEMESH_LISTEN: ":8080"
+      TANDEMESH_DB_PATH: ${TANDEMESH_DB_PATH:-/data/tandemesh.db}
+      TANDEMESH_JOIN_TOKEN: ${TANDEMESH_JOIN_TOKEN:-dev-join-token}
+      TANDEMESH_GITHUB_SECRET: ${TANDEMESH_GITHUB_SECRET:-}
+      TANDEMESH_LEASE_TTL: 30s
+    ports:
+      - "8080:8080"
+    volumes:
+      - tandemesh-data:/data
+    restart: unless-stopped
+
+  # Optional Postgres for team deployments:
+  #   docker compose --profile postgres up
+  #   TANDEMESH_DB_PATH=postgres://tandemesh:tandemesh@postgres:5432/tandemesh?sslmode=disable
+  postgres:
+    image: postgres:17-alpine
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_USER: tandemesh
+      POSTGRES_PASSWORD: tandemesh
+      POSTGRES_DB: tandemesh
+    ports:
+      - "5432:5432"
+    volumes:
+      - tandemesh-pg:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  tandemesh-data:
+  tandemesh-pg:
