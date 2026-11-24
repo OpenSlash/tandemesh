@@ -1,0 +1,25 @@
+# Normalize text files to LF; keep Windows scripts CRLF.
+* text=auto eol=lf
+
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.icns binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+*.syso binary
+*.exe binary
+*.dll binary
