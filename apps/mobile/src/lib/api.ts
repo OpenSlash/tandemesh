@@ -106,6 +106,10 @@ export class TandemeshClient {
     )
   }
 
+  runDiff(id: string) {
+    return this.request<{ runId: string; diff: string; truncated: boolean }>(`/api/v1/runs/${id}/diff`)
+  }
+
   notifications(workspaceId: string) {
     return this.request<ListResponse<{ id: string; title: string; body?: string; readAt?: string }>>(
       `/api/v1/notifications?workspaceId=${encodeURIComponent(workspaceId)}`,

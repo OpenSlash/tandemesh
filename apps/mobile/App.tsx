@@ -6,6 +6,7 @@ import { PairScreen } from './src/screens/PairScreen'
 import { MainTabs } from './src/screens/MainTabs'
 import { TaskDetailScreen } from './src/screens/TaskDetailScreen'
 import { RunDetailScreen } from './src/screens/RunDetailScreen'
+import { DiffScreen } from './src/screens/DiffScreen'
 import { parsePairingLink } from './src/lib/api'
 import { SessionContext } from './src/lib/SessionContext'
 import { clearSession, loadSession, saveSession, type MobileSession } from './src/lib/session'
@@ -83,6 +84,7 @@ function App() {
           <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
           <Stack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ title: 'Task' }} />
           <Stack.Screen name="RunDetail" component={RunDetailScreen} options={{ title: 'Run' }} />
+          <Stack.Screen name="Diff" component={DiffScreen} options={{ title: 'Diff' }} />
         </Stack.Navigator>
       </NavigationContainer>
     </SessionContext.Provider>

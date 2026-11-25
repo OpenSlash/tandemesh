@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native'
-import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack'
 import { TandemeshClient, type Run } from '../lib/api'
 import { useSession } from '../lib/SessionContext'
 import type { RootStackParamList } from '../navigation/types'
@@ -17,6 +18,7 @@ interface TranscriptEntry {
 export function RunDetailScreen({ route }: Props) {
   const { id } = route.params
   const { host, token } = useSession()
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [run, setRun] = useState<Run | null>(null)
   const [entries, setEntries] = useState<TranscriptEntry[]>([])
@@ -66,6 +68,8 @@ export function RunDetailScreen({ route }: Props) {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>{run.status}</Text>
       <Text style={styles.meta}>{run.agentId || run.id}</Text>
+      <Pressable style={styles.diffButton} onPress={() => navigation.navigate('Diff', { id: run.id })}>\n        <Text style={styles.diffButtonText}>View diff</Text>
+      </Pressable>
       {run.errorMessage ? <Text style={styles.error}>{run.errorMessage}</Text> : null}
 
       {run.prompt ? (
@@ -96,6 +100,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#07080f', padding: 24 },
   title: { color: '#f3f4f6', fontSize: 22, fontWeight: '600', textTransform: 'capitalize' },
   meta: { color: '#8b94a7', fontSize: 11, marginTop: 6 },
+  diffButton: { alignSelf: 'flex-start', marginTop: 14, borderRadius: 7, borderWidth: 1, borderColor: '#2a3040', paddingHorizontal: 12, paddingVertical: 7 },
+  diffButtonText: { color: '#d7dbe4', fontSize: 12 },
   error: { color: '#f87171', fontSize: 12, marginTop: 12 },
   section: { color: '#f3f4f6', fontSize: 15, fontWeight: '600', marginTop: 26, marginBottom: 8 },
   prompt: { color: '#c7ccd8', fontSize: 12, lineHeight: 18 },
