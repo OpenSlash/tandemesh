@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   empty: { color: '#8b94a7', fontSize: 12, textAlign: 'center', marginTop: 20 },
   message: { maxWidth: '92%', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9 },
   userMessage: { alignSelf: 'flex-end', backgroundColor: '#1d2331' },
-  agentMessage: { alignSelf: 'flex-start', backgroundColor: '#10131c', borderWidth: 1, borderColor: '#202433' },
+  agentMessage: { alignSelf: 'stretch', maxWidth: '100%', backgroundColor: 'transparent', borderWidth: 0, borderRadius: 0, paddingHorizontal: 0, paddingVertical: 2 },
   toolMessage: { alignSelf: 'stretch', backgroundColor: '#0b0f16', borderWidth: 1, borderColor: '#1a202b' },
   thinking: { alignSelf: 'stretch', paddingVertical: 2 },
   thinkingHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
