@@ -38,5 +38,19 @@ export function groupSessionMessages(messages: SessionMessage[]): DisplayMessage
       runId: message.runId,
     })
   }
-  return out
+  // Some ACP backends replay the prior transcript on session resume, and the
+  // replay is recorded as output of the new run. Drop assistant blocks whose
+  // text already appeared earlier in this session.
+  const seen = new Set<string>()
+  const deduped: DisplayMessage[] = []
+  for (const message of out) {
+    if (message.role === 'assistant') {
+      const text = message.text.trim()
+      const key = `${message.kind}|${text}`
+      if (text && seen.has(key)) continue
+      if (text) seen.add(key)
+    }
+    deduped.push(message)
+  }
+  return deduped
 }
