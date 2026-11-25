@@ -19,6 +19,14 @@ export interface Task {
   updatedAt: string
 }
 
+export interface TaskComment {
+  id: string
+  taskId: string
+  author: string
+  body: string
+  createdAt: string
+}
+
 export interface Run {
   id: string
   status: string
@@ -88,6 +96,26 @@ export class TandemeshClient {
 
   task(id: string) {
     return this.request<{ task: Task; runs: Run[] }>(`/api/v1/tasks/${id}`)
+  }
+
+  patchTask(id: string, status: string) {
+    return this.request<Task>(`/api/v1/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
+  }
+
+  comments(id: string) {
+    return this.request<ListResponse<TaskComment>>(`/api/v1/tasks/${id}/comments`)
+  }
+
+  addComment(id: string, body: string) {
+    return this.request<TaskComment>(`/api/v1/tasks/${id}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body }),
+    })
   }
 
   approvals(workspaceId: string) {
