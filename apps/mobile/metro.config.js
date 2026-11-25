@@ -1,27 +1,11 @@
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
-const { createHarmonyMetroConfig } = require('@react-native-oh/react-native-harmony/metro.config');
 
 /**
- * Metro configuration
- * https://reactnative.dev/docs/metro
+ * Metro configuration for Android and iOS.
+ * HarmonyOS uses metro.harmony.config.js instead.
  *
  * @type {import('@react-native/metro-config').MetroConfig}
  */
-const config = {
-  transformer: {
-    getTransformOptions: async () => ({
-      transform: {
-        experimentalImportSupport: false,
-        inlineRequires: true,
-      },
-    }),
-  },
-};
+const config = {};
 
-module.exports = mergeConfig(
-  getDefaultConfig(__dirname),
-  createHarmonyMetroConfig({
-    reactNativeHarmonyPackageName: '@react-native-oh/react-native-harmony',
-  }),
-  config,
-);
+module.exports = mergeConfig(getDefaultConfig(__dirname), config);
