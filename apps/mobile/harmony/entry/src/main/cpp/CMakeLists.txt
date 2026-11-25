@@ -26,6 +26,7 @@ add_subdirectory("${RNOH_CPP_DIR}" ./rn)
 # RNOH_BEGIN: manual_package_linking_1
 # Add third-party library C++ subdirectories here, e.g.:
 # add_subdirectory("${OH_MODULES}/@react-native-ohos/your-library/src/main/cpp" ./your-lib)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../../async_storage/src/main/cpp" ./async_storage)
 
 file(GLOB GENERATED_CPP_FILES "${CMAKE_CURRENT_SOURCE_DIR}/generated/*.cpp") # this line is needed by codegen v1
 
@@ -39,4 +40,5 @@ target_link_libraries(rnoh_app PUBLIC rnoh)
 # RNOH_BEGIN: manual_package_linking_2
 # Link third-party C++ libraries here, e.g.:
 # target_link_libraries(rnoh_app PUBLIC rnoh_your_lib)
+target_link_libraries(rnoh_app PUBLIC rnoh_async_storage)
 # RNOH_END: manual_package_linking_2

@@ -1,0 +1,14 @@
+{
+  "license": "MIT",
+  "devDependencies": {
+
+  },
+  "author": "",
+  "name": "@react-native-ohos/async-storage",
+  "version": "1.21.2",
+  "description": "react native async storage for openharmony",
+  "main": "index.ets",
+  "dependencies": {
+    "@rnoh/react-native-openharmony": "file:../react_native_openharmony"
+  }
+}
