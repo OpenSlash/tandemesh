@@ -14,7 +14,8 @@ const Tab = createBottomTabNavigator()
 export function MainTabs() {
   const { host, token } = useSession()
   const [client] = useState(() => new TandemeshClient(host, token))
-  const [workspace, setWorkspace] = useState<Workspace | null>(null)
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [selectedId, setSelectedId] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -22,7 +23,10 @@ export function MainTabs() {
     const load = async () => {
       try {
         const result = await client.workspaces()
-        if (!cancelled) setWorkspace(result.items[0] ?? null)
+        if (!cancelled) {
+          setWorkspaces(result.items)
+          setSelectedId((current) => current || result.items[0]?.id || '')
+        }
       } catch (nextError) {
         if (!cancelled) setError(nextError instanceof Error ? nextError.message : 'Failed to load workspace')
       }
@@ -40,6 +44,7 @@ export function MainTabs() {
       </View>
     )
   }
+  const workspace = workspaces.find((item) => item.id === selectedId) ?? workspaces[0]
   if (!workspace) {
     return (
       <View style={styles.center}>
@@ -49,7 +54,7 @@ export function MainTabs() {
   }
 
   return (
-    <WorkspaceContext.Provider value={workspace}>
+    <WorkspaceContext.Provider value={{ workspace, workspaces, selectWorkspace: setSelectedId }}>
       <Tab.Navigator
         screenOptions={{
           headerShown: false,

@@ -13,7 +13,7 @@ interface Notification {
 
 export function NotificationsScreen() {
   const { host, token } = useSession()
-  const workspace = useWorkspace()
+  const { workspace } = useWorkspace()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [items, setItems] = useState<Notification[]>([])
   const [error, setError] = useState('')

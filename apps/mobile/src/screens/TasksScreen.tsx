@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
   SafeAreaView,
   StyleSheet,
@@ -17,12 +18,13 @@ import type { RootStackParamList } from '../navigation/types'
 
 export function TasksScreen() {
   const { host, token } = useSession()
-  const workspace = useWorkspace()
+  const { workspace, workspaces, selectWorkspace } = useWorkspace()
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [tasks, setTasks] = useState<Task[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [switcher, setSwitcher] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -46,8 +48,29 @@ export function TasksScreen() {
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.brand}>Tandemesh</Text>
-        <Text style={styles.title}>{workspace.name}</Text>
+        <Pressable onPress={() => setSwitcher(true)}>
+          <Text style={styles.title}>{workspace.name} ▾</Text>
+        </Pressable>
       </View>
+
+      <Modal visible={switcher} transparent animationType="fade" onRequestClose={() => setSwitcher(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setSwitcher(false)}>
+          <View style={styles.sheet}>
+            {workspaces.map((item) => (
+              <Pressable
+                key={item.id}
+                style={[styles.option, item.id === workspace.id && styles.optionActive]}
+                onPress={() => {
+                  selectWorkspace(item.id)
+                  setSwitcher(false)
+                }}
+              >
+                <Text style={styles.optionText}>{item.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
 
       {loading ? (
         <View style={styles.center}>
@@ -94,4 +117,9 @@ const styles = StyleSheet.create({
   task: { borderRadius: 10, borderWidth: 1, borderColor: '#202433', backgroundColor: '#10131c', padding: 14 },
   taskTitle: { color: '#f3f4f6', fontSize: 14 },
   taskMeta: { color: '#8b94a7', fontSize: 11, marginTop: 6, textTransform: 'lowercase' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: '#10131c', borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: 16, paddingBottom: 28 },
+  option: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12 },
+  optionActive: { backgroundColor: '#1d2331' },
+  optionText: { color: '#f3f4f6', fontSize: 14 },
 })

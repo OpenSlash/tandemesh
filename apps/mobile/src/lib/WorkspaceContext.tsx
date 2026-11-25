@@ -1,10 +1,16 @@
 import { createContext, useContext } from 'react'
 import type { Workspace } from './api'
 
-export const WorkspaceContext = createContext<Workspace | null>(null)
+export interface WorkspaceState {
+  workspace: Workspace
+  workspaces: Workspace[]
+  selectWorkspace: (id: string) => void
+}
 
-export function useWorkspace(): Workspace {
-  const workspace = useContext(WorkspaceContext)
-  if (!workspace) throw new Error('WorkspaceContext is missing')
-  return workspace
+export const WorkspaceContext = createContext<WorkspaceState | null>(null)
+
+export function useWorkspace(): WorkspaceState {
+  const value = useContext(WorkspaceContext)
+  if (!value) throw new Error('WorkspaceContext is missing')
+  return value
 }
