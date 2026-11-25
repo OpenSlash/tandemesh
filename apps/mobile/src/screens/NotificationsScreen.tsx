@@ -60,6 +60,10 @@ export function NotificationsScreen() {
         <View style={styles.center}>
           <ActivityIndicator color="#d6d9e0" />
         </View>
+      ) : error ? (
+        <View style={styles.center}>
+          <Text style={styles.error}>{error}</Text>
+        </View>
       ) : (
         <FlatList
           data={items}
