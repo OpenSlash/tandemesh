@@ -27,10 +27,11 @@ export function TasksScreen() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [switcher, setSwitcher] = useState(false)
+  const [filter, setFilter] = useState('')
 
   const load = async (reset: boolean) => {
     try {
-      const result = await client.tasks(workspace.id)
+      const result = await client.tasks(workspace.id, filter || undefined)
       setTasks(result.items)
       setError('')
     } catch (nextError) {
@@ -45,7 +46,7 @@ export function TasksScreen() {
     setLoading(true)
     void load(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, workspace.id])
+  }, [client, workspace.id, filter])
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -54,6 +55,23 @@ export function TasksScreen() {
         <Pressable onPress={() => setSwitcher(true)}>
           <Text style={styles.title}>{workspace.name} ▾</Text>
         </Pressable>
+      </View>
+
+      <View style={styles.filters}>
+        {[
+          ['', 'All'],
+          ['open', 'Open'],
+          ['in_progress', 'In progress'],
+          ['done', 'Done'],
+        ].map(([value, label]) => (
+          <Pressable
+            key={value}
+            style={[styles.filter, filter === value && styles.filterActive]}
+            onPress={() => setFilter(value)}
+          >
+            <Text style={styles.filterText}>{label}</Text>
+          </Pressable>
+        ))}
       </View>
 
       <Modal visible={switcher} transparent animationType="fade" onRequestClose={() => setSwitcher(false)}>
@@ -130,6 +148,10 @@ const styles = StyleSheet.create({
   task: { borderRadius: 10, borderWidth: 1, borderColor: '#202433', backgroundColor: '#10131c', padding: 14 },
   taskTitle: { color: '#f3f4f6', fontSize: 14 },
   taskMeta: { color: '#8b94a7', fontSize: 11, marginTop: 6, textTransform: 'lowercase' },
+  filters: { flexDirection: 'row', gap: 6, paddingHorizontal: 16, paddingTop: 12 },
+  filter: { borderRadius: 6, borderWidth: 1, borderColor: '#262b3a', paddingHorizontal: 10, paddingVertical: 6 },
+  filterActive: { borderColor: '#6b7a96', backgroundColor: '#1a2130' },
+  filterText: { color: '#c7ccd8', fontSize: 11 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: '#10131c', borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: 16, paddingBottom: 28 },
   option: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12 },

@@ -88,10 +88,9 @@ export class TandemeshClient {
     return this.request<ListResponse<Workspace>>('/api/v1/workspaces')
   }
 
-  tasks(workspaceId: string) {
-    return this.request<ListResponse<Task>>(
-      `/api/v1/tasks?workspace=${encodeURIComponent(workspaceId)}`,
-    )
+  tasks(workspaceId: string, status?: string) {
+    const query = `workspace=${encodeURIComponent(workspaceId)}${status ? `&status=${encodeURIComponent(status)}` : ''}`
+    return this.request<ListResponse<Task>>(`/api/v1/tasks?${query}`)
   }
 
   task(id: string) {
