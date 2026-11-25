@@ -24,6 +24,7 @@ export function SessionDetailScreen() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({})
   const scrollRef = useRef<ScrollView>(null)
   const displayMessages = groupSessionMessages(messages)
 
@@ -95,19 +96,38 @@ export function SessionDetailScreen() {
 
       <ScrollView ref={scrollRef} style={styles.messages} contentContainerStyle={styles.messagesContent}>
         {displayMessages.length === 0 ? <Text style={styles.empty}>No messages yet.</Text> : null}
-        {displayMessages.map((message) => (
-          <View
-            key={message.id}
-            style={[
-              styles.message,
-              message.role === 'user' ? styles.userMessage : styles.agentMessage,
-              message.kind === 'tool' ? styles.toolMessage : null,
-            ]}
-          >
-            <Text style={styles.role}>{message.role || message.kind}</Text>
-            <Text style={styles.text}>{message.text}</Text>
-          </View>
-        ))}
+        {displayMessages.map((message) =>
+          message.kind === 'reasoning' ? (
+            <View key={message.id} style={styles.thinking}>
+              <Pressable
+                style={styles.thinkingHeader}
+                onPress={() =>
+                  setExpandedThinking((current) => ({ ...current, [message.id]: !current[message.id] }))
+                }
+              >
+                <Text style={styles.thinkingLabel}>
+                  {expandedThinking[message.id] ? 'Hide thinking' : 'Show thinking'}
+                </Text>
+                <Text style={styles.thinkingChevron}>{expandedThinking[message.id] ? '▾' : '▸'}</Text>
+              </Pressable>
+              {expandedThinking[message.id] ? (
+                <Text style={styles.thinkingText}>{message.text}</Text>
+              ) : null}
+            </View>
+          ) : (
+            <View
+              key={message.id}
+              style={[
+                styles.message,
+                message.role === 'user' ? styles.userMessage : styles.agentMessage,
+                message.kind === 'tool' ? styles.toolMessage : null,
+              ]}
+            >
+              <Text style={styles.role}>{message.role || message.kind}</Text>
+              <Text style={styles.text}>{message.text}</Text>
+            </View>
+          ),
+        )}
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </ScrollView>
 
@@ -145,6 +165,11 @@ const styles = StyleSheet.create({
   userMessage: { alignSelf: 'flex-end', backgroundColor: '#1d2331' },
   agentMessage: { alignSelf: 'flex-start', backgroundColor: '#10131c', borderWidth: 1, borderColor: '#202433' },
   toolMessage: { alignSelf: 'stretch', backgroundColor: '#0b0f16', borderWidth: 1, borderColor: '#1a202b' },
+  thinking: { alignSelf: 'stretch', borderRadius: 9, borderWidth: 1, borderColor: '#1d2432', backgroundColor: '#0a0d14' },
+  thinkingHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 11, paddingVertical: 8 },
+  thinkingLabel: { color: '#7f8ba0', fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase' },
+  thinkingChevron: { color: '#7f8ba0', fontSize: 11 },
+  thinkingText: { color: '#8d99ac', fontSize: 11.5, lineHeight: 17, paddingHorizontal: 11, paddingBottom: 10 },
   role: { color: '#6e7787', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
   text: { color: '#d7dbe4', fontSize: 12.5, lineHeight: 18 },
   error: { color: '#f87171', fontSize: 11, marginTop: 6 },
