@@ -5,6 +5,7 @@ import { TandemeshClient, type Workspace } from '../lib/api'
 import { useSession } from '../lib/SessionContext'
 import { WorkspaceContext } from '../lib/WorkspaceContext'
 import { TasksScreen } from './TasksScreen'
+import { SessionsScreen } from './SessionsScreen'
 import { ApprovalsScreen } from './ApprovalsScreen'
 import { NotificationsScreen } from './NotificationsScreen'
 import { SettingsScreen } from './SettingsScreen'
@@ -64,6 +65,7 @@ export function MainTabs() {
         }}
       >
         <Tab.Screen name="Tasks" component={TasksScreen} />
+        <Tab.Screen name="Sessions" component={SessionsScreen} />
         <Tab.Screen name="Approvals" component={ApprovalsScreen} />
         <Tab.Screen name="Notifications" component={NotificationsScreen} />
         <Tab.Screen name="Settings" component={SettingsScreen} />

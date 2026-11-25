@@ -19,6 +19,30 @@ export interface Task {
   updatedAt: string
 }
 
+export interface AgentSession {
+  id: string
+  workspaceId: string
+  taskId?: string
+  agentId: string
+  backend?: string
+  model?: string
+  title: string
+  repo?: string
+  status: string
+  lastRunStatus?: string
+  lastRunId?: string
+  updatedAt: string
+}
+
+export interface SessionMessage {
+  id?: string
+  runId: string
+  role: string
+  kind: string
+  text: string
+  ts: number
+}
+
 export interface TaskComment {
   id: string
   taskId: string
@@ -147,6 +171,28 @@ export class TandemeshClient {
 
   runDiff(id: string) {
     return this.request<{ runId: string; diff: string; truncated: boolean }>(`/api/v1/runs/${id}/diff`)
+  }
+
+  sessions(workspaceId: string) {
+    return this.request<{ sessions: AgentSession[] }>(
+      `/api/v1/sessions?workspaceId=${encodeURIComponent(workspaceId)}`,
+    )
+  }
+
+  session(id: string) {
+    return this.request<{ session: AgentSession; runCount: number }>(`/api/v1/sessions/${id}`)
+  }
+
+  sessionMessages(id: string) {
+    return this.request<{ messages: SessionMessage[] }>(`/api/v1/sessions/${id}/messages`)
+  }
+
+  createSessionRun(id: string, prompt: string) {
+    return this.request<Run>(`/api/v1/sessions/${id}/runs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    })
   }
 
   notifications(workspaceId: string) {
