@@ -1,4 +1,4 @@
-﻿# Tandemesh Mobile
+# Tandemesh Mobile
 
 React Native 0.82 shell for Android and iOS. HarmonyOS uses RNOH 0.82 and is added in a later step.
 
@@ -12,6 +12,25 @@ tandemesh://pair?host=http://192.168.1.10:8080&code=ABCD-EFGH
 ```
 
 ## Run
+
+```text
+Java 17+
+Android SDK 36 + build-tools 36
+NDK 27.1.12297006
+```
+
+```bash
+pnpm install
+pnpm start
+pnpm android
+```
+
+Debug APK:
+
+```powershell
+cd android
+.\gradlew.bat assembleDebug -PreactNativeArchitectures=arm64-v8a
+```
 
 ```bash
 pnpm install
