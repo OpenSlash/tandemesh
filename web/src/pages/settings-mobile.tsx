@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import QRCode from 'qrcode'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Copy, Loader2, Smartphone, Trash2 } from 'lucide-react'
 import { api, type MobileDevice } from '../lib/api'
@@ -14,6 +15,7 @@ export default function SettingsMobilePage() {
   const qc = useQueryClient()
   const [pairing, setPairing] = useState<{ code: string; deepLink: string; expiresAt: number } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [qr, setQr] = useState('')
   const [remaining, setRemaining] = useState(0)
 
   const { data: devicesData, isLoading } = useQuery({
@@ -28,6 +30,12 @@ export default function SettingsMobilePage() {
       const deepLink = `tandemesh://pair?host=${encodeURIComponent(window.location.origin)}&code=${encodeURIComponent(result.code)}`
       setPairing({ ...result, deepLink })
       setCopied(false)
+      setQr('')
+      void QRCode.toDataURL(deepLink, {
+        margin: 1,
+        width: 220,
+        color: { dark: '#0b0d12', light: '#e5e7eb' },
+      }).then(setQr)
     },
   })
 
@@ -83,6 +91,9 @@ export default function SettingsMobilePage() {
           <div className="mt-4 rounded-md border border-line2 bg-panel2/40 p-4">
             <p className="text-[10.5px] uppercase tracking-wider text-muted">{t('mobile.code')}</p>
             <p className="mt-1 font-mono text-[24px] font-semibold tracking-[0.2em]">{pairing.code}</p>
+            {qr ? (
+              <img src={qr} alt={t('mobile.qrAlt')} className="mt-3 h-[180px] w-[180px] rounded-md" />
+            ) : null}
             <p className="mt-1 text-[11px] text-muted">
               {remaining > 0 ? t('mobile.expiresIn', { seconds: remaining }) : t('mobile.expired')}
             </p>
