@@ -9,6 +9,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native'
 import { Screen } from '../components/Screen'
 import { TandemeshClient, type AgentSession } from '../lib/api'
@@ -28,6 +29,8 @@ export function SessionsScreen() {
   const [newOpen, setNewOpen] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [creating, setCreating] = useState(false)
+  const { width } = useWindowDimensions()
+  const columns = width >= 700 ? 2 : 1
 
   const load = async (reset: boolean) => {
     try {
@@ -104,7 +107,10 @@ export function SessionsScreen() {
         <View style={styles.center}><Text style={styles.error}>{error}</Text></View>
       ) : (
         <FlatList
+          key={columns}
           data={sessions}
+          numColumns={columns}
+          columnWrapperStyle={columns > 1 ? styles.columns : undefined}
           keyExtractor={(session) => session.id}
           contentContainerStyle={styles.list}
           refreshControl={
@@ -124,7 +130,7 @@ export function SessionsScreen() {
           }
           renderItem={({ item }) => (
             <Pressable
-              style={styles.card}
+              style={[styles.card, columns > 1 && styles.gridItem]}
               onPress={() => router.navigate('SessionDetail', { id: item.id })}
             >
               <Text style={styles.cardTitle}>{item.title || item.id}</Text>
@@ -160,7 +166,10 @@ const styles = StyleSheet.create({
   error: { color: '#f87171', fontSize: 13, textAlign: 'center' },
   empty: { color: '#8b94a7', fontSize: 13 },
   list: { padding: 16, gap: 8 },
-  card: { borderRadius: 10, borderWidth: 1, borderColor: '#202433', backgroundColor: '#10131c', padding: 14 },
+  columns: { gap: 10 },
+  gridItem: { flex: 1 },
+  card: {
+    borderRadius: 10, borderWidth: 1, borderColor: '#202433', backgroundColor: '#10131c', padding: 14 },
   cardTitle: { color: '#f3f4f6', fontSize: 14 },
   cardMeta: { color: '#8b94a7', fontSize: 11, marginTop: 6 },
 })
