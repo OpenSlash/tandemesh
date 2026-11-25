@@ -2,7 +2,7 @@ import { Platform } from 'react-native'
 
 const SERVICE = 'com.openslash.tandemesh.session'
 const USERNAME = 'tandemesh'
-const isHarmony = Platform.OS === 'harmony'
+const isHarmony = (Platform.OS as string) === 'harmony'
 
 export interface MobileSession {
   host: string
