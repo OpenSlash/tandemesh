@@ -1,12 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack'
 import { TandemeshClient, type Run } from '../lib/api'
+import { useRouter } from '../lib/RouterContext'
 import { useSession } from '../lib/SessionContext'
-import type { RootStackParamList } from '../navigation/types'
-
-type Props = NativeStackScreenProps<RootStackParamList, 'RunDetail'>
 
 interface TranscriptEntry {
   kind: string
@@ -15,10 +11,11 @@ interface TranscriptEntry {
   seq: number
 }
 
-export function RunDetailScreen({ route }: Props) {
-  const { id } = route.params
+export function RunDetailScreen() {
+  const { params } = useRouter()
+  const id = params?.id ?? ''
   const { host, token } = useSession()
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+  const router = useRouter()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [run, setRun] = useState<Run | null>(null)
   const [entries, setEntries] = useState<TranscriptEntry[]>([])
@@ -68,7 +65,7 @@ export function RunDetailScreen({ route }: Props) {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>{run.status}</Text>
       <Text style={styles.meta}>{run.agentId || run.id}</Text>
-      <Pressable style={styles.diffButton} onPress={() => navigation.navigate('Diff', { id: run.id })}>\n        <Text style={styles.diffButtonText}>View diff</Text>
+      <Pressable style={styles.diffButton} onPress={() => router.navigate('Diff', { id: run.id })}>\n        <Text style={styles.diffButtonText}>View diff</Text>
       </Pressable>
       {run.errorMessage ? <Text style={styles.error}>{run.errorMessage}</Text> : null}
 

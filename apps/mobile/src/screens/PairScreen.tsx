@@ -7,7 +7,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { Screen } from '../components/Screen'
 import { Platform } from 'react-native'
 import { exchangePairing } from '../lib/api'
 
@@ -38,7 +38,7 @@ export function PairScreen({ initialHost, initialCode, onPaired }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <Screen><View style={styles.content}>
       <View style={styles.card}>
         <Text style={styles.brand}>Tandemesh</Text>
         <Text style={styles.title}>Pair this device</Text>
@@ -85,12 +85,12 @@ export function PairScreen({ initialHost, initialCode, onPaired }: Props) {
           {busy ? <ActivityIndicator color="#0b0d12" /> : <Text style={styles.buttonText}>Pair</Text>}
         </Pressable>
       </View>
-    </SafeAreaView>
+    </View></Screen>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#07080f', justifyContent: 'center', padding: 20 },
+  content: { flex: 1, justifyContent: 'center', padding: 20 },
   card: { borderRadius: 16, borderWidth: 1, borderColor: '#202433', backgroundColor: '#10131c', padding: 20 },
   brand: { color: '#9aa4b2', fontSize: 13, letterSpacing: 2, textTransform: 'uppercase' },
   title: { color: '#f3f4f6', fontSize: 26, fontWeight: '600', marginTop: 8 },

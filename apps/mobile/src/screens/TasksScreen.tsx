@@ -9,18 +9,16 @@ import {
   Text,
   View,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { Screen } from '../components/Screen'
 import { TandemeshClient, type Task } from '../lib/api'
 import { useSession } from '../lib/SessionContext'
 import { useWorkspace } from '../lib/WorkspaceContext'
-import type { RootStackParamList } from '../navigation/types'
+import { useRouter } from '../lib/RouterContext'
 
 export function TasksScreen() {
   const { host, token } = useSession()
   const { workspace, workspaces, selectWorkspace } = useWorkspace()
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+  const router = useRouter()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [tasks, setTasks] = useState<Task[]>([])
   const [error, setError] = useState('')
@@ -49,7 +47,7 @@ export function TasksScreen() {
   }, [client, workspace.id, filter])
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <Screen>
       <View style={styles.header}>
         <Text style={styles.brand}>Tandemesh</Text>
         <Pressable onPress={() => setSwitcher(true)}>
@@ -124,7 +122,7 @@ export function TasksScreen() {
           renderItem={({ item }) => (
             <Pressable
               style={styles.task}
-              onPress={() => navigation.navigate('TaskDetail', { id: item.id })}
+              onPress={() => router.navigate('TaskDetail', { id: item.id })}
             >
               <Text style={styles.taskTitle}>{item.title || item.id}</Text>
               <Text style={styles.taskMeta}>{item.status}</Text>
@@ -132,7 +130,7 @@ export function TasksScreen() {
           )}
         />
       )}
-    </SafeAreaView>
+    </Screen>
   )
 }
 

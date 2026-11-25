@@ -9,6 +9,7 @@ import { SessionsScreen } from './SessionsScreen'
 import { ApprovalsScreen } from './ApprovalsScreen'
 import { NotificationsScreen } from './NotificationsScreen'
 import { SettingsScreen } from './SettingsScreen'
+import { withNativeRouter } from '../navigation/native-router'
 
 const Tab = createBottomTabNavigator()
 
@@ -64,11 +65,11 @@ export function MainTabs() {
           tabBarInactiveTintColor: '#6e7787',
         }}
       >
-        <Tab.Screen name="Tasks" component={TasksScreen} />
-        <Tab.Screen name="Sessions" component={SessionsScreen} />
-        <Tab.Screen name="Approvals" component={ApprovalsScreen} />
-        <Tab.Screen name="Notifications" component={NotificationsScreen} />
-        <Tab.Screen name="Settings" component={SettingsScreen} />
+        <Tab.Screen name="Tasks" component={withNativeRouter(TasksScreen)} />
+        <Tab.Screen name="Sessions" component={withNativeRouter(SessionsScreen)} />
+        <Tab.Screen name="Approvals" component={withNativeRouter(ApprovalsScreen)} />
+        <Tab.Screen name="Notifications" component={withNativeRouter(NotificationsScreen)} />
+        <Tab.Screen name="Settings" component={withNativeRouter(SettingsScreen)} />
       </Tab.Navigator>
     </WorkspaceContext.Provider>
   )

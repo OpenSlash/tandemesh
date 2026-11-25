@@ -4,22 +4,20 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { Screen } from '../components/Screen'
 import { TandemeshClient, type AgentSession } from '../lib/api'
 import { useSession } from '../lib/SessionContext'
 import { useWorkspace } from '../lib/WorkspaceContext'
-import type { RootStackParamList } from '../navigation/types'
+import { useRouter } from '../lib/RouterContext'
 
 export function SessionsScreen() {
   const { host, token } = useSession()
   const { workspace } = useWorkspace()
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+  const router = useRouter()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [sessions, setSessions] = useState<AgentSession[]>([])
   const [error, setError] = useState('')
@@ -46,7 +44,7 @@ export function SessionsScreen() {
   }, [client, workspace.id])
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <Screen>
       <View style={styles.header}>
         <Text style={styles.brand}>Tandemesh</Text>
         <Text style={styles.title}>Sessions</Text>
@@ -78,7 +76,7 @@ export function SessionsScreen() {
           renderItem={({ item }) => (
             <Pressable
               style={styles.card}
-              onPress={() => navigation.navigate('SessionDetail', { id: item.id })}
+              onPress={() => router.navigate('SessionDetail', { id: item.id })}
             >
               <Text style={styles.cardTitle}>{item.title || item.id}</Text>
               <Text style={styles.cardMeta}>
@@ -88,7 +86,7 @@ export function SessionsScreen() {
           )}
         />
       )}
-    </SafeAreaView>
+    </Screen>
   )
 }
 

@@ -1,5 +1,5 @@
 import { Alert, Platform, Pressable,  ScrollView, StyleSheet, Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { Screen } from '../components/Screen'
 import { useSession } from '../lib/SessionContext'
 import { useWorkspace } from '../lib/WorkspaceContext'
 
@@ -17,7 +17,7 @@ export function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <Screen>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={styles.brand}>Tandemesh</Text>
@@ -44,7 +44,7 @@ export function SettingsScreen() {
           <Text style={styles.buttonText}>Unpair this device</Text>
         </Pressable>
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   )
 }
 

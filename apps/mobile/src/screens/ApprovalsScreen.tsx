@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, FlatList, Pressable, RefreshControl,  StyleSheet, Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { Screen } from '../components/Screen'
 import { TandemeshClient } from '../lib/api'
 import { useSession } from '../lib/SessionContext'
 import { useWorkspace } from '../lib/WorkspaceContext'
@@ -67,7 +67,7 @@ export function ApprovalsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <Screen>
       <View style={styles.header}>
         <Text style={styles.brand}>Tandemesh</Text>
         <Text style={styles.title}>Approvals</Text>
@@ -120,7 +120,7 @@ export function ApprovalsScreen() {
           )}
         />
       )}
-    </SafeAreaView>
+    </Screen>
   )
 }
 

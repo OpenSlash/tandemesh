@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, View } from 'react-native'
-import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { TandemeshClient } from '../lib/api'
+import { useRouter } from '../lib/RouterContext'
 import { useSession } from '../lib/SessionContext'
-import type { RootStackParamList } from '../navigation/types'
-
-type Props = NativeStackScreenProps<RootStackParamList, 'Diff'>
 
 function lineStyle(line: string) {
   if (line.startsWith('@@')) return styles.hunk
@@ -14,8 +11,9 @@ function lineStyle(line: string) {
   return styles.context
 }
 
-export function DiffScreen({ route }: Props) {
-  const { id } = route.params
+export function DiffScreen() {
+  const { params } = useRouter()
+  const id = params?.id ?? ''
   const { host, token } = useSession()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [lines, setLines] = useState<string[]>([])

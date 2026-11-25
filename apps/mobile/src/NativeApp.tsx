@@ -9,6 +9,7 @@ import { TaskDetailScreen } from './screens/TaskDetailScreen'
 import { RunDetailScreen } from './screens/RunDetailScreen'
 import { DiffScreen } from './screens/DiffScreen'
 import { SessionDetailScreen } from './screens/SessionDetailScreen'
+import { withNativeRouter } from './navigation/native-router'
 import { parsePairingLink } from './lib/api'
 import { SessionContext } from './lib/SessionContext'
 import { clearSession, loadSession, saveSession, type MobileSession } from './lib/session'
@@ -89,10 +90,10 @@ function App() {
           }}
         >
           <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
-          <Stack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ title: 'Task' }} />
-          <Stack.Screen name="RunDetail" component={RunDetailScreen} options={{ title: 'Run' }} />
-          <Stack.Screen name="Diff" component={DiffScreen} options={{ title: 'Diff' }} />
-          <Stack.Screen name="SessionDetail" component={SessionDetailScreen} options={{ title: 'Session' }} />
+          <Stack.Screen name="TaskDetail" component={withNativeRouter(TaskDetailScreen)} options={{ title: 'Task' }} />
+          <Stack.Screen name="RunDetail" component={withNativeRouter(RunDetailScreen)} options={{ title: 'Run' }} />
+          <Stack.Screen name="Diff" component={withNativeRouter(DiffScreen)} options={{ title: 'Diff' }} />
+          <Stack.Screen name="SessionDetail" component={withNativeRouter(SessionDetailScreen)} options={{ title: 'Session' }} />
         </Stack.Navigator>
       </NavigationContainer>
     </SessionContext.Provider>

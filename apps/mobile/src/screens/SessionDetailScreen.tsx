@@ -8,15 +8,13 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { TandemeshClient, type AgentSession, type SessionMessage } from '../lib/api'
+import { useRouter } from '../lib/RouterContext'
 import { useSession } from '../lib/SessionContext'
-import type { RootStackParamList } from '../navigation/types'
 
-type Props = NativeStackScreenProps<RootStackParamList, 'SessionDetail'>
-
-export function SessionDetailScreen({ route }: Props) {
-  const { id } = route.params
+export function SessionDetailScreen() {
+  const { params } = useRouter()
+  const id = params?.id ?? ''
   const { host, token } = useSession()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [session, setSession] = useState<AgentSession | null>(null)

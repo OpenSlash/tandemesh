@@ -8,13 +8,9 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
-import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack'
 import { TandemeshClient, type Run, type Task, type TaskComment } from '../lib/api'
+import { useRouter } from '../lib/RouterContext'
 import { useSession } from '../lib/SessionContext'
-import type { RootStackParamList } from '../navigation/types'
-
-type Props = NativeStackScreenProps<RootStackParamList, 'TaskDetail'>
 
 const STATUSES: { value: string; label: string }[] = [
   { value: 'open', label: 'Open' },
@@ -22,10 +18,11 @@ const STATUSES: { value: string; label: string }[] = [
   { value: 'done', label: 'Done' },
 ]
 
-export function TaskDetailScreen({ route }: Props) {
-  const { id } = route.params
+export function TaskDetailScreen() {
+  const { params } = useRouter()
+  const id = params?.id ?? ''
   const { host, token } = useSession()
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
+  const router = useRouter()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [task, setTask] = useState<Task | null>(null)
   const [runs, setRuns] = useState<Run[]>([])
@@ -133,7 +130,7 @@ export function TaskDetailScreen({ route }: Props) {
           <Pressable
             key={run.id}
             style={styles.run}
-            onPress={() => navigation.navigate('RunDetail', { id: run.id })}
+            onPress={() => router.navigate('RunDetail', { id: run.id })}
           >
             <Text style={styles.runStatus}>{run.status}</Text>
             <Text style={styles.runMeta}>{run.agentId || run.id}</Text>
