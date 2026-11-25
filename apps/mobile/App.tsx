@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Linking, StatusBar, StyleSheet, View } from 'react-native'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { NavigationContainer, DarkTheme } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { PairScreen } from './src/screens/PairScreen'
@@ -45,17 +46,20 @@ function App() {
 
   if (paired === undefined) {
     return (
+      <SafeAreaProvider>
       <View style={styles.root}>
         <StatusBar barStyle="light-content" backgroundColor="#07080f" />
         <View style={styles.loading}>
           <ActivityIndicator color="#d6d9e0" />
         </View>
       </View>
+      </SafeAreaProvider>
     )
   }
 
   if (!paired) {
     return (
+      <SafeAreaProvider>
       <View style={styles.root}>
         <StatusBar barStyle="light-content" backgroundColor="#07080f" />
         <PairScreen
@@ -67,10 +71,12 @@ function App() {
           }}
         />
       </View>
+      </SafeAreaProvider>
     )
   }
 
   return (
+    <SafeAreaProvider>
     <SessionContext.Provider value={{ host: paired.host, token: paired.token, onSignOut: signOut }}>
       <StatusBar barStyle="light-content" backgroundColor="#07080f" />
       <NavigationContainer theme={DarkTheme}>
@@ -88,6 +94,7 @@ function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </SessionContext.Provider>
+    </SafeAreaProvider>
   )
 }
 

@@ -2,12 +2,12 @@ import { useState } from 'react'
 import {
   ActivityIndicator,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { Platform } from 'react-native'
 import { exchangePairing } from '../lib/api'
 
