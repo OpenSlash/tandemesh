@@ -25,8 +25,12 @@ export function SessionDetailScreen() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({})
+  const [runningRunId, setRunningRunId] = useState<string | null>(null)
   const scrollRef = useRef<ScrollView>(null)
   const displayMessages = groupSessionMessages(messages)
+  const assistantStarted = runningRunId
+    ? messages.some((message) => message.runId === runningRunId && message.role === 'assistant')
+    : false
 
   const loadMessages = async () => {
     try {
@@ -62,14 +66,39 @@ export function SessionDetailScreen() {
     scrollRef.current?.scrollToEnd({ animated: true })
   }, [messages.length])
 
+  useEffect(() => {
+    if (!runningRunId) return
+    let cancelled = false
+    const tick = async () => {
+      try {
+        const run = await client.run(runningRunId)
+        if (cancelled) return
+        await loadMessages()
+        if (run.status !== 'running' && run.status !== 'queued' && run.status !== 'leased') {
+          setRunningRunId(null)
+        }
+      } catch {
+        // keep polling; transient network failures are expected
+      }
+    }
+    void tick()
+    const timer = setInterval(() => void tick(), 1200)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, runningRunId])
+
   const send = async () => {
     const prompt = draft.trim()
     if (!prompt) return
     setSending(true)
     try {
-      await client.createSessionRun(id, prompt)
+      const run = await client.createSessionRun(id, prompt)
       setDraft('')
       await loadMessages()
+      setRunningRunId(run.id)
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Failed to send message')
     } finally {
@@ -128,6 +157,12 @@ export function SessionDetailScreen() {
             </View>
           ),
         )}
+        {runningRunId ? (
+          <View style={styles.statusRow}>
+            <ActivityIndicator size="small" color="#7f8ba0" />
+            <Text style={styles.statusText}>{assistantStarted ? 'Responding…' : 'Thinking…'}</Text>
+          </View>
+        ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </ScrollView>
 
@@ -141,8 +176,8 @@ export function SessionDetailScreen() {
           style={styles.input}
         />
         <Pressable
-          style={[styles.send, (!draft.trim() || sending) && styles.sendDisabled]}
-          disabled={!draft.trim() || sending}
+          style={[styles.send, (!draft.trim() || sending || Boolean(runningRunId)) && styles.sendDisabled]}
+          disabled={!draft.trim() || sending || Boolean(runningRunId)}
           onPress={() => void send()}
         >
           <Text style={styles.sendText}>{sending ? 'Sending…' : 'Send'}</Text>
@@ -161,6 +196,8 @@ const styles = StyleSheet.create({
   messages: { flex: 1 },
   messagesContent: { padding: 14, gap: 8 },
   empty: { color: '#8b94a7', fontSize: 12, textAlign: 'center', marginTop: 20 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  statusText: { color: '#7f8ba0', fontSize: 11.5 },
   message: { maxWidth: '92%', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9 },
   userMessage: { alignSelf: 'flex-end', backgroundColor: '#1d2331' },
   agentMessage: { alignSelf: 'stretch', maxWidth: '100%', backgroundColor: 'transparent', borderWidth: 0, borderRadius: 0, paddingHorizontal: 0, paddingVertical: 2 },
