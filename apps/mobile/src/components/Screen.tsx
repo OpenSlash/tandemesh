@@ -13,5 +13,9 @@ export function Screen({ children }: PropsWithChildren) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#07080f', paddingTop: (Platform.OS as string) === 'harmony' ? 32 : 0 },
+  screen: {
+    flex: 1,
+    backgroundColor: '#07080f',
+    paddingTop: (Platform.OS as string) === 'harmony' ? 32 : Platform.OS === 'android' ? 24 : 0,
+  },
 })

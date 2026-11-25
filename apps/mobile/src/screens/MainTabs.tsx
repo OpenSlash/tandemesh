@@ -60,6 +60,7 @@ export function MainTabs() {
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
+          tabBarIcon: () => null,
           tabBarStyle: { backgroundColor: '#0b0d14', borderTopColor: '#202433' },
           tabBarActiveTintColor: '#f3f4f6',
           tabBarInactiveTintColor: '#6e7787',
