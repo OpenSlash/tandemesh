@@ -65,10 +65,10 @@ export class TandemeshClient {
     private readonly token: string,
   ) {}
 
-  private async request<T>(path: string): Promise<T> {
-    const response = await fetch(`${normalizeBaseUrl(this.baseUrl)}${path}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
-    })
+  private async request<T>(path: string, init?: RequestInit): Promise<T> {
+    const headers = new Headers(init?.headers)
+    headers.set('Authorization', `Bearer ${this.token}`)
+    const response = await fetch(`${normalizeBaseUrl(this.baseUrl)}${path}`, { ...init, headers })
     if (!response.ok) {
       throw new Error((await response.text()) || `HTTP ${response.status}`)
     }
@@ -104,6 +104,18 @@ export class TandemeshClient {
     return this.request<{ items: { kind: string; text: string; tsMs: number; seq: number }[]; runId: string }>(
       `/api/v1/runs/${id}/transcript`,
     )
+  }
+
+  decideApproval(id: string, decision: 'approved' | 'denied') {
+    return this.request<{ status: string }>(`/api/v1/approvals/${id}/decision`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision, by: 'mobile' }),
+    })
+  }
+
+  markNotificationRead(id: string) {
+    return this.request<{ status: string }>(`/api/v1/notifications/${id}/read`, { method: 'POST' })
   }
 
   runDiff(id: string) {

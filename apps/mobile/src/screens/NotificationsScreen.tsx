@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, FlatList, SafeAreaView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 import { TandemeshClient } from '../lib/api'
 import { useSession } from '../lib/SessionContext'
 import { useWorkspace } from '../lib/WorkspaceContext'
@@ -37,6 +37,19 @@ export function NotificationsScreen() {
     }
   }, [client, workspace.id])
 
+  const markRead = async (id: string) => {
+    try {
+      await client.markNotificationRead(id)
+      setItems((current) =>
+        current.map((item) =>
+          item.id === id ? { ...item, readAt: item.readAt ?? new Date().toISOString() } : item,
+        ),
+      )
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Failed to mark notification read')
+    }
+  }
+
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
@@ -44,20 +57,28 @@ export function NotificationsScreen() {
         <Text style={styles.title}>Notifications</Text>
       </View>
       {loading ? (
-        <View style={styles.center}><ActivityIndicator color="#d6d9e0" /></View>
-      ) : error ? (
-        <View style={styles.center}><Text style={styles.error}>{error}</Text></View>
+        <View style={styles.center}>
+          <ActivityIndicator color="#d6d9e0" />
+        </View>
       ) : (
         <FlatList
           data={items}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          ListEmptyComponent={<View style={styles.center}><Text style={styles.empty}>Nothing new.</Text></View>}
+          ListEmptyComponent={
+            <View style={styles.center}>
+              <Text style={styles.empty}>Nothing new.</Text>
+            </View>
+          }
           renderItem={({ item }) => (
-            <View style={styles.card}>
+            <Pressable
+              style={[styles.card, item.readAt ? styles.read : null]}
+              onPress={() => void markRead(item.id)}
+            >
               <Text style={styles.cardTitle}>{item.title}</Text>
               {item.body ? <Text style={styles.cardBody}>{item.body}</Text> : null}
-            </View>
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+            </Pressable>
           )}
         />
       )}
@@ -71,10 +92,11 @@ const styles = StyleSheet.create({
   brand: { color: '#9aa4b2', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' },
   title: { color: '#f3f4f6', fontSize: 22, fontWeight: '600', marginTop: 4 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  error: { color: '#f87171', fontSize: 13, textAlign: 'center' },
+  error: { color: '#f87171', fontSize: 12, marginTop: 6 },
   empty: { color: '#8b94a7', fontSize: 13 },
   list: { padding: 16, gap: 8 },
   card: { borderRadius: 10, borderWidth: 1, borderColor: '#202433', backgroundColor: '#10131c', padding: 14 },
+  read: { opacity: 0.55 },
   cardTitle: { color: '#f3f4f6', fontSize: 14 },
   cardBody: { color: '#8b94a7', fontSize: 12, marginTop: 5 },
 })
