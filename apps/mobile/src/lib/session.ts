@@ -1,19 +1,29 @@
-// Session storage seam. The first scaffold keeps the token in memory; the next
-// step replaces this with Keychain / Keystore / HarmonyOS secure storage.
+import * as Keychain from 'react-native-keychain'
 
-let token: string | null = null
-let host: string | null = null
+const SERVICE = 'com.openslash.tandemesh.session'
+const USERNAME = 'tandemesh'
 
-export function saveSession(nextHost: string, nextToken: string) {
-  host = nextHost
-  token = nextToken
+export interface MobileSession {
+  host: string
+  token: string
 }
 
-export function clearSession() {
-  host = null
-  token = null
+export async function saveSession(host: string, token: string): Promise<void> {
+  await Keychain.setGenericPassword(USERNAME, JSON.stringify({ host, token }), { service: SERVICE })
 }
 
-export function session() {
-  return token ? { host: host ?? '', token } : null
+export async function loadSession(): Promise<MobileSession | null> {
+  const stored = await Keychain.getGenericPassword({ service: SERVICE })
+  if (!stored) return null
+  try {
+    const parsed = JSON.parse(stored.password) as Partial<MobileSession>
+    if (!parsed.host || !parsed.token) return null
+    return { host: parsed.host, token: parsed.token }
+  } catch {
+    return null
+  }
+}
+
+export async function clearSession(): Promise<void> {
+  await Keychain.resetGenericPassword({ service: SERVICE })
 }
