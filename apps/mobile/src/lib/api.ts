@@ -23,6 +23,8 @@ export interface Run {
   id: string
   status: string
   agentId?: string
+  prompt?: string
+  errorMessage?: string
   createdAt: string
 }
 
@@ -91,6 +93,16 @@ export class TandemeshClient {
   approvals(workspaceId: string) {
     return this.request<ListResponse<{ id: string; runId: string; tool: string; risk: string; status: string }>>(
       `/api/v1/approvals?workspaceId=${encodeURIComponent(workspaceId)}`,
+    )
+  }
+
+  run(id: string) {
+    return this.request<Run>(`/api/v1/runs/${id}`)
+  }
+
+  runTranscript(id: string) {
+    return this.request<{ items: { kind: string; text: string; tsMs: number; seq: number }[]; runId: string }>(
+      `/api/v1/runs/${id}/transcript`,
     )
   }
 

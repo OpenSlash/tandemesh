@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native'
-import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack'
 import { TandemeshClient, type Run, type Task } from '../lib/api'
 import { useSession } from '../lib/SessionContext'
 import type { RootStackParamList } from '../navigation/types'
@@ -10,6 +11,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TaskDetail'>
 export function TaskDetailScreen({ route }: Props) {
   const { id } = route.params
   const { host, token } = useSession()
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [task, setTask] = useState<Task | null>(null)
   const [runs, setRuns] = useState<Run[]>([])
@@ -65,10 +67,14 @@ export function TaskDetailScreen({ route }: Props) {
         <Text style={styles.empty}>No runs yet.</Text>
       ) : (
         runs.map((run) => (
-          <View key={run.id} style={styles.run}>
+          <Pressable
+            key={run.id}
+            style={styles.run}
+            onPress={() => navigation.navigate('RunDetail', { id: run.id })}
+          >
             <Text style={styles.runStatus}>{run.status}</Text>
             <Text style={styles.runMeta}>{run.agentId || run.id}</Text>
-          </View>
+          </Pressable>
         ))
       )}
     </ScrollView>
