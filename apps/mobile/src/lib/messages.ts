@@ -12,13 +12,14 @@ export interface DisplayMessage {
 // chunks from the same run so the transcript renders as one message.
 export function groupSessionMessages(messages: SessionMessage[]): DisplayMessage[] {
   const out: DisplayMessage[] = []
+  const streamKinds = new Set(['message.chunk', 'thought', 'thinking', 'reasoning', 'delta'])
   for (let index = 0; index < messages.length; index += 1) {
     const message = messages[index]
     const previous = out[out.length - 1]
     if (
-      message.kind === 'message.chunk' &&
+      streamKinds.has(message.kind) &&
       previous &&
-      previous.kind === 'message.chunk' &&
+      previous.kind === message.kind &&
       previous.runId === message.runId &&
       previous.role === message.role
     ) {
