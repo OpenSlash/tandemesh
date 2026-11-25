@@ -4,6 +4,7 @@ import {
   FlatList,
   Modal,
   Pressable,
+  RefreshControl,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -24,24 +25,26 @@ export function TasksScreen() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [switcher, setSwitcher] = useState(false)
 
+  const load = async (reset: boolean) => {
+    try {
+      const result = await client.tasks(workspace.id)
+      setTasks(result.items)
+      setError('')
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Failed to load tasks')
+    } finally {
+      if (reset) setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
   useEffect(() => {
-    let cancelled = false
-    const load = async () => {
-      try {
-        const result = await client.tasks(workspace.id)
-        if (!cancelled) setTasks(result.items)
-      } catch (nextError) {
-        if (!cancelled) setError(nextError instanceof Error ? nextError.message : 'Failed to load tasks')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    void load()
-    return () => {
-      cancelled = true
-    }
+    setLoading(true)
+    void load(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, workspace.id])
 
   return (
@@ -85,6 +88,16 @@ export function TasksScreen() {
           data={tasks}
           keyExtractor={(task) => task.id}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true)
+                void load(false)
+              }}
+              tintColor="#d6d9e0"
+            />
+          }
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.empty}>No tasks in this workspace.</Text>

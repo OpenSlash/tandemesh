@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, FlatList, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 import { TandemeshClient } from '../lib/api'
 import { useSession } from '../lib/SessionContext'
 import { useWorkspace } from '../lib/WorkspaceContext'
@@ -19,6 +19,7 @@ export function ApprovalsScreen() {
   const [items, setItems] = useState<Approval[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [deciding, setDeciding] = useState('')
 
   useEffect(() => {
@@ -38,6 +39,19 @@ export function ApprovalsScreen() {
       cancelled = true
     }
   }, [client, workspace.id])
+
+  const refresh = async () => {
+    setRefreshing(true)
+    try {
+      const result = await client.approvals(workspace.id)
+      setItems(result.items)
+      setError('')
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Failed to load approvals')
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   const decide = async (id: string, decision: 'approved' | 'denied') => {
     setDeciding(id)
@@ -70,6 +84,7 @@ export function ApprovalsScreen() {
           data={items}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor="#d6d9e0" />}
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.empty}>No pending approvals.</Text>
