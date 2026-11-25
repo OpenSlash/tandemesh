@@ -10,15 +10,16 @@ import {
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { TandemeshClient, type Task, type Workspace } from '../lib/api'
+import { TandemeshClient, type Task } from '../lib/api'
 import { useSession } from '../lib/SessionContext'
+import { useWorkspace } from '../lib/WorkspaceContext'
 import type { RootStackParamList } from '../navigation/types'
 
 export function TasksScreen() {
   const { host, token } = useSession()
+  const workspace = useWorkspace()
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
   const [client] = useState(() => new TandemeshClient(host, token))
-  const [workspace, setWorkspace] = useState<Workspace | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -27,13 +28,8 @@ export function TasksScreen() {
     let cancelled = false
     const load = async () => {
       try {
-        const workspaces = await client.workspaces()
-        const first = workspaces.items[0]
-        if (!first) throw new Error('No workspace available')
-        const result = await client.tasks(first.id)
-        if (cancelled) return
-        setWorkspace(first)
-        setTasks(result.items)
+        const result = await client.tasks(workspace.id)
+        if (!cancelled) setTasks(result.items)
       } catch (nextError) {
         if (!cancelled) setError(nextError instanceof Error ? nextError.message : 'Failed to load tasks')
       } finally {
@@ -44,13 +40,13 @@ export function TasksScreen() {
     return () => {
       cancelled = true
     }
-  }, [client])
+  }, [client, workspace.id])
 
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.brand}>Tandemesh</Text>
-        <Text style={styles.title}>{workspace?.name ?? 'Tasks'}</Text>
+        <Text style={styles.title}>{workspace.name}</Text>
       </View>
 
       {loading ? (
