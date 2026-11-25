@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import { TandemeshClient, type AgentSession, type SessionMessage } from '../lib/api'
 import { useRouter } from '../lib/RouterContext'
+import { groupSessionMessages } from '../lib/messages'
 import { useSession } from '../lib/SessionContext'
 
 export function SessionDetailScreen() {
@@ -24,6 +25,7 @@ export function SessionDetailScreen() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const scrollRef = useRef<ScrollView>(null)
+  const displayMessages = groupSessionMessages(messages)
 
   const loadMessages = async () => {
     try {
@@ -92,10 +94,10 @@ export function SessionDetailScreen() {
       </View>
 
       <ScrollView ref={scrollRef} style={styles.messages} contentContainerStyle={styles.messagesContent}>
-        {messages.length === 0 ? <Text style={styles.empty}>No messages yet.</Text> : null}
-        {messages.map((message, index) => (
+        {displayMessages.length === 0 ? <Text style={styles.empty}>No messages yet.</Text> : null}
+        {displayMessages.map((message) => (
           <View
-            key={message.id ?? `${message.runId}-${message.ts}-${index}`}
+            key={message.id}
             style={[
               styles.message,
               message.role === 'user' ? styles.userMessage : styles.agentMessage,
