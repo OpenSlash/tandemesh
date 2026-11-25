@@ -8,15 +8,15 @@ import {
   Text,
   View,
 } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { TandemeshClient, type Task, type Workspace } from '../lib/api'
+import { useSession } from '../lib/SessionContext'
+import type { RootStackParamList } from '../navigation/types'
 
-interface Props {
-  host: string
-  token: string
-  onSignOut: () => void
-}
-
-export function TasksScreen({ host, token, onSignOut }: Props) {
+export function TasksScreen() {
+  const { host, token } = useSession()
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
@@ -49,13 +49,8 @@ export function TasksScreen({ host, token, onSignOut }: Props) {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.brand}>Tandemesh</Text>
-          <Text style={styles.title}>{workspace?.name ?? 'Tasks'}</Text>
-        </View>
-        <Pressable onPress={onSignOut} style={styles.signOut}>
-          <Text style={styles.signOutText}>Unpair</Text>
-        </Pressable>
+        <Text style={styles.brand}>Tandemesh</Text>
+        <Text style={styles.title}>{workspace?.name ?? 'Tasks'}</Text>
       </View>
 
       {loading ? (
@@ -77,10 +72,13 @@ export function TasksScreen({ host, token, onSignOut }: Props) {
             </View>
           }
           renderItem={({ item }) => (
-            <View style={styles.task}>
+            <Pressable
+              style={styles.task}
+              onPress={() => navigation.navigate('TaskDetail', { id: item.id })}
+            >
               <Text style={styles.taskTitle}>{item.title || item.id}</Text>
               <Text style={styles.taskMeta}>{item.status}</Text>
-            </View>
+            </Pressable>
           )}
         />
       )}
@@ -90,11 +88,9 @@ export function TasksScreen({ host, token, onSignOut }: Props) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#07080f' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#202433' },
+  header: { padding: 20, borderBottomWidth: 1, borderBottomColor: '#202433' },
   brand: { color: '#9aa4b2', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' },
   title: { color: '#f3f4f6', fontSize: 22, fontWeight: '600', marginTop: 4 },
-  signOut: { borderRadius: 6, borderWidth: 1, borderColor: '#2a3040', paddingHorizontal: 10, paddingVertical: 6 },
-  signOutText: { color: '#9aa4b2', fontSize: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   error: { color: '#f87171', fontSize: 13, textAlign: 'center' },
   empty: { color: '#8b94a7', fontSize: 13 },

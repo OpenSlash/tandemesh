@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Linking, StatusBar, StyleSheet, View } from 'react-native'
+import { NavigationContainer, DarkTheme } from '@react-navigation/native'
+import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { PairScreen } from './src/screens/PairScreen'
-import { TasksScreen } from './src/screens/TasksScreen'
+import { MainTabs } from './src/screens/MainTabs'
+import { TaskDetailScreen } from './src/screens/TaskDetailScreen'
 import { parsePairingLink } from './src/lib/api'
+import { SessionContext } from './src/lib/SessionContext'
 import { clearSession, loadSession, saveSession, type MobileSession } from './src/lib/session'
+import type { RootStackParamList } from './src/navigation/types'
 
 interface DeepLinkPair {
   host?: string
   code?: string
 }
+
+const Stack = createNativeStackNavigator<RootStackParamList>()
 
 function App() {
   const [pairLink, setPairLink] = useState<DeepLinkPair>({})
@@ -29,23 +36,26 @@ function App() {
     return () => subscription.remove()
   }, [])
 
-  return (
-    <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#07080f" />
-      {paired === undefined ? (
+  const signOut = () => {
+    void clearSession()
+    setPaired(null)
+  }
+
+  if (paired === undefined) {
+    return (
+      <View style={styles.root}>
+        <StatusBar barStyle="light-content" backgroundColor="#07080f" />
         <View style={styles.loading}>
           <ActivityIndicator color="#d6d9e0" />
         </View>
-      ) : paired ? (
-        <TasksScreen
-          host={paired.host}
-          token={paired.token}
-          onSignOut={() => {
-            void clearSession()
-            setPaired(null)
-          }}
-        />
-      ) : (
+      </View>
+    )
+  }
+
+  if (!paired) {
+    return (
+      <View style={styles.root}>
+        <StatusBar barStyle="light-content" backgroundColor="#07080f" />
         <PairScreen
           initialHost={pairLink.host}
           initialCode={pairLink.code}
@@ -54,8 +64,26 @@ function App() {
             setPaired({ host, token })
           }}
         />
-      )}
-    </View>
+      </View>
+    )
+  }
+
+  return (
+    <SessionContext.Provider value={{ host: paired.host, token: paired.token, onSignOut: signOut }}>
+      <StatusBar barStyle="light-content" backgroundColor="#07080f" />
+      <NavigationContainer theme={DarkTheme}>
+        <Stack.Navigator
+          screenOptions={{
+            headerStyle: { backgroundColor: '#0b0d14' },
+            headerTintColor: '#f3f4f6',
+            contentStyle: { backgroundColor: '#07080f' },
+          }}
+        >
+          <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+          <Stack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ title: 'Task' }} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </SessionContext.Provider>
   )
 }
 

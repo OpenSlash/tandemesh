@@ -19,6 +19,13 @@ export interface Task {
   updatedAt: string
 }
 
+export interface Run {
+  id: string
+  status: string
+  agentId?: string
+  createdAt: string
+}
+
 interface PairingResponse {
   token: string
   device: MobileDevice
@@ -74,6 +81,22 @@ export class TandemeshClient {
   tasks(workspaceId: string) {
     return this.request<ListResponse<Task>>(
       `/api/v1/tasks?workspace=${encodeURIComponent(workspaceId)}`,
+    )
+  }
+
+  task(id: string) {
+    return this.request<{ task: Task; runs: Run[] }>(`/api/v1/tasks/${id}`)
+  }
+
+  approvals(workspaceId: string) {
+    return this.request<ListResponse<{ id: string; runId: string; tool: string; risk: string; status: string }>>(
+      `/api/v1/approvals?workspaceId=${encodeURIComponent(workspaceId)}`,
+    )
+  }
+
+  notifications(workspaceId: string) {
+    return this.request<ListResponse<{ id: string; title: string; body?: string; readAt?: string }>>(
+      `/api/v1/notifications?workspaceId=${encodeURIComponent(workspaceId)}`,
     )
   }
 }
