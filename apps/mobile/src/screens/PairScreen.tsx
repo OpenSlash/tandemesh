@@ -18,7 +18,8 @@ interface Props {
 }
 
 export function PairScreen({ initialHost, initialCode, onPaired }: Props) {
-  const [host, setHost] = useState(initialHost ?? `http://10.0.2.2:8080`)
+  const defaultHost = (Platform.OS as string) === 'harmony' ? 'http://127.0.0.1:8080' : 'http://10.0.2.2:8080'
+  const [host, setHost] = useState(initialHost ?? defaultHost)
   const [code, setCode] = useState(initialCode ?? '')
   const [deviceName, setDeviceName] = useState('Tandemesh Mobile')
   const [busy, setBusy] = useState(false)
