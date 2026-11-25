@@ -31,5 +31,17 @@
         },
       ],
     },
+    {
+      "name": 'async_storage',
+      "srcPath": './async_storage',
+      "targets": [
+        {
+          "name": 'default',
+          "applyToProducts": [
+            'default'
+          ],
+        },
+      ],
+    },
   ],
 }
