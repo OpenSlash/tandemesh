@@ -173,6 +173,14 @@ export class TandemeshClient {
     return this.request<{ runId: string; diff: string; truncated: boolean }>(`/api/v1/runs/${id}/diff`)
   }
 
+  createSession(workspaceId: string, title: string) {
+    return this.request<AgentSession>('/api/v1/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workspaceId, title, mode: 'chat' }),
+    })
+  }
+
   sessions(workspaceId: string) {
     return this.request<{ sessions: AgentSession[] }>(
       `/api/v1/sessions?workspaceId=${encodeURIComponent(workspaceId)}`,

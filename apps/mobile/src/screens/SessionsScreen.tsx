@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native'
 import { Screen } from '../components/Screen'
@@ -23,6 +25,9 @@ export function SessionsScreen() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [newOpen, setNewOpen] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const [creating, setCreating] = useState(false)
 
   const load = async (reset: boolean) => {
     try {
@@ -43,12 +48,56 @@ export function SessionsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, workspace.id])
 
+  const create = async () => {
+    const title = newTitle.trim() || 'New session'
+    setCreating(true)
+    try {
+      const created = await client.createSession(workspace.id, title)
+      setSessions((current) => [created, ...current])
+      setNewOpen(false)
+      setNewTitle('')
+      router.navigate('SessionDetail', { id: created.id })
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Failed to create session')
+    } finally {
+      setCreating(false)
+    }
+  }
+
   return (
     <Screen>
       <View style={styles.header}>
-        <Text style={styles.brand}>Tandemesh</Text>
-        <Text style={styles.title}>Sessions</Text>
+        <View style={styles.headerText}>
+          <Text style={styles.brand}>Tandemesh</Text>
+          <Text style={styles.title}>Sessions</Text>
+        </View>
+        <Pressable style={styles.newButton} onPress={() => setNewOpen(true)}>
+          <Text style={styles.newButtonText}>New session</Text>
+        </Pressable>
       </View>
+
+      <Modal visible={newOpen} transparent animationType="fade" onRequestClose={() => setNewOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setNewOpen(false)}>
+          <View style={styles.dialog}>
+            <Text style={styles.dialogTitle}>New session</Text>
+            <TextInput
+              value={newTitle}
+              onChangeText={setNewTitle}
+              placeholder="Session title"
+              placeholderTextColor="#6b7280"
+              style={styles.input}
+            />
+            <View style={styles.dialogActions}>
+              <Pressable style={styles.cancel} onPress={() => setNewOpen(false)}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.create} disabled={creating} onPress={() => void create()}>
+                <Text style={styles.createText}>{creating ? 'Creating…' : 'Create'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
       {loading ? (
         <View style={styles.center}><ActivityIndicator color="#d6d9e0" /></View>
       ) : error ? (
@@ -92,7 +141,19 @@ export function SessionsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#07080f' },
-  header: { padding: 20, borderBottomWidth: 1, borderBottomColor: '#202433' },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#202433' },
+  headerText: { flex: 1 },
+  newButton: { borderRadius: 7, backgroundColor: '#d6d9e0', paddingHorizontal: 12, paddingVertical: 8 },
+  newButtonText: { color: '#0b0d12', fontSize: 11, fontWeight: '600' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', padding: 24 },
+  dialog: { borderRadius: 12, borderWidth: 1, borderColor: '#202433', backgroundColor: '#10131c', padding: 18 },
+  dialogTitle: { color: '#f3f4f6', fontSize: 16, fontWeight: '600', marginBottom: 12 },
+  input: { borderRadius: 8, borderWidth: 1, borderColor: '#262b3a', backgroundColor: '#0b0d14', color: '#f3f4f6', paddingHorizontal: 12, paddingVertical: 10, fontSize: 13 },
+  dialogActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 },
+  cancel: { borderRadius: 7, paddingHorizontal: 12, paddingVertical: 9 },
+  cancelText: { color: '#9aa4b2', fontSize: 12 },
+  create: { borderRadius: 7, backgroundColor: '#d6d9e0', paddingHorizontal: 14, paddingVertical: 9 },
+  createText: { color: '#0b0d12', fontSize: 12, fontWeight: '600' },
   brand: { color: '#9aa4b2', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' },
   title: { color: '#f3f4f6', fontSize: 22, fontWeight: '600', marginTop: 4 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
