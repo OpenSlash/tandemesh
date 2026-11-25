@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Pressable, StatusBar, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { AppTabBarView, type AppTabItem } from './components/AppTabBar'
 import { PairScreen } from './screens/PairScreen'
 import { TasksScreen } from './screens/TasksScreen'
 import { SessionsScreen } from './screens/SessionsScreen'
@@ -90,6 +91,37 @@ function Home({ session, onSignOut }: { session: MobileSession; onSignOut: () =>
     navigate: (name: RouteName, params?: Record<string, string>) => setRoute({ name, params }),
     back: () => setRoute(null),
   }
+  const { width, height } = useWindowDimensions()
+  const wide = width >= 720 && width > height
+  const tabs: AppTabItem[] = [
+    { key: 'tasks', label: 'Tasks', glyph: '☰' },
+    { key: 'sessions', label: 'Sessions', glyph: '◎' },
+    { key: 'approvals', label: 'Approvals', glyph: '✓' },
+    { key: 'notifications', label: 'Alerts', glyph: '◔' },
+    { key: 'settings', label: 'Settings', glyph: '⚙' },
+  ]
+  const tabBar = (
+    <AppTabBarView items={tabs} active={tab} onChange={(key) => setTab(key as Tab)} bottomInset={18} />
+  )
+  const content = route ? (
+    <>
+      <Pressable style={styles.back} onPress={() => setRoute(null)}>
+        <Text style={styles.backText}>‹ Back</Text>
+      </Pressable>
+      {route.name === 'TaskDetail' ? <TaskDetailScreen /> : null}
+      {route.name === 'SessionDetail' ? <SessionDetailScreen /> : null}
+      {route.name === 'RunDetail' ? <RunDetailScreen /> : null}
+      {route.name === 'Diff' ? <DiffScreen /> : null}
+    </>
+  ) : (
+    <>
+      {tab === 'tasks' ? <TasksScreen /> : null}
+      {tab === 'sessions' ? <SessionsScreen /> : null}
+      {tab === 'approvals' ? <ApprovalsScreen /> : null}
+      {tab === 'notifications' ? <NotificationsScreen /> : null}
+      {tab === 'settings' ? <SettingsScreen /> : null}
+    </>
+  )
 
   return (
     <SessionContext.Provider value={{ host: session.host, token: session.token, onSignOut }}>
@@ -97,41 +129,16 @@ function Home({ session, onSignOut }: { session: MobileSession; onSignOut: () =>
         <RouterContext.Provider value={router}>
           <View style={styles.screen}>
             <StatusBar barStyle="light-content" backgroundColor="#07080f" />
-            <View style={styles.body}>
-              {route ? (
-                <>
-                  <Pressable style={styles.back} onPress={() => setRoute(null)}>
-                    <Text style={styles.backText}>‹ Back</Text>
-                  </Pressable>
-                  {route.name === 'TaskDetail' ? <TaskDetailScreen /> : null}
-                  {route.name === 'SessionDetail' ? <SessionDetailScreen /> : null}
-                  {route.name === 'RunDetail' ? <RunDetailScreen /> : null}
-                  {route.name === 'Diff' ? <DiffScreen /> : null}
-                </>
-              ) : (
-                <>
-                  {tab === 'tasks' ? <TasksScreen /> : null}
-                  {tab === 'sessions' ? <SessionsScreen /> : null}
-                  {tab === 'approvals' ? <ApprovalsScreen /> : null}
-                  {tab === 'notifications' ? <NotificationsScreen /> : null}
-                  {tab === 'settings' ? <SettingsScreen /> : null}
-                </>
-              )}
-            </View>
-            {route ? null : (
-              <View style={styles.tabs}>
-                {([
-                  ['tasks', 'Tasks'],
-                  ['sessions', 'Sessions'],
-                  ['approvals', 'Approvals'],
-                  ['notifications', 'Notifications'],
-                  ['settings', 'Settings'],
-                ] as [Tab, string][]).map(([value, label]) => (
-                  <Pressable key={value} style={styles.tab} onPress={() => setTab(value)}>
-                    <Text style={[styles.tabText, tab === value && styles.tabActive]}>{label}</Text>
-                  </Pressable>
-                ))}
+            {wide && !route ? (
+              <View style={styles.wide}>
+                {tabBar}
+                <View style={styles.body}>{content}</View>
               </View>
+            ) : (
+              <>
+                <View style={styles.body}>{content}</View>
+                {route ? null : tabBar}
+              </>
             )}
           </View>
         </RouterContext.Provider>
@@ -144,11 +151,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#07080f', paddingTop: 32 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#07080f', paddingTop: 32 },
   body: { flex: 1 },
+  wide: { flex: 1, flexDirection: 'row' },
   error: { color: '#f87171', fontSize: 12 },
   back: { paddingHorizontal: 16, paddingVertical: 10 },
   backText: { color: '#8fb7e0', fontSize: 13 },
-  tabs: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#202433', backgroundColor: '#0b0d14', paddingTop: 10, paddingBottom: 18 },
-  tab: { flex: 1, alignItems: 'center' },
-  tabText: { color: '#6e7787', fontSize: 10.5 },
-  tabActive: { color: '#f3f4f6', fontWeight: '600' },
 })

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { TandemeshClient, type Workspace } from '../lib/api'
 import { useSession } from '../lib/SessionContext'
@@ -10,6 +10,7 @@ import { ApprovalsScreen } from './ApprovalsScreen'
 import { NotificationsScreen } from './NotificationsScreen'
 import { SettingsScreen } from './SettingsScreen'
 import { withNativeRouter } from '../navigation/native-router'
+import { AppTabBar } from '../components/AppTabBar'
 
 const Tab = createBottomTabNavigator()
 
@@ -19,6 +20,7 @@ export function MainTabs() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [selectedId, setSelectedId] = useState('')
   const [error, setError] = useState('')
+  const { width, height } = useWindowDimensions()
 
   useEffect(() => {
     let cancelled = false
@@ -58,12 +60,11 @@ export function MainTabs() {
   return (
     <WorkspaceContext.Provider value={{ workspace, workspaces, selectWorkspace: setSelectedId }}>
       <Tab.Navigator
+        tabBar={(props) => <AppTabBar {...props} />}
         screenOptions={{
           headerShown: false,
-          tabBarIcon: () => null,
-          tabBarStyle: { backgroundColor: '#0b0d14', borderTopColor: '#202433' },
-          tabBarActiveTintColor: '#f3f4f6',
-          tabBarInactiveTintColor: '#6e7787',
+          tabBarPosition: width >= 720 && width > height ? 'left' : 'bottom',
+          tabBarHideOnKeyboard: true,
         }}
       >
         <Tab.Screen name="Tasks" component={withNativeRouter(TasksScreen)} />
