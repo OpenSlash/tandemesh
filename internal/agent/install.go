@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 )
@@ -47,9 +48,9 @@ func platformKey() string {
 	return runtime.GOOS + "-" + arch
 }
 
-// InstallACP installs a registry binary distribution into an isolated home.
-// npx/uvx entries are deliberately rejected until the package runner has its
-// own sandbox and lockfile policy.
+// InstallACP installs a registry agent into an isolated home. Binary
+// distributions are checksum-verified; npx and uvx distributions are installed
+// into a private prefix with npm or uv.
 func InstallACP(ctx context.Context, id, home string) (*ACPInstall, error) {
 	snapshot, err := FetchACPRegistry(ctx)
 	if err != nil {
@@ -171,7 +172,7 @@ func installUV(ctx context.Context, id, version string, uvx map[string]any, home
 		python = filepath.Join(venv, "Scripts", "python.exe")
 		binDir = filepath.Join(venv, "Scripts")
 	}
-	if err := run("pip", "install", "--python", python, pkg+"=="+version); err != nil {
+	if err := run("pip", "install", "--python", python, pipRequirement(pkg, version)); err != nil {
 		return nil, err
 	}
 	entries, err := os.ReadDir(binDir)
@@ -220,17 +221,17 @@ func installNPM(ctx context.Context, id, version string, npx map[string]any, hom
 	if err != nil {
 		return nil, fmt.Errorf("npm is required for npx distribution: %w", err)
 	}
-	spec := pkg + "@" + version
+	spec := npmSpec(pkg, version)
 	cmd := exec.CommandContext(ctx, npm, "install", "--prefix", target, "--no-save", "--ignore-scripts", "--no-audit", "--no-fund", spec)
 	cmd.Env = os.Environ()
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return nil, fmt.Errorf("npm install %s: %w: %s", spec, err, strings.TrimSpace(string(out)))
 	}
-	entries, err := os.ReadDir(filepath.Join(target, "node_modules", ".bin"))
-	if err != nil || len(entries) == 0 {
-		return nil, fmt.Errorf("npm install produced no executable in node_modules/.bin")
+	bin, err := npmBin(target, npmPackageName(spec))
+	if err != nil {
+		return nil, err
 	}
-	command := filepath.Join(target, "node_modules", ".bin", entries[0].Name())
+	command := filepath.Join(target, "node_modules", ".bin", bin)
 	args := make([]string, 0)
 	if raw, ok := npx["args"].([]any); ok {
 		for _, item := range raw {
@@ -243,6 +244,78 @@ func installNPM(ctx context.Context, id, version string, npx map[string]any, hom
 	writeManifest(target, result)
 	return result, nil
 }
+
+// npmPackageName strips a version from an npm spec: "@scope/pkg@1.0" and
+// "pkg@1.0" become "@scope/pkg" and "pkg".
+func npmPackageName(spec string) string {
+	if i := strings.LastIndex(spec, "@"); i > 0 {
+		return spec[:i]
+	}
+	return spec
+}
+
+// npmSpec pins pkg to version unless the registry already did.
+func npmSpec(pkg, version string) string {
+	if npmPackageName(pkg) != pkg || version == "" {
+		return pkg
+	}
+	return pkg + "@" + version
+}
+
+// pipRequirement turns a uvx package ("pkg", "pkg@1.0" or "pkg==1.0") into
+// a pinned pip requirement.
+func pipRequirement(pkg, version string) string {
+	if strings.Contains(pkg, "==") {
+		return pkg
+	}
+	if i := strings.LastIndex(pkg, "@"); i > 0 {
+		return pkg[:i] + "==" + pkg[i+1:]
+	}
+	if version == "" {
+		return pkg
+	}
+	return pkg + "==" + version
+}
+
+// npmBin returns the executable an npm package declares. Dependencies can
+// add their own entries to node_modules/.bin, so the directory alone is not
+// enough to pick one.
+func npmBin(prefix, name string) (string, error) {
+	raw, err := os.ReadFile(filepath.Join(prefix, "node_modules", filepath.FromSlash(name), "package.json"))
+	if err != nil {
+		return "", fmt.Errorf("read %s package.json: %w", name, err)
+	}
+	var manifest struct {
+		Name string          `json:"name"`
+		Bin  json.RawMessage `json:"bin"`
+	}
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		return "", fmt.Errorf("parse %s package.json: %w", name, err)
+	}
+	base := manifest.Name
+	if i := strings.LastIndex(base, "/"); i >= 0 {
+		base = base[i+1:]
+	}
+	var single string
+	if json.Unmarshal(manifest.Bin, &single) == nil && single != "" {
+		// A string bin is installed under the unscoped package name.
+		return base, nil
+	}
+	var bins map[string]string
+	if err := json.Unmarshal(manifest.Bin, &bins); err != nil || len(bins) == 0 {
+		return "", fmt.Errorf("package %s declares no executable", name)
+	}
+	if _, ok := bins[base]; ok {
+		return base, nil
+	}
+	names := make([]string, 0, len(bins))
+	for key := range bins {
+		names = append(names, key)
+	}
+	sort.Strings(names)
+	return names[0], nil
+}
+
 func extractArchive(path, source, target string) error {
 	if strings.HasSuffix(strings.ToLower(source), ".zip") {
 		reader, err := zip.OpenReader(path)
@@ -336,5 +409,11 @@ func UninstallACP(id, version, home string) error {
 	if !strings.HasPrefix(clean, base+string(os.PathSeparator)) {
 		return fmt.Errorf("invalid install path")
 	}
-	return os.RemoveAll(clean)
+	if err := os.RemoveAll(clean); err != nil {
+		return err
+	}
+	// Drop the agent directory once its last version is gone; os.Remove
+	// fails harmlessly while other versions remain.
+	_ = os.Remove(filepath.Dir(clean))
+	return nil
 }
