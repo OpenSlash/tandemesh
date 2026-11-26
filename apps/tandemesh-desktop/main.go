@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -66,7 +67,19 @@ func main() {
 		Height:    900,
 		MinWidth:  960,
 		MinHeight: 640,
-		Frameless: true,
+		// Windows draws its own caption buttons in the web topbar; macOS keeps
+		// the native traffic lights on the left over a transparent title bar.
+		Frameless: runtime.GOOS != "darwin",
+		Mac: application.MacWindow{
+			TitleBar: application.MacTitleBar{
+				AppearsTransparent:   true,
+				HideTitle:            true,
+				FullSizeContent:      true,
+				UseToolbar:           true,
+				HideToolbarSeparator: true,
+				ToolbarStyle:         application.MacToolbarStyleUnifiedCompact,
+			},
+		},
 		Windows: application.WindowsWindow{
 			NonClientRegionSupport: true,
 		},
