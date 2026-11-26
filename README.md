@@ -133,7 +133,23 @@ cd apps\tandemesh-desktop
 wails3 package
 ```
 
-The installer includes the desktop shell, plane and agentd. The build is currently unsigned.
+The installer includes the desktop shell, plane and agentd. The Windows build is currently unsigned.
+
+### macOS app
+
+With Wails 3 (`go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0`), Xcode and pnpm:
+
+```bash
+cd apps/tandemesh-desktop
+wails3 task darwin:package                      # ad-hoc signed .app for local use
+wails3 task darwin:sign SIGN_IDENTITY="Developer ID Application: ..."
+wails3 task darwin:release SIGN_IDENTITY="Developer ID Application: ..." NOTARY_PROFILE=<profile>
+```
+
+`darwin:package` builds the web console, plane and agentd and bundles them into
+`bin/tandemesh-desktop.app`. `darwin:release` produces a signed, notarized and stapled `.dmg`;
+create the notary profile once with `xcrun notarytool store-credentials <profile>`. Data lives in
+`~/Library/Application Support/Tandemesh`.
 
 ## Configuration
 
