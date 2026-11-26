@@ -3,7 +3,10 @@ package main
 import (
 	"log"
 	"os"
+	"os/signal"
 	"runtime"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -16,6 +19,25 @@ func main() {
 	}
 	defer lock.Close()
 	inheritLoginShellPath()
+
+	// Cocoa ends the process from its own terminate path, so deferred calls in
+	// main never run on Cmd+Q. Every exit path goes through shutdown instead,
+	// or plane and agentd outlive the app.
+	var cleanups []func()
+	var once sync.Once
+	shutdown := func() {
+		once.Do(func() {
+			for i := len(cleanups) - 1; i >= 0; i-- {
+				cleanups[i]()
+			}
+		})
+	}
+	defer shutdown()
+	fatal := func(format string, args ...any) {
+		shutdown()
+		log.Fatalf(format, args...)
+	}
+
 	webURL := os.Getenv("TANDEMESH_WEB_URL")
 	var server *desktopServer
 	var plane *localPlane
@@ -27,20 +49,20 @@ func main() {
 				var err error
 				token, tokenErr := loadOrCreateToken(dataDirPath())
 				if tokenErr != nil {
-					log.Fatalf("load local token: %v", tokenErr)
+					fatal("load local token: %v", tokenErr)
 				}
 				localToken = token
 				plane, err = startLocalPlane(localToken)
 				if err != nil {
-					log.Fatalf("start local plane: %v", err)
+					fatal("start local plane: %v", err)
 				}
-				defer plane.Stop()
+				cleanups = append(cleanups, plane.Stop)
 				planeURL = plane.URL
 				if os.Getenv("TANDEMESH_LAN") == "1" {
 					log.Printf("LAN access enabled. Open http://<this-host>:%d/?token=%s once to set the access cookie.", plane.Port, localToken)
 				}
 				agentd := startAgentd(planeURL, dataDirPath(), localToken)
-				defer agentd.Stop()
+				cleanups = append(cleanups, agentd.Stop)
 			}
 		}
 		if planeURL == "" {
@@ -49,18 +71,27 @@ func main() {
 		var err error
 		server, webURL, err = startDesktopServer(planeURL, desktopWebFS(), localToken)
 		if err != nil {
-			log.Fatal(err)
+			fatal("start desktop server: %v", err)
 		}
-		defer server.server.Close()
+		cleanups = append(cleanups, func() { _ = server.server.Close() })
 	}
 
 	app := application.New(application.Options{
 		Name:        "Tandemesh",
 		Description: "Local-first agent execution plane",
+		// The app lives in the tray; hiding or closing the window must not
+		// quit it. Quit comes from the tray menu or Cmd+Q.
 		Mac: application.MacOptions{
-			ApplicationShouldTerminateAfterLastWindowClosed: true,
+			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
+		OnShutdown: shutdown,
 	})
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-signals
+		app.Quit()
+	}()
 
 	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "Tandemesh",
