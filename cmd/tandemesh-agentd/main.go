@@ -15,10 +15,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -92,46 +90,39 @@ func main() {
 		log.Error("load custom ACP backends", "err", err)
 		os.Exit(1)
 	}
-	runtimes := detectRuntimes()
-	for id := range customACP {
-		if _, ok := runtimes[id]; !ok {
-			runtimes[id] = "configured"
-		}
+	overrides := map[string]agent.ACPBackendSpec{}
+	if *claudeACPCommand != "" {
+		overrides["claude"] = agent.ACPBackendSpec{Command: *claudeACPCommand, Args: strings.Fields(*claudeACPArgs)}
 	}
-	agentList := split(*agents)
-	for id := range customACP {
-		found := false
-		for _, existing := range agentList {
-			if existing == id {
-				found = true
-			}
-		}
-		if !found {
-			agentList = append(agentList, id)
-		}
+	if *codexACPCommand != "" {
+		overrides["codex"] = agent.ACPBackendSpec{Command: *codexACPCommand, Args: strings.Fields(*codexACPArgs)}
 	}
-	if len(agentList) == 0 {
-		for name := range runtimes {
-			agentList = append(agentList, name)
-		}
-		sort.Strings(agentList)
+	runner, router := newRunner(*runnerMode, *acpCommand, *acpArgs, *grpcAddr, log)
+	host := &runtimeHost{
+		acpHome:     os.Getenv("TANDEMESH_ACP_HOME"),
+		custom:      customACP,
+		overrides:   overrides,
+		fixedAgents: split(*agents),
+		router:      router,
+		log:         log,
 	}
-	m, err := register(client, *plane, *token, *name, split(*labels), agentList, runtimes, *concurrency, collectMetrics(*dataDir))
+	host.refresh(context.Background())
+
+	m, err := register(client, *plane, *token, *name, split(*labels), host, *concurrency, collectMetrics(*dataDir))
 	if err != nil {
 		log.Error("register", "err", err)
 		os.Exit(1)
 	}
-	log.Info("registered", "machine", m.ID, "name", m.Name, "runtimes", len(runtimes))
+	log.Info("registered", "machine", m.ID, "name", m.Name)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	go heartbeat(ctx, client, *plane, m.ID, runtimes, *dataDir, log)
+	go heartbeat(ctx, client, *plane, m.ID, host, *dataDir, log)
+	go machineJobLoop(ctx, client, *plane, m.ID, host, log)
 	go terminalLoop(ctx, client, *plane, m.ID, *workdir, log)
 	go gitJobLoop(ctx, client, *plane, m.ID, *dataDir, *gitPath, log)
 	go historyScanLoop(ctx, client, *plane, m.ID, log)
-	runner := newRunner(*runnerMode, *acpCommand, *acpArgs, *grpcAddr,
-		*claudeACPCommand, *claudeACPArgs, *codexACPCommand, *codexACPArgs, customACP, log)
 
 	var mgr *workspace.Manager
 	if *useWorkspace {
@@ -158,61 +149,37 @@ func main() {
 	log.Info("agentd stopped")
 }
 
-func newRunner(mode, command, args, grpcAddr, claudeCommand, claudeArgs, codexCommand, codexArgs string, custom map[string]agent.ACPBackendSpec, log *slog.Logger) agent.Runner {
+// newRunner builds the configured runner. In ACP mode it also returns the
+// router whose backends the runtime host fills in from detection.
+func newRunner(mode, command, args, grpcAddr string, log *slog.Logger) (agent.Runner, *agent.Router) {
 	switch mode {
 	case "acp":
-		defaultRunner := agent.NewACP(agent.ACPConfig{
+		router := &agent.Router{Default: agent.NewACP(agent.ACPConfig{
 			Command: command,
 			Args:    strings.Fields(args),
 			Logger:  log,
-		})
-		byBackend := map[string]agent.Runner{}
-		for backend, spec := range agent.DefaultACPBackends {
-			byBackend[backend] = agent.NewACP(agent.ACPConfig{
-				Command: spec.Command, Args: spec.Args, Env: spec.Env, Logger: log,
-			})
-		}
-		for backend, spec := range custom {
-			byBackend[backend] = agent.NewACP(agent.ACPConfig{
-				Command: spec.Command, Args: spec.Args, Env: spec.Env, Logger: log,
-			})
-		}
-		if claudeCommand != "" {
-			byBackend["claude"] = agent.NewACP(agent.ACPConfig{
-				Command: claudeCommand, Args: strings.Fields(claudeArgs), Logger: log,
-			})
-		}
-		if codexCommand != "" {
-			byBackend["codex"] = agent.NewACP(agent.ACPConfig{
-				Command: codexCommand, Args: strings.Fields(codexArgs), Logger: log,
-			})
-		}
-		if len(byBackend) > 0 {
-			return &agent.Router{Default: defaultRunner, ByBackend: byBackend}
-		}
-		return defaultRunner
+		})}
+		return router, router
 	case "grpc":
 		runner, err := plugin.Dial(grpcAddr)
 		if err != nil {
 			log.Error("dial grpc plugin", "addr", grpcAddr, "err", err)
 			os.Exit(1)
 		}
-		return runner
+		return runner, nil
 	}
-	return agent.NewMock(500 * time.Millisecond)
+	return agent.NewMock(500 * time.Millisecond), nil
 }
 
-func register(c *http.Client, plane, token, name string, labels, agents []string, runtimes map[string]string, concurrency int, metrics *domain.MachineMetrics) (*machine, error) {
-	body, _ := json.Marshal(map[string]any{
-		"token":       token,
-		"name":        name,
-		"labels":      labels,
-		"agents":      agents,
-		"runtimes":    runtimes,
-		"concurrency": concurrency,
-		"version":     "0.1.0-dev",
-		"metrics":     metrics,
-	})
+func register(c *http.Client, plane, token, name string, labels []string, host *runtimeHost, concurrency int, metrics *domain.MachineMetrics) (*machine, error) {
+	payload := host.report()
+	payload["token"] = token
+	payload["name"] = name
+	payload["labels"] = labels
+	payload["concurrency"] = concurrency
+	payload["version"] = "0.1.0-dev"
+	payload["metrics"] = metrics
+	body, _ := json.Marshal(payload)
 	resp, err := c.Post(plane+"/api/v1/machines/register", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
@@ -226,7 +193,7 @@ func register(c *http.Client, plane, token, name string, labels, agents []string
 	return &m, json.NewDecoder(resp.Body).Decode(&m)
 }
 
-func heartbeat(ctx context.Context, c *http.Client, plane, machineID string, runtimes map[string]string, dataDir string, log *slog.Logger) {
+func heartbeat(ctx context.Context, c *http.Client, plane, machineID string, host *runtimeHost, dataDir string, log *slog.Logger) {
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 	for {
@@ -234,7 +201,9 @@ func heartbeat(ctx context.Context, c *http.Client, plane, machineID string, run
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			raw, _ := json.Marshal(map[string]any{"runtimes": runtimes, "metrics": collectMetrics(dataDir)})
+			payload := host.report()
+			payload["metrics"] = collectMetrics(dataDir)
+			raw, _ := json.Marshal(payload)
 			req, _ := http.NewRequestWithContext(ctx, http.MethodPost, plane+"/api/v1/machines/"+machineID+"/heartbeat", bytes.NewReader(raw))
 			req.Header.Set("Content-Type", "application/json")
 			resp, err := c.Do(req)
@@ -245,37 +214,6 @@ func heartbeat(ctx context.Context, c *http.Client, plane, machineID string, run
 			resp.Body.Close()
 		}
 	}
-}
-
-// detectRuntimes looks for known agent CLIs and records their versions.
-func detectRuntimes() map[string]string {
-	out := map[string]string{}
-	names := make([]string, 0, len(agent.RuntimeCatalog)+2)
-	for _, runtime := range agent.RuntimeCatalog {
-		names = append(names, runtime.ID)
-	}
-	names = append(names, "claude-code-acp", "trae")
-	for _, name := range names {
-		binary := name
-		for _, runtime := range agent.RuntimeCatalog {
-			if runtime.ID == name && runtime.Command != "" {
-				binary = runtime.Command
-			}
-		}
-		path, err := exec.LookPath(binary)
-		if err != nil {
-			continue
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		raw, _ := exec.CommandContext(ctx, path, "--version").Output()
-		cancel()
-		version := strings.TrimSpace(strings.SplitN(string(raw), "\n", 2)[0])
-		if version == "" {
-			version = "installed"
-		}
-		out[name] = version
-	}
-	return out
 }
 
 func backendOf(r *run) string {

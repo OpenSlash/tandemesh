@@ -106,6 +106,7 @@ export default function App() {
             <Route path="credentials" element={<CredentialsPage />} />
             <Route path="skills" element={<SkillsPage />} />
             <Route path="machines" element={<MachinesPage />} />
+            <Route path="machines/registry" element={<ACPRegistryPage />} />
             <Route path="machines/:id" element={<MachineDetailPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="documents" element={<DocumentsPage />} />
@@ -116,7 +117,7 @@ export default function App() {
             <Route path="appearance" element={<SettingsAppearancePage />} />
             <Route path="account" element={<SettingsAccountPage />} />
             <Route path="mobile" element={<SettingsMobilePage />} />
-            <Route path="acp" element={<ACPRegistryPage />} />
+            <Route path="acp" element={<Navigate to="/machines/registry" replace />} />
           </Route>
         </Routes>
       </WorkspaceProvider>

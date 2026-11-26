@@ -5,7 +5,10 @@
 // external system that remains the source of truth.
 package domain
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // RunStatus is the lifecycle state of a run.
 type RunStatus string
@@ -148,16 +151,66 @@ type Notification struct {
 
 // Machine is a registered execution host.
 type Machine struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	Labels      []string          `json:"labels"`
-	Agents      []string          `json:"agents"`
-	Runtimes    map[string]string `json:"runtimes,omitempty"`
-	Concurrency int               `json:"concurrency"`
-	Status      string            `json:"status"`
-	Version     string            `json:"version,omitempty"`
-	LastSeen    time.Time         `json:"lastSeen"`
-	Metrics     *MachineMetrics   `json:"metrics,omitempty"`
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	Labels []string `json:"labels"`
+	Agents []string `json:"agents"`
+	// Runtimes maps each backend the host can run right now to its version.
+	Runtimes map[string]string `json:"runtimes,omitempty"`
+	// RuntimeDetails explains every known backend, including the ones that
+	// cannot run yet and why.
+	RuntimeDetails []RuntimeStatus `json:"runtimeDetails,omitempty"`
+	Concurrency    int             `json:"concurrency"`
+	Status         string          `json:"status"`
+	Version        string          `json:"version,omitempty"`
+	LastSeen       time.Time       `json:"lastSeen"`
+	Metrics        *MachineMetrics `json:"metrics,omitempty"`
+}
+
+// Runtime statuses reported by an execution host.
+const (
+	RuntimeReady          = "ready"           // the ACP launcher resolves
+	RuntimeAdapterMissing = "adapter-missing" // the CLI is installed but its ACP adapter is not
+	RuntimeMissing        = "missing"         // neither the CLI nor a launcher is installed
+	RuntimeUnsupported    = "unsupported"     // the CLI is installed but does not speak ACP
+)
+
+// RuntimeStatus is one backend as seen by an execution host.
+type RuntimeStatus struct {
+	ID      string `json:"id"`
+	Name    string `json:"name,omitempty"`
+	Status  string `json:"status"`
+	Version string `json:"version,omitempty"`
+	// CLI is the resolved path of the agent CLI, when installed.
+	CLI string `json:"cli,omitempty"`
+	// Launcher is the ACP command the host starts, or would start.
+	Launcher string `json:"launcher,omitempty"`
+	// Source tells where the launcher came from: flag, custom, registry or path.
+	Source string `json:"source,omitempty"`
+	// RegistryID and RegistryVersion identify an ACP Registry install.
+	RegistryID      string `json:"registryId,omitempty"`
+	RegistryVersion string `json:"registryVersion,omitempty"`
+}
+
+// Machine job kinds. Jobs are queued by the plane and executed by the host.
+const (
+	MachineJobRuntimeCheck = "runtime-check"
+	MachineJobACPInstall   = "acp-install"
+	MachineJobACPUninstall = "acp-uninstall"
+)
+
+// MachineJob is work the plane asks one execution host to perform locally.
+type MachineJob struct {
+	ID          string          `json:"id"`
+	MachineID   string          `json:"machineId"`
+	Kind        string          `json:"kind"`
+	Payload     json.RawMessage `json:"payload,omitempty"`
+	Status      string          `json:"status"`
+	Result      json.RawMessage `json:"result,omitempty"`
+	Error       string          `json:"error,omitempty"`
+	RequestedAt time.Time       `json:"requestedAt"`
+	StartedAt   *time.Time      `json:"startedAt,omitempty"`
+	CompletedAt *time.Time      `json:"completedAt,omitempty"`
 }
 
 // MachineMetrics is the latest host-level resource sample.

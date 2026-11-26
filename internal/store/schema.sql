@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS machines (
     labels_json   TEXT NOT NULL DEFAULT '[]',
     agents_json   TEXT NOT NULL DEFAULT '[]',
     runtimes_json TEXT NOT NULL DEFAULT '{}',
+    runtime_details_json TEXT NOT NULL DEFAULT '[]',
     concurrency   INTEGER NOT NULL DEFAULT 2,
     status        TEXT NOT NULL DEFAULT 'online',
     version       TEXT NOT NULL DEFAULT '',
@@ -806,6 +807,23 @@ CREATE TABLE IF NOT EXISTS history_scans (
 );
 
 CREATE INDEX IF NOT EXISTS history_scans_pending_idx ON history_scans(status, machine_id, requested_at_ms);
+
+-- Work the plane asks one host to run locally: runtime checks and ACP
+-- Registry installs. The host owns its filesystem; the plane only queues.
+CREATE TABLE IF NOT EXISTS machine_jobs (
+    id              TEXT PRIMARY KEY,
+    machine_id      TEXT NOT NULL,
+    kind            TEXT NOT NULL,
+    payload_json    TEXT NOT NULL DEFAULT '{}',
+    status          TEXT NOT NULL DEFAULT 'pending',
+    result_json     TEXT NOT NULL DEFAULT '{}',
+    error           TEXT NOT NULL DEFAULT '',
+    requested_at_ms INTEGER NOT NULL,
+    started_at_ms   INTEGER,
+    completed_at_ms INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS machine_jobs_pending_idx ON machine_jobs(machine_id, status, requested_at_ms);
 
 CREATE TABLE IF NOT EXISTS machine_history (
     machine_id      TEXT PRIMARY KEY,

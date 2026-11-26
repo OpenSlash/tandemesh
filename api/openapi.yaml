@@ -125,6 +125,115 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Machine" }
         "401": { description: Invalid join token }
+  /api/v1/machines/{id}/runtime-checks:
+    post:
+      summary: Ask a host to detect its agent runtimes again
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "202":
+          description: Queued; poll the job until it is done or failed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MachineJob" }
+        "404": { description: Machine not found }
+        "409": { description: Machine is not online }
+  /api/v1/machines/{id}/acp-installs:
+    post:
+      summary: Install an ACP Registry agent on a host
+      description: The host downloads and installs the agent into its own ACP home, then re-detects runtimes.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [registryId]
+              properties:
+                registryId: { type: string }
+      responses:
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MachineJob" }
+        "400": { description: Invalid registry id }
+        "404": { description: Machine not found }
+        "409": { description: Machine is not online }
+    delete:
+      summary: Remove an ACP Registry agent from a host
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: registryId, in: query, required: true, schema: { type: string } }
+        - { name: version, in: query, description: "Omit to remove every installed version", schema: { type: string } }
+      responses:
+        "202":
+          description: Queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MachineJob" }
+        "400": { description: Invalid registry id or version }
+        "404": { description: Machine not found }
+        "409": { description: Machine is not online }
+  /api/v1/machine-jobs/{id}:
+    get:
+      summary: Get a machine job
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Job
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MachineJob" }
+        "404": { description: Job not found }
+  /api/v1/agentd/machine-jobs/{machineId}:
+    get:
+      summary: Claim pending jobs for a host (daemon only)
+      parameters:
+        - { name: machineId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Jobs now marked running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/MachineJob" }
+  /api/v1/agentd/machine-jobs/{machineId}/{id}:
+    post:
+      summary: Report a job result and the host's runtimes after it (daemon only)
+      parameters:
+        - { name: machineId, in: path, required: true, schema: { type: string } }
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [done, failed] }
+                error: { type: string }
+                result: { type: object }
+                runtimes:
+                  type: object
+                  additionalProperties: { type: string }
+                runtimeDetails:
+                  type: array
+                  items: { $ref: "#/components/schemas/RuntimeStatus" }
+                agents:
+                  type: array
+                  items: { type: string }
+      responses:
+        "200": { description: Recorded }
+        "404": { description: No running job with this id for this machine }
   /webhooks/github/{binding}:
     post:
       summary: GitHub issue webhook
@@ -286,9 +395,42 @@ components:
         agents:
           type: array
           items: { type: string }
+        runtimes:
+          type: object
+          description: Backends the host can run now, mapped to their version
+          additionalProperties: { type: string }
+        runtimeDetails:
+          type: array
+          items: { $ref: "#/components/schemas/RuntimeStatus" }
         concurrency: { type: integer }
         status: { type: string }
         lastSeen: { type: string, format: date-time }
+    RuntimeStatus:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [ready, adapter-missing, missing, unsupported] }
+        version: { type: string }
+        cli: { type: string, description: Resolved path of the agent CLI }
+        launcher: { type: string, description: ACP command the host starts, or would start }
+        source: { type: string, enum: [flag, custom, registry, path] }
+        registryId: { type: string }
+        registryVersion: { type: string }
+    MachineJob:
+      type: object
+      properties:
+        id: { type: string }
+        machineId: { type: string }
+        kind: { type: string, enum: [runtime-check, acp-install, acp-uninstall] }
+        payload: { type: object }
+        status: { type: string, enum: [pending, running, done, failed] }
+        result: { type: object }
+        error: { type: string }
+        requestedAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
     RegisterMachineRequest:
       type: object
       required: [token, name]

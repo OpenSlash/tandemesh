@@ -7,6 +7,7 @@ import { useI18n } from '../lib/i18n'
 import { cn } from '../lib/utils'
 import { Button } from '../components/ui/button'
 import { ConnectMachineDialog } from '../components/connect-machine-dialog'
+import { MachinesTabs } from '../components/machines-tabs'
 
 export default function MachinesPage() {
   const { t } = useI18n()
@@ -16,13 +17,11 @@ export default function MachinesPage() {
     refetchInterval: 10000,
   })
   const machines = data?.items ?? []
-  const { data: catalogData } = useQuery({ queryKey: ['runtimes'], queryFn: api.runtimes })
-  const catalog = catalogData?.items ?? []
-  const installed = new Set(machines.flatMap((machine) => Object.keys(machine.runtimes ?? {})))
   const now = Date.now()
 
   return (
     <div className="mx-auto max-w-[1100px] px-6 py-5">
+      <MachinesTabs />
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[18px] font-semibold tracking-tight">{t('page.machines')}</h1>
@@ -37,6 +36,9 @@ export default function MachinesPage() {
         {machines.map((machine) => {
           const online = machine.status === 'online' && now - new Date(machine.lastSeen).getTime() < 45000
           const runtimes = Object.entries(machine.runtimes ?? {})
+          // Installed CLIs that cannot run yet stay visible, so they do not
+          // look undetected.
+          const needsAdapter = (machine.runtimeDetails ?? []).filter((item) => item.status === 'adapter-missing')
           return (
             <div key={machine.id} className="rounded-lg border border-line bg-panel/40 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -87,7 +89,17 @@ export default function MachinesPage() {
                         {name} <span className="text-muted">{version.slice(0, 18)}</span>
                       </span>
                     ))}
-                    {runtimes.length === 0 && (
+                    {needsAdapter.map((item) => (
+                      <Link
+                        key={item.id}
+                        to={`/machines/${machine.id}`}
+                        className="rounded bg-warn/10 px-1.5 py-0.5 font-mono text-[10.5px] text-warn hover:underline"
+                        title={t('machines.adapterMissingHint', { launcher: item.launcher ?? '' })}
+                      >
+                        {item.id} <span className="font-sans">· {t('machines.statusAdapterMissing')}</span>
+                      </Link>
+                    ))}
+                    {runtimes.length === 0 && needsAdapter.length === 0 && (
                       <span className="text-[11px] text-warn">{t('machines.noRuntimes')}</span>
                     )}
                   </div>
@@ -160,32 +172,6 @@ export default function MachinesPage() {
         )}
       </div>
 
-      <section className="mt-6">
-        <h2 className="text-[13px] font-medium">{t('machines.guide')}</h2>
-        <p className="mt-0.5 text-[11.5px] text-muted">{t('machines.guideHint')}</p>
-        <div className="mt-3 space-y-2">
-          {catalog.map((runtime) => (
-            <div key={runtime.id} className="rounded-lg border border-line bg-panel/40 p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-[12px]">{runtime.id}</span>
-                <span className="text-[11px] text-muted">{runtime.name}</span>
-                <span className={cn(
-                  'ml-auto rounded px-1.5 py-0.5 text-[10px]',
-                  installed.has(runtime.id) ? 'bg-ok/15 text-ok' : 'bg-panel2 text-muted',
-                )}>
-                  {installed.has(runtime.id) ? t('machines.installed') : t('machines.notInstalled')}
-                </span>
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <code className="rounded bg-panel2 px-2 py-1 font-mono text-[11px] text-muted">{runtime.install}</code>
-                <a href={runtime.docs} target="_blank" rel="noreferrer" className="text-[11px] text-accent2 hover:underline">
-                  {t('machines.docs')}
-                </a>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   )
 }

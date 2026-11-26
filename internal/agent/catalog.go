@@ -8,6 +8,9 @@ type Runtime struct {
 	Docs    string `json:"docs"`
 	Command string `json:"command,omitempty"`
 	ACP     bool   `json:"acp"`
+	// RegistryID is the ACP Registry agent that provides this backend's
+	// launcher, when the registry has one.
+	RegistryID string `json:"registryId,omitempty"`
 }
 
 type ACPBackendSpec struct {
@@ -27,17 +30,17 @@ var DefaultACPBackends = map[string]ACPBackendSpec{
 	"opencode": {Command: "opencode", Args: []string{"acp"}},
 }
 
-// RuntimeCatalog lists the agent CLIs Orca knows how to detect.
+// RuntimeCatalog lists the agent CLIs Tandemesh knows how to detect.
 var RuntimeCatalog = []Runtime{
 	{
 		ID: "claude", Name: "Claude Code",
 		Install: "npm install -g @anthropic-ai/claude-code",
-		Docs:    "https://docs.anthropic.com/en/docs/claude-code", ACP: true,
+		Docs:    "https://docs.anthropic.com/en/docs/claude-code", ACP: true, RegistryID: "claude-acp",
 	},
 	{
 		ID: "codex", Name: "Codex CLI",
 		Install: "npm install -g @openai/codex",
-		Docs:    "https://github.com/openai/codex", ACP: true,
+		Docs:    "https://github.com/openai/codex", ACP: true, RegistryID: "codex-acp",
 	},
 	{
 		ID: "deepseek", Name: "DeepSeek Harness",
@@ -47,22 +50,22 @@ var RuntimeCatalog = []Runtime{
 	{
 		ID: "gemini", Name: "Gemini CLI",
 		Install: "npm install -g @google/gemini-cli",
-		Docs:    "https://github.com/google-gemini/gemini-cli", ACP: true,
+		Docs:    "https://github.com/google-gemini/gemini-cli", ACP: true, RegistryID: "gemini",
 	},
 	{
 		ID: "cursor", Name: "Cursor Agent",
 		Command: "cursor-agent", Install: "curl https://cursor.com/install -fsS | bash",
-		Docs: "https://cursor.com/docs/cli/acp", ACP: true,
+		Docs: "https://cursor.com/docs/cli/acp", ACP: true, RegistryID: "cursor",
 	},
 	{
 		ID: "qwen", Name: "Qwen Code",
 		Install: "npm install -g @qwen-code/qwen-code",
-		Docs:    "https://github.com/QwenLM/qwen-code", ACP: true,
+		Docs:    "https://github.com/QwenLM/qwen-code", ACP: true, RegistryID: "qwen-code",
 	},
 	{
 		ID: "opencode", Name: "OpenCode",
 		Install: "npm install -g opencode-ai",
-		Docs:    "https://opencode.ai/docs/", ACP: true,
+		Docs:    "https://opencode.ai/docs/", ACP: true, RegistryID: "opencode",
 	},
 	{
 		ID: "goose", Name: "Goose",
@@ -70,3 +73,15 @@ var RuntimeCatalog = []Runtime{
 		Docs:    "https://block.github.io/goose/", ACP: false,
 	},
 }
+
+// RegistryAliases maps ACP Registry agent ids to catalog backend ids, so an
+// agent installed from the registry serves the backend users already know.
+var RegistryAliases = func() map[string]string {
+	out := map[string]string{}
+	for _, runtime := range RuntimeCatalog {
+		if runtime.RegistryID != "" {
+			out[runtime.RegistryID] = runtime.ID
+		}
+	}
+	return out
+}()

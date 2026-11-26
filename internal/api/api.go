@@ -119,8 +119,6 @@ func (s *Server) Router() http.Handler {
 		r.Get("/usage/trend", s.usageTrend)
 		r.Get("/acp/registry", s.acpRegistry)
 		r.Post("/workflow-artifacts/cleanup", s.cleanupWorkflowArtifacts)
-		r.Post("/acp/install", s.acpInstall)
-		r.Delete("/acp/install", s.acpUninstall)
 		r.Get("/version", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]string{"version": Version})
 		})
@@ -362,6 +360,12 @@ func (s *Server) Router() http.Handler {
 		r.Post("/machines/{id}/takeover", s.takeoverMachine)
 		r.Post("/machines/{id}/status", s.setMachineStatus)
 		r.Post("/machines/{id}/heartbeat", s.heartbeat)
+		r.Post("/machines/{id}/runtime-checks", s.requestRuntimeCheck)
+		r.Post("/machines/{id}/acp-installs", s.requestACPInstall)
+		r.Delete("/machines/{id}/acp-installs", s.requestACPUninstall)
+		r.Get("/machine-jobs/{id}", s.getMachineJob)
+		r.Get("/agentd/machine-jobs/{machineId}", s.agentdMachineJobs)
+		r.Post("/agentd/machine-jobs/{machineId}/{id}", s.agentdMachineJobResult)
 
 		r.Get("/agents", s.listAgents)
 		r.Post("/agents", s.createAgent)
@@ -690,14 +694,16 @@ func (s *Server) getMachine(w http.ResponseWriter, r *http.Request) {
 }
 
 type registerMachineRequest struct {
-	Token       string                 `json:"token"`
-	Name        string                 `json:"name"`
-	Labels      []string               `json:"labels"`
-	Agents      []string               `json:"agents"`
-	Runtimes    map[string]string      `json:"runtimes"`
-	Concurrency int                    `json:"concurrency"`
-	Version     string                 `json:"version"`
-	Metrics     *domain.MachineMetrics `json:"metrics,omitempty"`
+	Token    string            `json:"token"`
+	Name     string            `json:"name"`
+	Labels   []string          `json:"labels"`
+	Agents   []string          `json:"agents"`
+	Runtimes map[string]string `json:"runtimes"`
+	// RuntimeDetails is sent by hosts that report per-backend status.
+	RuntimeDetails []domain.RuntimeStatus `json:"runtimeDetails,omitempty"`
+	Concurrency    int                    `json:"concurrency"`
+	Version        string                 `json:"version"`
+	Metrics        *domain.MachineMetrics `json:"metrics,omitempty"`
 }
 
 func (s *Server) setMachineStatus(w http.ResponseWriter, r *http.Request) {
@@ -818,16 +824,17 @@ func (s *Server) registerMachine(w http.ResponseWriter, r *http.Request) {
 		machineID = existing.ID
 	}
 	m := &domain.Machine{
-		ID:          machineID,
-		Name:        req.Name,
-		Labels:      req.Labels,
-		Agents:      req.Agents,
-		Runtimes:    req.Runtimes,
-		Concurrency: req.Concurrency,
-		Status:      "online",
-		Version:     req.Version,
-		LastSeen:    time.Now().UTC(),
-		Metrics:     req.Metrics,
+		ID:             machineID,
+		Name:           req.Name,
+		Labels:         req.Labels,
+		Agents:         req.Agents,
+		Runtimes:       req.Runtimes,
+		RuntimeDetails: req.RuntimeDetails,
+		Concurrency:    req.Concurrency,
+		Status:         "online",
+		Version:        req.Version,
+		LastSeen:       time.Now().UTC(),
+		Metrics:        req.Metrics,
 	}
 	if err := s.store.UpsertMachine(r.Context(), m); err != nil {
 		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
@@ -839,11 +846,23 @@ func (s *Server) registerMachine(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) heartbeat(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Runtimes map[string]string      `json:"runtimes"`
-		Metrics  *domain.MachineMetrics `json:"metrics,omitempty"`
+		Runtimes       map[string]string      `json:"runtimes"`
+		RuntimeDetails []domain.RuntimeStatus `json:"runtimeDetails"`
+		Agents         []string               `json:"agents"`
+		Metrics        *domain.MachineMetrics `json:"metrics,omitempty"`
 	}
+	// A heartbeat with an unreadable body still proves the host is alive.
 	_ = json.NewDecoder(r.Body).Decode(&req)
-	if len(req.Runtimes) > 0 {
+	if req.RuntimeDetails != nil {
+		if err := s.store.Heartbeat(r.Context(), chi.URLParam(r, "id")); err != nil {
+			writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
+			return
+		}
+		if err := s.store.SetMachineRuntimes(r.Context(), chi.URLParam(r, "id"), req.Runtimes, req.RuntimeDetails, req.Agents); err != nil {
+			writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
+			return
+		}
+	} else if len(req.Runtimes) > 0 {
 		if err := s.store.Heartbeat(r.Context(), chi.URLParam(r, "id"), req.Runtimes); err != nil {
 			writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
 			return

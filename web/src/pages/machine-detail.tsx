@@ -1,17 +1,18 @@
 import { Link, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowLeft,
   CheckCircle2,
   Clock3,
   Cpu,
-  ExternalLink,
   Monitor,
+  RefreshCw,
   Server,
   Terminal,
 } from 'lucide-react'
-import { api } from '../lib/api'
+import { api, waitForMachineJob, type MachineJob, type RuntimeInfo, type RuntimeStatus } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { cn } from '../lib/utils'
 
@@ -27,10 +28,30 @@ export default function MachineDetailPage() {
   const { data: catalogData } = useQuery({ queryKey: ['runtimes'], queryFn: api.runtimes })
   const catalog = catalogData?.items ?? []
   const detected = machine?.runtimes ?? {}
+  const details = machine?.runtimeDetails
   const knownIds = new Set(catalog.map((runtime) => runtime.id))
-  const extras = Object.entries(detected).filter(([name]) => !knownIds.has(name))
+  const extras = details
+    ? details.filter((status) => !knownIds.has(status.id))
+    : Object.entries(detected)
+        .filter(([name]) => !knownIds.has(name))
+        .map(([id, version]): RuntimeStatus => ({ id, status: 'ready', version }))
   const online =
     machine?.status === 'online' && Date.now() - new Date(machine.lastSeen).getTime() < 45000
+
+  // Checks and installs run on the host; the plane only queues them.
+  const queryClient = useQueryClient()
+  const job = useMutation({
+    mutationFn: async ({ start }: { key: string; start: () => Promise<MachineJob> }) => {
+      const finished = await waitForMachineJob((await start()).id)
+      if (finished.status === 'failed') throw new Error(t('machines.jobFailed', { error: finished.error ?? '' }))
+      return finished
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['machine', id] })
+      void queryClient.invalidateQueries({ queryKey: ['machines'] })
+    },
+  })
+  const busyKey = job.isPending ? job.variables?.key : undefined
 
   return (
     <div className="mx-auto max-w-[980px] px-6 py-5">
@@ -123,55 +144,40 @@ export default function MachineDetailPage() {
                 <h2 className="text-[13px] font-medium">{t('machines.runtimeMatrix')}</h2>
                 <p className="mt-0.5 text-[11.5px] text-muted">{t('machines.runtimeMatrixHint')}</p>
               </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Link
+                  to={`/machines/registry?host=${encodeURIComponent(id)}`}
+                  className="text-[11.5px] text-accent2 hover:underline"
+                >
+                  {t('machines.browseAgents')}
+                </Link>
+                <button
+                  type="button"
+                  disabled={!online || job.isPending}
+                  title={online ? undefined : t('machines.offlineAction')}
+                  onClick={() => job.mutate({ key: 'check', start: () => api.checkMachineRuntimes(id) })}
+                  className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-line2 px-2.5 text-[11.5px] text-muted hover:text-fg disabled:opacity-50"
+                >
+                  <RefreshCw className={cn('h-3.5 w-3.5', busyKey === 'check' && 'animate-spin')} />
+                  {busyKey === 'check' ? t('machines.checking') : t('machines.checkNow')}
+                </button>
+              </div>
             </div>
+            {job.error && <p className="mt-2 text-[11.5px] text-err">{job.error.message}</p>}
             <div className="mt-3 overflow-hidden rounded-lg border border-line">
-              {catalog.map((runtime) => {
-                const version = detected[runtime.id]
-                return (
-                  <div
-                    key={runtime.id}
-                    className="flex flex-wrap items-center gap-2 border-b border-line/60 px-3 py-2.5 last:border-0"
-                  >
-                    <Terminal className="h-3.5 w-3.5 text-muted" />
-                    <span className="text-[12.5px] font-medium">{runtime.name}</span>
-                    <span className="font-mono text-[10.5px] text-muted">{runtime.id}</span>
-                    {runtime.acp && (
-                      <span className="rounded bg-accent/10 px-1 py-0.5 text-[9.5px] text-accent2">ACP</span>
-                    )}
-                    <span className="ml-auto flex items-center gap-1.5 text-[10.5px]">
-                      {version ? (
-                        <>
-                          <CheckCircle2 className="h-3.5 w-3.5 text-ok" />
-                          <span className="text-ok">{t('machines.installed')}</span>
-                          <span className="max-w-[180px] truncate font-mono text-muted" title={version}>
-                            {version}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="h-3.5 w-3.5 text-muted/60" />
-                          <span className="text-muted">{t('machines.notInstalled')}</span>
-                        </>
-                      )}
-                    </span>
-                    {!version && (
-                      <div className="flex w-full items-center gap-2 pl-5">
-                        <code className="rounded bg-panel2 px-2 py-1 font-mono text-[10.5px] text-muted">
-                          {runtime.install}
-                        </code>
-                        <a
-                          href={runtime.docs}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[10.5px] text-accent2 hover:underline"
-                        >
-                          {t('machines.docs')} <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+              {catalog.map((runtime) => (
+                <RuntimeRow
+                  key={runtime.id}
+                  runtime={runtime}
+                  status={
+                    details?.find((item) => item.id === runtime.id) ??
+                    (detected[runtime.id]
+                      ? { id: runtime.id, status: 'ready', version: detected[runtime.id] }
+                      : { id: runtime.id, status: 'missing' })
+                  }
+                  machineId={id}
+                />
+              ))}
             </div>
           </section>
 
@@ -180,9 +186,19 @@ export default function MachineDetailPage() {
               <h2 className="text-[13px] font-medium">{t('machines.detectedExtras')}</h2>
               <p className="mt-0.5 text-[11.5px] text-muted">{t('machines.detectedExtrasHint')}</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {extras.map(([name, version]) => (
-                  <span key={name} className="rounded bg-panel2 px-2 py-1 font-mono text-[10.5px] text-muted">
-                    {name} <span className="text-fg/60">{version}</span>
+                {extras.map((status) => (
+                  <span
+                    key={status.id}
+                    title={status.launcher}
+                    className={cn(
+                      'rounded px-2 py-1 font-mono text-[10.5px]',
+                      status.status === 'ready' ? 'bg-panel2 text-muted' : 'bg-warn/10 text-warn',
+                    )}
+                  >
+                    {status.id} <span className="text-fg/60">{status.version}</span>
+                    {status.source && status.source !== 'path' && (
+                      <span className="ml-1 text-muted/70">· {sourceLabel(t, status.source)}</span>
+                    )}
                   </span>
                 ))}
               </div>
@@ -210,6 +226,82 @@ export default function MachineDetailPage() {
           <p className="mt-6 text-[10.5px] text-muted/60">{t('machines.detectionNote')}</p>
         </>
       )}
+    </div>
+  )
+}
+
+function sourceLabel(t: (key: string) => string, source: NonNullable<RuntimeStatus['source']>) {
+  switch (source) {
+    case 'registry':
+      return t('machines.sourceRegistry')
+    case 'custom':
+      return t('machines.sourceCustom')
+    case 'flag':
+      return t('machines.sourceFlag')
+    default:
+      return ''
+  }
+}
+
+function RuntimeRow({ runtime, status, machineId }: { runtime: RuntimeInfo; status: RuntimeStatus; machineId: string }) {
+  const { t } = useI18n()
+  // Installing happens in one place: the agent list, preset to this host.
+  const installLink = (
+    <Link
+      to={`/machines/registry?host=${encodeURIComponent(machineId)}&q=${encodeURIComponent(runtime.id)}`}
+      className="text-[10.5px] text-accent2 hover:underline"
+    >
+      {t('machines.goInstall')}
+    </Link>
+  )
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-b border-line/60 px-3 py-2.5 last:border-0">
+      <Terminal className="h-3.5 w-3.5 text-muted" />
+      <span className="text-[12.5px] font-medium">{runtime.name}</span>
+      <span className="font-mono text-[10.5px] text-muted">{runtime.id}</span>
+      {runtime.acp && <span className="rounded bg-accent/10 px-1 py-0.5 text-[9.5px] text-accent2">ACP</span>}
+      <span className="ml-auto flex items-center gap-1.5 text-[10.5px]">
+        {status.status === 'ready' && (
+          <>
+            <CheckCircle2 className="h-3.5 w-3.5 text-ok" />
+            <span className="text-ok">{t('machines.statusReady')}</span>
+            {status.source && status.source !== 'path' && (
+              <span className="rounded bg-panel2 px-1 text-muted">{sourceLabel(t, status.source)}</span>
+            )}
+            <span className="max-w-[180px] truncate font-mono text-muted" title={status.launcher ?? status.version}>
+              {status.version}
+            </span>
+          </>
+        )}
+        {status.status === 'adapter-missing' && (
+          <>
+            <AlertTriangle className="h-3.5 w-3.5 text-warn" />
+            <span className="text-warn">{t('machines.statusAdapterMissing')}</span>
+          </>
+        )}
+        {status.status === 'unsupported' && (
+          <>
+            <AlertCircle className="h-3.5 w-3.5 text-muted/60" />
+            <span className="text-muted">{t('machines.statusUnsupported')}</span>
+          </>
+        )}
+        {status.status === 'missing' && (
+          <>
+            <AlertCircle className="h-3.5 w-3.5 text-muted/60" />
+            <span className="text-muted">{t('machines.statusMissing')}</span>
+          </>
+        )}
+      </span>
+      {status.status === 'adapter-missing' && (
+        <div className="flex w-full flex-wrap items-center gap-2 pl-5">
+          <span className="text-[10.5px] text-muted">
+            {t('machines.adapterMissingHint', { launcher: status.launcher ?? '' })}
+          </span>
+          {installLink}
+        </div>
+      )}
+      {status.status === 'missing' && <div className="w-full pl-5">{installLink}</div>}
     </div>
   )
 }

@@ -108,6 +108,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 		`ALTER TABLE runs ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'ws_default'`,
 		`ALTER TABLE approvals ADD COLUMN message_ref TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE machines ADD COLUMN runtimes_json TEXT NOT NULL DEFAULT '{}'`,
+		`ALTER TABLE machines ADD COLUMN runtime_details_json TEXT NOT NULL DEFAULT '[]'`,
 		`ALTER TABLE machines ADD COLUMN metrics_json TEXT NOT NULL DEFAULT '{}'`,
 		`ALTER TABLE agents ADD COLUMN machine_id TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE agent_sessions ADD COLUMN repo TEXT NOT NULL DEFAULT ''`,
@@ -1122,56 +1123,54 @@ func parseMachineMetrics(raw string) *domain.MachineMetrics {
 	return &metrics
 }
 
-// GetMachineByName returns a machine by name, case-insensitively.
-func (s *Store) GetMachineByName(ctx context.Context, name string) (*domain.Machine, error) {
-	row := s.db.QueryRowContext(ctx, `SELECT id, name, labels_json, agents_json, runtimes_json, metrics_json, concurrency, status, version, last_seen_ms FROM machines WHERE LOWER(name) = LOWER(?) LIMIT 1`, name)
+const machineColumns = `id, name, labels_json, agents_json, runtimes_json, runtime_details_json, metrics_json, concurrency, status, version, last_seen_ms`
+
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+// scanMachine reads one row selected with machineColumns.
+func scanMachine(row rowScanner) (*domain.Machine, error) {
 	var (
 		m        domain.Machine
 		labels   string
 		agents   string
 		runtimes string
+		details  string
 		metrics  string
 		lastSee  int64
 	)
-	err := row.Scan(&m.ID, &m.Name, &labels, &agents, &runtimes, &metrics, &m.Concurrency, &m.Status, &m.Version, &lastSee)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
+	if err := row.Scan(&m.ID, &m.Name, &labels, &agents, &runtimes, &details, &metrics, &m.Concurrency, &m.Status, &m.Version, &lastSee); err != nil {
 		return nil, err
 	}
+	// Columns default to valid JSON; a malformed value leaves the field empty.
 	_ = json.Unmarshal([]byte(labels), &m.Labels)
 	_ = json.Unmarshal([]byte(agents), &m.Agents)
 	_ = json.Unmarshal([]byte(runtimes), &m.Runtimes)
+	_ = json.Unmarshal([]byte(details), &m.RuntimeDetails)
 	m.Metrics = parseMachineMetrics(metrics)
 	m.LastSeen = fromMS(lastSee)
 	return &m, nil
 }
 
-// GetMachine returns one machine by ID or nil.
-func (s *Store) GetMachine(ctx context.Context, id string) (*domain.Machine, error) {
-	row := s.db.QueryRowContext(ctx, `SELECT id, name, labels_json, agents_json, runtimes_json, metrics_json, concurrency, status, version, last_seen_ms FROM machines WHERE id = ?`, id)
-	var (
-		m        domain.Machine
-		labels   string
-		agents   string
-		runtimes string
-		metrics  string
-		lastSee  int64
-	)
-	err := row.Scan(&m.ID, &m.Name, &labels, &agents, &runtimes, &metrics, &m.Concurrency, &m.Status, &m.Version, &lastSee)
+// GetMachineByName returns a machine by name, case-insensitively.
+func (s *Store) GetMachineByName(ctx context.Context, name string) (*domain.Machine, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT `+machineColumns+` FROM machines WHERE LOWER(name) = LOWER(?) LIMIT 1`, name)
+	m, err := scanMachine(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	if err != nil {
-		return nil, err
+	return m, err
+}
+
+// GetMachine returns one machine by ID or nil.
+func (s *Store) GetMachine(ctx context.Context, id string) (*domain.Machine, error) {
+	row := s.db.QueryRowContext(ctx, `SELECT `+machineColumns+` FROM machines WHERE id = ?`, id)
+	m, err := scanMachine(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
 	}
-	_ = json.Unmarshal([]byte(labels), &m.Labels)
-	_ = json.Unmarshal([]byte(agents), &m.Agents)
-	_ = json.Unmarshal([]byte(runtimes), &m.Runtimes)
-	m.Metrics = parseMachineMetrics(metrics)
-	m.LastSeen = fromMS(lastSee)
-	return &m, nil
+	return m, err
 }
 
 // UpsertMachine registers or updates a machine and refreshes its heartbeat.
@@ -1179,20 +1178,25 @@ func (s *Store) UpsertMachine(ctx context.Context, m *domain.Machine) error {
 	labels, _ := json.Marshal(m.Labels)
 	agents, _ := json.Marshal(m.Agents)
 	runtimes, _ := json.Marshal(m.Runtimes)
+	details, _ := json.Marshal(m.RuntimeDetails)
+	if m.RuntimeDetails == nil {
+		details = []byte("[]")
+	}
 	metrics, _ := json.Marshal(m.Metrics)
 	if m.Metrics == nil {
 		metrics = []byte("{}")
 	}
 	now := ms(time.Now())
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO machines (id, name, labels_json, agents_json, runtimes_json, metrics_json, concurrency, status, version, last_seen_ms, created_at_ms)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?)
+		INSERT INTO machines (id, name, labels_json, agents_json, runtimes_json, runtime_details_json, metrics_json, concurrency, status, version, last_seen_ms, created_at_ms)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
 		ON CONFLICT(id) DO UPDATE SET
 			name = excluded.name, labels_json = excluded.labels_json, agents_json = excluded.agents_json,
-			runtimes_json = excluded.runtimes_json, metrics_json = excluded.metrics_json,
+			runtimes_json = excluded.runtimes_json, runtime_details_json = excluded.runtime_details_json,
+			metrics_json = excluded.metrics_json,
 			concurrency = excluded.concurrency, status = excluded.status, version = excluded.version,
 			last_seen_ms = excluded.last_seen_ms`,
-		m.ID, m.Name, string(labels), string(agents), string(runtimes), string(metrics), m.Concurrency, m.Status, m.Version, now, now)
+		m.ID, m.Name, string(labels), string(agents), string(runtimes), string(details), string(metrics), m.Concurrency, m.Status, m.Version, now, now)
 	return err
 }
 
@@ -1205,6 +1209,28 @@ func (s *Store) Heartbeat(ctx context.Context, id string, runtimes ...map[string
 		return err
 	}
 	_, err := s.db.ExecContext(ctx, `UPDATE machines SET last_seen_ms = ?, status = 'online' WHERE id = ?`, ms(time.Now()), id)
+	return err
+}
+
+// SetMachineRuntimes stores what a host can run, as reported by the host.
+// A nil agents slice leaves the configured backends unchanged.
+func (s *Store) SetMachineRuntimes(ctx context.Context, id string, runtimes map[string]string, details []domain.RuntimeStatus, agents []string) error {
+	if runtimes == nil {
+		runtimes = map[string]string{}
+	}
+	if details == nil {
+		details = []domain.RuntimeStatus{}
+	}
+	rawRuntimes, _ := json.Marshal(runtimes)
+	rawDetails, _ := json.Marshal(details)
+	if agents == nil {
+		_, err := s.db.ExecContext(ctx, `UPDATE machines SET runtimes_json = ?, runtime_details_json = ? WHERE id = ?`,
+			string(rawRuntimes), string(rawDetails), id)
+		return err
+	}
+	rawAgents, _ := json.Marshal(agents)
+	_, err := s.db.ExecContext(ctx, `UPDATE machines SET runtimes_json = ?, runtime_details_json = ?, agents_json = ? WHERE id = ?`,
+		string(rawRuntimes), string(rawDetails), string(rawAgents), id)
 	return err
 }
 
@@ -1221,37 +1247,25 @@ func (s *Store) SetMachineMetrics(ctx context.Context, id string, metrics *domai
 
 // ListMachines returns all machines ordered by name.
 func (s *Store) ListMachines(ctx context.Context) ([]*domain.Machine, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, name, labels_json, agents_json, runtimes_json, metrics_json, concurrency, status, version, last_seen_ms FROM machines ORDER BY name`)
+	rows, err := s.db.QueryContext(ctx, `SELECT `+machineColumns+` FROM machines ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var out []*domain.Machine
 	for rows.Next() {
-		var (
-			m        domain.Machine
-			labels   string
-			agents   string
-			runtimes string
-			metrics  string
-			lastSee  int64
-		)
-		if err := rows.Scan(&m.ID, &m.Name, &labels, &agents, &runtimes, &metrics, &m.Concurrency, &m.Status, &m.Version, &lastSee); err != nil {
+		m, err := scanMachine(rows)
+		if err != nil {
 			return nil, err
 		}
-		_ = json.Unmarshal([]byte(labels), &m.Labels)
-		_ = json.Unmarshal([]byte(agents), &m.Agents)
-		_ = json.Unmarshal([]byte(runtimes), &m.Runtimes)
-		m.Metrics = parseMachineMetrics(metrics)
-		m.LastSeen = fromMS(lastSee)
-		out = append(out, &m)
+		out = append(out, m)
 	}
 	return out, rows.Err()
 }
 
 // ListStaleMachines returns online machines whose heartbeat is older than cutoff.
 func (s *Store) ListStaleMachines(ctx context.Context, cutoff time.Time) ([]*domain.Machine, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, name, labels_json, agents_json, runtimes_json, metrics_json, concurrency, status, version, last_seen_ms
+	rows, err := s.db.QueryContext(ctx, `SELECT `+machineColumns+`
 		FROM machines WHERE status = 'online' AND last_seen_ms < ? ORDER BY last_seen_ms`, ms(cutoff))
 	if err != nil {
 		return nil, err
@@ -1259,23 +1273,11 @@ func (s *Store) ListStaleMachines(ctx context.Context, cutoff time.Time) ([]*dom
 	defer rows.Close()
 	var out []*domain.Machine
 	for rows.Next() {
-		var (
-			m        domain.Machine
-			labels   string
-			agents   string
-			runtimes string
-			metrics  string
-			lastSee  int64
-		)
-		if err := rows.Scan(&m.ID, &m.Name, &labels, &agents, &runtimes, &metrics, &m.Concurrency, &m.Status, &m.Version, &lastSee); err != nil {
+		m, err := scanMachine(rows)
+		if err != nil {
 			return nil, err
 		}
-		_ = json.Unmarshal([]byte(labels), &m.Labels)
-		_ = json.Unmarshal([]byte(agents), &m.Agents)
-		_ = json.Unmarshal([]byte(runtimes), &m.Runtimes)
-		m.Metrics = parseMachineMetrics(metrics)
-		m.LastSeen = fromMS(lastSee)
-		out = append(out, &m)
+		out = append(out, m)
 	}
 	return out, rows.Err()
 }

@@ -391,6 +391,48 @@ func writeManifest(dir string, result *ACPInstall) {
 	}
 }
 
+// ACPHome returns the directory registry agents are installed into.
+func ACPHome(home string) string {
+	return acpHome(home)
+}
+
+// ListACPInstalls returns the registry agents installed under home, oldest
+// first, so later installs of the same agent win when callers build a map.
+func ListACPInstalls(home string) ([]ACPInstall, error) {
+	paths, err := filepath.Glob(filepath.Join(acpHome(home), "*", "*", "manifest.json"))
+	if err != nil {
+		return nil, fmt.Errorf("list acp installs: %w", err)
+	}
+	type entry struct {
+		install ACPInstall
+		at      string
+	}
+	entries := make([]entry, 0, len(paths))
+	for _, path := range paths {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		var manifest acpManifest
+		if json.Unmarshal(raw, &manifest) != nil || manifest.ID == "" || manifest.Command == "" {
+			continue
+		}
+		entries = append(entries, entry{
+			install: ACPInstall{
+				ID: manifest.ID, Version: manifest.Version, Dir: filepath.Dir(path),
+				Command: manifest.Command, Args: manifest.Args, Verified: manifest.Verified,
+			},
+			at: manifest.InstalledAt,
+		})
+	}
+	sort.SliceStable(entries, func(i, j int) bool { return entries[i].at < entries[j].at })
+	out := make([]ACPInstall, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, e.install)
+	}
+	return out, nil
+}
+
 func acpHome(home string) string {
 	if home != "" {
 		return home

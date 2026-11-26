@@ -414,6 +414,32 @@ export interface RuntimeInfo {
   install: string
   docs: string
   acp: boolean
+  /** ACP Registry agent that provides this backend's launcher. */
+  registryId?: string
+}
+
+export type RuntimeState = 'ready' | 'adapter-missing' | 'missing' | 'unsupported'
+
+export interface RuntimeStatus {
+  id: string
+  name?: string
+  status: RuntimeState
+  version?: string
+  cli?: string
+  launcher?: string
+  source?: 'flag' | 'custom' | 'registry' | 'path'
+  registryId?: string
+  registryVersion?: string
+}
+
+export interface MachineJob {
+  id: string
+  machineId: string
+  kind: 'runtime-check' | 'acp-install' | 'acp-uninstall'
+  status: 'pending' | 'running' | 'done' | 'failed'
+  error?: string
+  requestedAt: string
+  completedAt?: string
 }
 
 export interface Machine {
@@ -422,6 +448,7 @@ export interface Machine {
   labels: string[]
   agents: string[]
   runtimes?: Record<string, string>
+  runtimeDetails?: RuntimeStatus[]
   concurrency: number
   status: string
   version?: string
@@ -1596,7 +1623,6 @@ export const api = {
 
   workflowTemplates: () => request<List<WorkflowTemplate>>('/api/v1/workflow-templates'),
   acpRegistry: (q = '') => request<{ items: ACPRegistryEntry[]; fetchedAt: string }>(`/api/v1/acp/registry?q=${encodeURIComponent(q)}`),
-  installACP: (id: string) => request<{ id: string; version: string; dir: string; command: string; verified: boolean }>('/api/v1/acp/install', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ id }) }),
   usage: (workspace: string, days = 30) => request<UsageSummary>(`/api/v1/usage?workspace=${workspace}&days=${days}`),
   workflows: (workspace: string) =>
     request<List<Workflow>>(`/api/v1/workflows?workspace=${workspace}`),
@@ -1657,6 +1683,13 @@ export const api = {
 
   machines: () => request<List<Machine>>('/api/v1/machines'),
   machine: (id: string) => request<Machine>(`/api/v1/machines/${id}`),
+  checkMachineRuntimes: (id: string) =>
+    request<MachineJob>(`/api/v1/machines/${id}/runtime-checks`, { method: 'POST' }),
+  installMachineACP: (id: string, registryId: string) =>
+    request<MachineJob>(`/api/v1/machines/${id}/acp-installs`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ registryId }) }),
+  uninstallMachineACP: (id: string, registryId: string) =>
+    request<MachineJob>(`/api/v1/machines/${id}/acp-installs?registryId=${encodeURIComponent(registryId)}`, { method: 'DELETE' }),
+  machineJob: (id: string) => request<MachineJob>(`/api/v1/machine-jobs/${id}`),
   systemInfo: () => request<{ baseUrl: string }>('/api/v1/system/info'),
   machineJoinToken: () =>
     request<{ token: string; expiresAt: string }>('/api/v1/machines/join-token', {
@@ -1747,4 +1780,18 @@ installSkill: (body: { workspaceId: string; name?: string; body?: string; source
   mobileDevices: () => request<{ items: MobileDevice[] }>('/api/v1/mobile/devices'),
   revokeMobileDevice: (id: string) =>
     request<void>(`/api/v1/mobile/devices/${id}`, { method: 'DELETE' }),
+}
+
+/**
+ * Polls a machine job until the host finishes it. Installs can take minutes
+ * (npm, uv or a binary download), hence the generous timeout.
+ */
+export async function waitForMachineJob(id: string, timeoutMs = 10 * 60 * 1000): Promise<MachineJob> {
+  const deadline = Date.now() + timeoutMs
+  for (;;) {
+    const job = await api.machineJob(id)
+    if (job.status === 'done' || job.status === 'failed') return job
+    if (Date.now() > deadline) throw new Error('timed out waiting for the host')
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+  }
 }
