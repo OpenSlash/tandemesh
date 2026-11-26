@@ -55,5 +55,17 @@
         },
       ],
     },
+    {
+      "name": 'secure_key_store',
+      "srcPath": './secure_key_store',
+      "targets": [
+        {
+          "name": 'default',
+          "applyToProducts": [
+            'default'
+          ],
+        },
+      ],
+    },
   ],
 }
