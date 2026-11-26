@@ -15,6 +15,7 @@ func main() {
 		return
 	}
 	defer lock.Close()
+	inheritLoginShellPath()
 	webURL := os.Getenv("TANDEMESH_WEB_URL")
 	var server *desktopServer
 	var plane *localPlane
