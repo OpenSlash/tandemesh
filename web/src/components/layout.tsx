@@ -404,7 +404,7 @@ export default function Layout() {
           </div>
           <div className="flex items-center gap-2 px-4 py-3 text-[11px] text-muted">
             <Command className="h-3.5 w-3.5" />
-            <span>orca 0.1.0-dev</span>
+            <span>{__APP_VERSION__}</span>
           </div>
         </div>
       </aside>
