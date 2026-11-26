@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ExternalLink, MessageSquare, Plus, Search, X } from 'lucide-react'
+import { ExternalLink, History, MessageSquare, Plus, Search, X } from 'lucide-react'
 import { api } from '../lib/api'
 import { useWorkspace } from '../lib/workspace'
 import { useI18n } from '../lib/i18n'
@@ -175,13 +175,22 @@ export default function SessionsPage() {
             </h1>
             <p className="mt-0.5 text-[11px] text-muted">{items.length} sessions</p>
           </div>
-          <Dialog
-            open={open}
-            onOpenChange={(value) => {
-              setOpen(value)
-              if (value && !agentId) setAgentId(agents[0]?.id ?? 'claude')
-            }}
-          >
+          <div className="flex items-center gap-1">
+            <Link
+              to="/session-history"
+              title={t('nav.sessionHistory')}
+              aria-label={t('nav.sessionHistory')}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-panel2 hover:text-fg"
+            >
+              <History className="h-3.5 w-3.5" />
+            </Link>
+            <Dialog
+              open={open}
+              onOpenChange={(value) => {
+                setOpen(value)
+                if (value && !agentId) setAgentId(agents[0]?.id ?? 'claude')
+              }}
+            >
             <DialogTrigger asChild>
               <Button variant="primary" size="sm">
                 <Plus className="h-3.5 w-3.5" />
@@ -276,6 +285,7 @@ export default function SessionsPage() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="relative px-3 pb-2">

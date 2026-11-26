@@ -24,7 +24,6 @@ import {
   FileText,
   MessageSquare,
   LayoutDashboard,
-  History,
   ScrollText,
   Workflow,
   MoreHorizontal,
@@ -296,7 +295,6 @@ export default function Layout() {
             <GlobalItem to="/tasks?scope=all" label={t('nav.tasks')} icon={ListTodo} />
             <GlobalItem to="/sessions?scope=all" label={t('nav.recentSessions')} icon={MessageSquare} />
             <GlobalItem to="/dashboard" label={t('nav.agentDashboard')} icon={LayoutDashboard} />
-            <GlobalItem to="/session-history" label={t('nav.sessionHistory')} icon={History} />
             <GlobalItem to="/runs?scope=all" label={t('nav.runs')} icon={Activity} />
             <GlobalItem to="/agents?scope=all" label={t('nav.agents')} icon={Bot} />
           </div>
