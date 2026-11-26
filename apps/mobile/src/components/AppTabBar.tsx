@@ -1,19 +1,20 @@
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
+import { TabIcon, type TabIconName } from './TabIcon'
 
 export interface AppTabItem {
   key: string
   label: string
-  glyph: string
+  icon: TabIconName
   badge?: number
 }
 
-const TAB_META: Record<string, { glyph: string; label: string }> = {
-  Tasks: { glyph: '☰', label: 'Tasks' },
-  Sessions: { glyph: '◎', label: 'Sessions' },
-  Approvals: { glyph: '✓', label: 'Approvals' },
-  Notifications: { glyph: '◔', label: 'Alerts' },
-  Settings: { glyph: '⚙', label: 'Settings' },
+const TAB_META: Record<string, { icon: TabIconName; label: string }> = {
+  Tasks: { icon: 'tasks', label: 'Tasks' },
+  Sessions: { icon: 'sessions', label: 'Sessions' },
+  Approvals: { icon: 'approvals', label: 'Approvals' },
+  Notifications: { icon: 'alerts', label: 'Alerts' },
+  Settings: { icon: 'settings', label: 'Settings' },
 }
 
 export function AppTabBarView({
@@ -51,7 +52,7 @@ export function AppTabBarView({
               onPress={() => onChange(item.key)}
               style={[styles.item, vertical ? styles.itemVertical : styles.itemHorizontal, focused && styles.itemActive]}
             >
-              <Text style={[styles.glyph, focused && styles.glyphActive]}>{item.glyph}</Text>
+              <TabIcon name={item.icon} active={focused} />
               {item.badge ? (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{item.badge > 9 ? '9+' : item.badge}</Text>
@@ -77,7 +78,7 @@ export function AppTabBar({
   const items = state.routes.map((route) => ({
     key: route.key,
     label: TAB_META[route.name]?.label ?? route.name,
-    glyph: TAB_META[route.name]?.glyph ?? '•',
+    icon: TAB_META[route.name]?.icon ?? 'tasks',
     badge: badges?.[route.name],
   }))
   return (

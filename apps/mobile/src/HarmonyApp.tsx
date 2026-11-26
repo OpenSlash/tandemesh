@@ -115,11 +115,11 @@ function Home({ session, onSignOut }: { session: MobileSession; onSignOut: () =>
   const { width, height } = useWindowDimensions()
   const wide = width >= 720 && width > height
   const tabs: AppTabItem[] = [
-    { key: 'tasks', label: 'Tasks', glyph: '☰' },
-    { key: 'sessions', label: 'Sessions', glyph: '◎' },
-    { key: 'approvals', label: 'Approvals', glyph: '✓' },
-    { key: 'notifications', label: 'Alerts', glyph: '◔', badge: unread },
-    { key: 'settings', label: 'Settings', glyph: '⚙' },
+    { key: 'tasks', label: 'Tasks', icon: 'tasks' },
+    { key: 'sessions', label: 'Sessions', icon: 'sessions' },
+    { key: 'approvals', label: 'Approvals', icon: 'approvals' },
+    { key: 'notifications', label: 'Alerts', icon: 'alerts', badge: unread },
+    { key: 'settings', label: 'Settings', icon: 'settings' },
   ]
   const tabBar = (
     <AppTabBarView items={tabs} active={tab} onChange={(key) => setTab(key as Tab)} bottomInset={18} />
