@@ -49,12 +49,12 @@ func startAgentd(planeURL, dataDir, localToken string) *localAgentd {
 	workdir := filepath.Join(dataDir, "work")
 	_ = os.MkdirAll(workdir, 0o755)
 	// Backends and their launchers come from agentd's own detection, so the
-	// host reports exactly what it can run.
+	// host reports exactly what it can run. The host is named after the
+	// computer; the "desktop" label lets the UI call it "this computer".
 	cmd := exec.Command(binary,
 		"-plane", planeURL,
 		"-token", "dev-join-token",
-		"-name", "desktop",
-		"-labels", "os="+runtime.GOOS,
+		"-labels", "os="+runtime.GOOS+",desktop",
 		"-runner", "acp",
 		"-workdir", workdir,
 	)

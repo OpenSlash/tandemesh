@@ -5,6 +5,7 @@ import { AlertCircle, AlertTriangle, CheckCircle2, ExternalLink, Loader2, Search
 import { api, waitForMachineJob, type MachineJob, type RuntimeStatus } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { cn } from '../lib/utils'
+import { isLocalHost } from '../lib/hosts'
 import { Input } from '../components/ui/input'
 import { MachinesTabs } from '../components/machines-tabs'
 
@@ -84,6 +85,8 @@ export default function AgentCatalogPage() {
     },
   })
   const busy = job.isPending ? job.variables?.registryId : undefined
+  const hostLabel = (machine: { name: string; labels: string[] }) =>
+    isLocalHost(machine) ? t('acp.localHost', { name: machine.name }) : machine.name
 
   return (
     <div className="mx-auto max-w-[1100px] px-6 py-5">
@@ -95,7 +98,7 @@ export default function AgentCatalogPage() {
           <Search className="pointer-events-none absolute left-2 top-2 h-3.5 w-3.5 text-muted" />
           <Input className="h-8 pl-7" placeholder={t('acp.search')} value={query} onChange={(event) => setQuery(event.target.value)} />
         </div>
-        {hosts.length > 0 ? (
+        {hosts.length > 1 ? (
           <label className="flex items-center gap-2 text-[11.5px] text-muted">
             {t('acp.host')}
             <select
@@ -104,10 +107,15 @@ export default function AgentCatalogPage() {
               className="h-8 rounded-md border border-line2 bg-panel px-2 text-[11.5px] text-fg"
             >
               {hosts.map((machine) => (
-                <option key={machine.id} value={machine.id}>{machine.name}</option>
+                <option key={machine.id} value={machine.id}>{hostLabel(machine)}</option>
               ))}
             </select>
           </label>
+        ) : host ? (
+          // With one host there is nothing to choose; just say where installs go.
+          <span className="text-[11.5px] text-muted">
+            {t('acp.host')} <span className="text-fg">{hostLabel(host)}</span>
+          </span>
         ) : (
           <span className="text-[11.5px] text-warn">{t('acp.noHost')}</span>
         )}

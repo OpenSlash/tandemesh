@@ -497,7 +497,8 @@ func hostname() string {
 	if err != nil {
 		return "machine"
 	}
-	return h
+	// macOS reports the Bonjour name; the suffix adds nothing in the UI.
+	return strings.TrimSuffix(h, ".local")
 }
 
 func env(key, fallback string) string {
