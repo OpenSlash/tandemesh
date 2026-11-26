@@ -30,5 +30,15 @@ target 'TandemeshMobile' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # fmt 11.0.2 fails to compile its own sources under Xcode 26 clang in C++20
+    # ("call to consteval function ... is not a constant expression"). C++17
+    # turns consteval format strings off for that target only.
+    installer.pods_project.targets.each do |target|
+      next unless target.name == 'fmt'
+      target.build_configurations.each do |build_config|
+        build_config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+      end
+    end
   end
 end
