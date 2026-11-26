@@ -21,6 +21,7 @@ export function MainTabs() {
   const [selectedId, setSelectedId] = useState('')
   const [error, setError] = useState('')
   const { width, height } = useWindowDimensions()
+  const [unread, setUnread] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -41,6 +42,26 @@ export function MainTabs() {
     }
   }, [client])
 
+  useEffect(() => {
+    const workspaceId = workspaces.find((item) => item.id === selectedId)?.id ?? workspaces[0]?.id
+    if (!workspaceId) return
+    let cancelled = false
+    const load = async () => {
+      try {
+        const result = await client.notifications(workspaceId)
+        if (!cancelled) setUnread(result.items.filter((item) => !item.readAt).length)
+      } catch {
+        // ignore polling errors
+      }
+    }
+    void load()
+    const timer = setInterval(() => void load(), 15000)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [client, workspaces, selectedId])
+
   if (error) {
     return (
       <View style={styles.center}>
@@ -60,7 +81,7 @@ export function MainTabs() {
   return (
     <WorkspaceContext.Provider value={{ workspace, workspaces, selectWorkspace: setSelectedId }}>
       <Tab.Navigator
-        tabBar={(props) => <AppTabBar {...props} />}
+        tabBar={(props) => <AppTabBar {...props} badges={{ Notifications: unread }} />}
         screenOptions={{
           headerShown: false,
           tabBarPosition: width >= 720 && width > height ? 'left' : 'bottom',

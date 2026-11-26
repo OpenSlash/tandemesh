@@ -5,6 +5,7 @@ export interface AppTabItem {
   key: string
   label: string
   glyph: string
+  badge?: number
 }
 
 const TAB_META: Record<string, { glyph: string; label: string }> = {
@@ -51,6 +52,11 @@ export function AppTabBarView({
               style={[styles.item, vertical ? styles.itemVertical : styles.itemHorizontal, focused && styles.itemActive]}
             >
               <Text style={[styles.glyph, focused && styles.glyphActive]}>{item.glyph}</Text>
+              {item.badge ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{item.badge > 9 ? '9+' : item.badge}</Text>
+                </View>
+              ) : null}
               <Text style={[styles.label, focused && styles.labelActive]} numberOfLines={1}>
                 {item.label}
               </Text>
@@ -62,11 +68,17 @@ export function AppTabBarView({
   )
 }
 
-export function AppTabBar({ state, navigation, insets }: BottomTabBarProps) {
+export function AppTabBar({
+  state,
+  navigation,
+  insets,
+  badges,
+}: BottomTabBarProps & { badges?: Record<string, number> }) {
   const items = state.routes.map((route) => ({
     key: route.key,
     label: TAB_META[route.name]?.label ?? route.name,
     glyph: TAB_META[route.name]?.glyph ?? '•',
+    badge: badges?.[route.name],
   }))
   return (
     <AppTabBarView
@@ -112,7 +124,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 8,
   },
-  item: { alignItems: 'center', justifyContent: 'center', borderRadius: 22 },
+  item: { position: 'relative', alignItems: 'center', justifyContent: 'center', borderRadius: 22 },
   itemHorizontal: { flex: 1, height: 46, gap: 2 },
   itemVertical: { height: 62, gap: 4, marginHorizontal: 6 },
   itemActive: { backgroundColor: '#1d2433' },
@@ -120,4 +132,6 @@ const styles = StyleSheet.create({
   glyphActive: { color: '#f3f4f6' },
   label: { color: '#6e7787', fontSize: 9.5, letterSpacing: 0.2 },
   labelActive: { color: '#f3f4f6', fontWeight: '600' },
+  badge: { position: 'absolute', top: 2, right: 8, minWidth: 15, height: 15, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#e05c6b', paddingHorizontal: 3 },
+  badgeText: { color: '#ffffff', fontSize: 8.5, fontWeight: '700' },
 })

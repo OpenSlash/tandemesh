@@ -59,6 +59,7 @@ function Home({ session, onSignOut }: { session: MobileSession; onSignOut: () =>
   const [tab, setTab] = useState<Tab>('tasks')
   const [route, setRoute] = useState<RouteState | null>(null)
   const [error, setError] = useState('')
+  const [unread, setUnread] = useState(0)
 
   useEffect(() => {
     client
@@ -69,6 +70,26 @@ function Home({ session, onSignOut }: { session: MobileSession; onSignOut: () =>
       })
       .catch((nextError) => setError(nextError instanceof Error ? nextError.message : 'Failed to load workspace'))
   }, [client])
+
+  useEffect(() => {
+    const id = workspaces.find((item) => item.id === workspaceId)?.id ?? workspaces[0]?.id
+    if (!id) return
+    let cancelled = false
+    const load = async () => {
+      try {
+        const result = await client.notifications(id)
+        if (!cancelled) setUnread(result.items.filter((item) => !item.readAt).length)
+      } catch {
+        // ignore polling errors
+      }
+    }
+    void load()
+    const timer = setInterval(() => void load(), 15000)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [client, workspaces, workspaceId])
 
   const workspace = workspaces.find((item) => item.id === workspaceId) ?? workspaces[0]
   if (error) {
@@ -97,7 +118,7 @@ function Home({ session, onSignOut }: { session: MobileSession; onSignOut: () =>
     { key: 'tasks', label: 'Tasks', glyph: '☰' },
     { key: 'sessions', label: 'Sessions', glyph: '◎' },
     { key: 'approvals', label: 'Approvals', glyph: '✓' },
-    { key: 'notifications', label: 'Alerts', glyph: '◔' },
+    { key: 'notifications', label: 'Alerts', glyph: '◔', badge: unread },
     { key: 'settings', label: 'Settings', glyph: '⚙' },
   ]
   const tabBar = (
