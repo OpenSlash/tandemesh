@@ -10,6 +10,7 @@ import { Input } from '../components/ui/input'
 import { cn } from '../lib/utils'
 import { OAuthAppsDialog } from '../components/oauth-apps-dialog'
 import { PlaneCatalogPicker } from '../components/plane-catalog-picker'
+import { ProviderIcon } from '../components/provider-icon'
 import { Drawer } from '../components/ui/drawer'
 
 const GROUPS: { kind: Provider['kind']; labelKey: string; icon: typeof Boxes }[] = [
@@ -403,7 +404,7 @@ export default function ProvidersPage() {
                   <div key={p.id} className="rounded-lg border border-line bg-panel/40 p-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Plug className="h-3.5 w-3.5 text-accent2" />
+                        <ProviderIcon id={p.id} className="h-3.5 w-3.5 text-accent2" />
                         <span className="text-[13px] font-medium">{p.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
