@@ -1,256 +1,135 @@
-# Tandemesh
-
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="design/logo/kit/svg/tandemesh-lockup-horizontal-paper.svg">
-    <img src="design/logo/kit/svg/tandemesh-lockup-horizontal-ink.svg" alt="Tandemesh" height="48">
+    <img src="design/logo/kit/svg/tandemesh-lockup-horizontal-ink.svg" alt="Tandemesh" height="56">
   </picture>
 </p>
 
-> **Internal codename: Orca.** The repository, Go module and public product name are Tandemesh.
-> Orca remains only as an internal codename and as a compatibility fallback for legacy environment
-> variables and headers.
+<p align="center">
+  <strong>Run coding agents on your own machines, driven by the tools your team already uses.</strong>
+</p>
 
-Tandemesh is a **local-first agent execution plane**. It routes tasks from external systems to
-coding agents running on local machines, records execution facts, and writes results back to the
-tools a team already uses.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
+  <img src="https://img.shields.io/badge/go-1.27%2B-00ADD8" alt="Go 1.27+">
+  <img src="https://img.shields.io/badge/status-early%20development-orange" alt="Status: early development">
+</p>
 
-External systems remain the source of truth for tasks, documents and conversations. Tandemesh stores
-execution state: runs, events, machines, agents, approvals, sessions and artifacts.
+---
 
-## Status
+Tandemesh is a **local-first agent execution plane**. It picks up work from GitHub, Jira, Linear
+and other systems, hands it to coding agents such as Claude Code, Codex or Gemini CLI running on
+your machines, and writes the results back as comments and draft pull requests.
 
-Tandemesh is under active development. The local single-user workflow is usable; the project is not
-yet a hosted multi-tenant service.
+Your issue tracker stays the source of truth. Tandemesh only records how work was executed: runs,
+events, approvals and artifacts. Your code and credentials stay on the machines you control.
 
-Working today:
+## Why Tandemesh
 
-- `tandemesh-plane`: control plane with SQLite (Postgres optional), tasks, runs, agents, machines,
-  sessions, approvals, workflows, artifacts, audit and usage APIs.
-- `tandemesh-agentd`: machine daemon that registers with the plane, leases runs, executes ACP agents,
-  streams events, handles approvals and reports usage.
-- ACP execution: Claude Code, Codex, DeepSeek Harness, Gemini CLI, Cursor Agent, Qwen Code and
-  OpenCode, plus custom ACP commands.
-- ACP Registry browser and managed binary / `npx` / `uvx` installers.
-- Workflow engine: linear steps and DAG `needs`, parallel branches, fanout, merge (including merge
-  agent), gates, conditions, retries, timeouts, child workflows and `onFail`.
-- Web control panel: React 19, Vite, TanStack Query, React Flow workflow editor.
-- Desktop: Wails 3 shell, local plane/agentd lifecycle, tray, close-to-tray, autostart, local token,
-  LAN mode, NSIS installer and installer-based update checks.
-- Mobile: React Native 0.82 shell in `apps/mobile` with device pairing and a read-only task
-  list; HarmonyOS (RNOH) and iOS follow.
+- **Local-first.** Agents run on your laptop, workstation or build box, with your toolchain and
+  your repositories. No hosted sandbox required.
+- **Bring your own agent.** Any [ACP](https://agentclientprotocol.com)-compatible agent works,
+  including Claude Code, Codex, Gemini CLI, Cursor Agent, Qwen Code, OpenCode and DeepSeek.
+- **Humans stay in control.** Risky tool calls wait for approval, every run is recorded, and
+  Tandemesh opens draft PRs. It never merges.
+- **Fits your workflow.** Trigger runs from issues, comments and webhooks; chain agents with a
+  visual workflow editor; follow progress from desktop, web or phone.
 
-Not included in the self-hosted core:
-
-- accounts, organizations or seat management
-- model gateway or billing
-- auto-merge
-
-## Architecture
+## How it works
 
 ```text
-Desktop / Web / Mobile
-        |
-        | HTTP + WebSocket
-        v
-  tandemesh-plane  (control plane, SQLite/Postgres)
-        |
-        | lease / events
-        v
-  tandemesh-agentd (execution host)
-        |
-        | ACP over stdio
-        v
-  Claude Code / Codex / DeepSeek / Gemini / ...
+ GitHub · Jira · Linear · Notion · Slack · ...
+                     │  webhooks / polling
+                     ▼
+┌──────────────────────────────────────────┐      Desktop · Web · Mobile
+│  tandemesh-plane   control plane         │◀──── HTTP + WebSocket
+│  tasks · runs · approvals · workflows    │
+└──────────────────────────────────────────┘
+                     │  leases / events
+                     ▼
+┌──────────────────────────────────────────┐
+│  tandemesh-agentd  on each machine       │
+│  git worktrees · terminals · approvals   │
+└──────────────────────────────────────────┘
+                     │  ACP over stdio
+                     ▼
+     Claude Code · Codex · Gemini CLI · ...
 ```
 
-The control plane never executes agent code. The daemon owns the local workspace, agent process,
-terminal, Git and filesystem.
+The control plane schedules and records; it never executes agent code. Each machine runs a small
+daemon that owns the workspace, the agent process, Git and the filesystem.
+
+## Features
+
+- **Sources and write-back:** GitHub, GitLab, Jira, Linear, Notion, Outline, Slack, Outlook,
+  Feishu and Plane.
+- **Agents:** built-in ACP backends, custom ACP commands, an ACP Registry browser and managed
+  installers (binary, `npx`, `uvx`).
+- **Workflows:** sequential and DAG steps, parallel branches, fan-out and merge, gates,
+  conditions, retries, timeouts and child workflows.
+- **Isolation:** one Git worktree per run, cleaned up automatically.
+- **Approvals:** pause on sensitive tool calls and approve from any client.
+- **Clients:**
+  - **Web** control panel with a visual workflow editor.
+  - **Desktop** app for Windows and macOS that runs everything locally, with tray and autostart.
+  - **Mobile** app for Android, iOS and HarmonyOS to follow sessions, review diffs and approve on
+    the go.
+- **Storage:** SQLite by default, Postgres optional.
 
 ## Quick start
 
-Requirements:
-
-- Go 1.27+
-- Node 20+ and pnpm for the web UI
-- at least one supported agent CLI for real execution
-
-Start the control plane:
+You need Go 1.27+, Node 20+ with pnpm, and at least one agent CLI with an ACP adapter (for example
+Claude Code with `claude-agent-acp`).
 
 ```bash
+git clone https://github.com/OpenSlash/tandemesh.git
+cd tandemesh
+
+# 1. control plane on :8080
 go run ./cmd/tandemesh-plane
+
+# 2. second terminal: register this machine as an execution host
+go run ./cmd/tandemesh-agentd -name dev-1 -runner acp -workdir ~/tandemesh-work
+
+# 3. third terminal: web UI
+cd web && pnpm install && pnpm dev
 ```
 
-Start a local execution host:
+Open <http://127.0.0.1:5173>, create a task and assign it to an agent.
 
-```bash
-go run ./cmd/tandemesh-agentd \
-  -name dev-1 \
-  -runner acp \
-  -claude-acp-command claude-agent-acp \
-  -codex-acp-command codex-acp \
-  -workdir /path/to/workspace
-```
-
-Start the web UI:
-
-```bash
-cd web
-pnpm install
-pnpm dev
-```
-
-Open `http://127.0.0.1:5173`.
-
-### Desktop
-
-Build the web bundle first, then the Wails app:
-
-```powershell
-cd web
-pnpm run build
-
-cd ..\apps\tandemesh-desktop
-powershell -ExecutionPolicy Bypass -File scripts\build.ps1
-```
-
-For a development shell against the Vite server:
-
-```powershell
-$env:TANDEMESH_WEB_URL = "http://127.0.0.1:5173"
-go run .
-```
-
-The desktop app can start `tandemesh-plane` and `tandemesh-agentd` itself. It writes data to
-`%APPDATA%/Tandemesh` on Windows. Set `TANDEMESH_MANAGE_PLANE=0` to attach to an already-running plane.
-
-### Windows installer
-
-With Wails 3 and NSIS installed:
-
-```powershell
-cd apps\tandemesh-desktop
-wails3 package
-```
-
-The installer includes the desktop shell, plane and agentd. The Windows build is currently unsigned.
-
-### macOS app
-
-With Wails 3 (`go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0`), Xcode and pnpm:
-
-```bash
-cd apps/tandemesh-desktop
-wails3 task darwin:package                      # ad-hoc signed .app for local use
-wails3 task darwin:sign SIGN_IDENTITY="Developer ID Application: ..."
-wails3 task darwin:release SIGN_IDENTITY="Developer ID Application: ..." NOTARY_PROFILE=<profile>
-```
-
-`darwin:package` builds the web console, plane and agentd and bundles them into
-`bin/tandemesh-desktop.app`. `darwin:release` produces a signed, notarized and stapled `.dmg`;
-create the notary profile once with `xcrun notarytool store-credentials <profile>`. Data lives in
-`~/Library/Application Support/Tandemesh`.
+Prefer a single app? The [desktop client](apps/tandemesh-desktop/README.md) starts the plane and
+the daemon for you.
 
 ## Configuration
 
-See `.env.example` for the full list. Common variables:
+Common settings (see [`.env.example`](.env.example) for all of them):
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `TANDEMESH_LISTEN` | `:8080` | HTTP listen address |
 | `TANDEMESH_DB_PATH` | `tandemesh.db` | SQLite file or `postgres://` DSN |
-| `TANDEMESH_AUTH` | `none` | local auth mode |
-| `TANDEMESH_LOCAL_TOKEN` | empty | require a bearer token for browser/API traffic |
-| `TANDEMESH_JOIN_TOKEN` | `dev-join-token` | machine registration token |
-| `TANDEMESH_WORKSPACE` | `off` | prepare a git worktree per run |
+| `TANDEMESH_JOIN_TOKEN` | `dev-join-token` | token machines use to register |
+| `TANDEMESH_LOCAL_TOKEN` | empty | require a bearer token for browser and API traffic |
+| `TANDEMESH_WORKSPACE` | `off` | `on` prepares a Git worktree per run |
 | `TANDEMESH_DATA_DIR` | `~/.tandemesh` | repository cache and run workspaces |
-| `TANDEMESH_TRANSPORT` | `http` | `ws` pushes leases over WebSocket |
-| `TANDEMESH_LAN` | `0` | desktop: listen on `0.0.0.0` instead of loopback |
-| `TANDEMESH_UPDATE_URL` | empty | desktop update manifest URL |
 
-### Local security
+> **Security:** run the plane on loopback or a trusted private network such as Tailscale, never
+> directly on the internet, and change `TANDEMESH_JOIN_TOKEN` before adding other machines.
+> See [SECURITY.md](SECURITY.md).
 
-The default desktop mode binds to `127.0.0.1`, generates a per-install token and injects it through
-the local proxy. LAN mode is opt-in:
+## Status
 
-```powershell
-$env:TANDEMESH_LAN = "1"
-```
+Tandemesh is in early development. The single-user, local workflow is usable today; team
+deployment is in progress. See the [roadmap](ROADMAP.md).
 
-Remote browsers must open the desktop-provided URL with `?token=...` once; the plane sets an
-HttpOnly cookie for subsequent API and WebSocket traffic.
-
-Do not expose the plane directly to the public internet. Use a trusted private network such as
-Tailscale, or a future relay.
-
-## Data
-
-Default desktop data directory on Windows:
-
-```text
-%APPDATA%/Tandemesh/
-  tandemesh.db
-  tandemesh.db-wal
-  tandemesh.db-shm
-  local.token
-  work/
-```
-
-SQLite is the default. Back it up by stopping the plane and copying the database together with its
-`-wal` and `-shm` files, or use SQLite's online backup API.
-
-## Testing
-
-```bash
-go build ./...
-go test ./...
-go vet ./...
-```
-
-For web changes:
-
-```bash
-cd web
-pnpm run build
-pnpm exec tsc --noEmit
-```
-
-## Repository layout
-
-```text
-cmd/tandemesh-plane       control plane
-cmd/tandemesh-agentd      execution host
-cmd/tandemesh             CLI
-internal/domain           types and invariants
-internal/agent            ACP runner and ACP registry
-internal/store            SQLite/Postgres persistence
-internal/api              REST, SSE and WebSocket handlers
-internal/scheduler        lease scheduling
-internal/workspace        repository cache and worktrees
-web/                      React control panel
-apps/tandemesh-desktop    Wails 3 desktop shell
-api/openapi.yaml          API contract
-docs/                     architecture and design documents
-```
-
-## Documentation
-
-- [AGENTS.md](AGENTS.md) — repository rules for contributors and AI agents
-- [ROADMAP.md](ROADMAP.md) — planned milestones
-- [docs/](docs/) — architecture, workflow, desktop, mobile and integration design
-- [docs/workflows.md](docs/workflows.md) — workflow engine reference
-
-All project documentation is written in English.
+By design, Tandemesh does **not** include accounts or seat management, a model gateway or billing,
+or auto-merge.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Commits follow Conventional Commits and the repository
-provides a local `commit-msg` hook.
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for reporting vulnerabilities and the current local security model.
+Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers setup, the repository layout,
+builds, packaging and commit conventions.
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+[Apache-2.0](LICENSE)

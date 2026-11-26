@@ -1,48 +1,53 @@
-# Tandemesh Desktop (Wails 3)
+# Tandemesh Desktop
 
-This is the Wails 3 shell. The web application remains in `../../web` and is not duplicated here.
+A Wails 3 app for Windows and macOS that runs Tandemesh entirely on your machine. It reuses the web
+console from `../../web`; there is no separate desktop UI.
 
-## Behavior
+## What it does
 
-```text
-1. Start tandemesh-plane on a free localhost port
-2. Use %APPDATA%/Tandemesh/tandemesh.db
-3. Serve ../../web/dist through a local HTTP server
-4. Proxy /api, /auth and /ws to the plane
-5. Open the local URL in the Wails window
+1. Starts `tandemesh-plane` on a free loopback port and `tandemesh-agentd` as the local execution
+   host.
+2. Generates a per-install access token and passes it to both.
+3. Serves the web console and proxies `/api`, `/auth` and `/ws` to the plane, so the UI stays
+   same-origin.
+4. Keeps running in the tray when the window is closed; optional start at login.
+5. Allows one instance at a time and stops the plane and daemon when it quits.
+
+## Run from source
+
+From the repository root:
+
+```bash
+make build                    # bin/tandemesh-plane, bin/tandemesh-agentd
+(cd web && pnpm install && pnpm run build)
+cd apps/tandemesh-desktop && go run .
 ```
 
-Build the web UI first:
-
-```powershell
-cd D:\project\orca\web
-pnpm run build
-```
-
-Then:
-
-```powershell
-cd apps\tandemesh-desktop
-go run .
-```
+Packaging (Windows installer, signed and notarized macOS `.dmg`) is described in
+[CONTRIBUTING.md](../../CONTRIBUTING.md#build-and-test).
 
 ## Environment
 
-```text
-TANDEMESH_PLANE_BIN    path to tandemesh-plane
-TANDEMESH_MANAGE_PLANE 0 disables automatic plane startup
-TANDEMESH_PLANE_URL    reuse an already running plane
-TANDEMESH_WEB_DIST     path to web/dist
-TANDEMESH_WEB_URL      dev-server mode; skips bundled web
-```
+| Variable | Purpose |
+|---|---|
+| `TANDEMESH_MANAGE_PLANE=0` | do not start a plane; attach to `TANDEMESH_PLANE_URL` |
+| `TANDEMESH_PLANE_URL` | URL of an already-running plane |
+| `TANDEMESH_PLANE_BIN`, `TANDEMESH_AGENTD_BIN` | override the sidecar paths |
+| `TANDEMESH_WEB_URL` | load the UI from a dev server instead of the bundled build |
+| `TANDEMESH_WEB_DIST` | serve the UI from this directory |
+| `TANDEMESH_LAN=1` | listen on all interfaces for other devices on a trusted network |
+| `TANDEMESH_UPDATE_URL` | update manifest URL (Windows installer) |
 
-## Lifecycle
-`n- Single instance lock on loopback port 47831.
-- Starts tandemesh-plane and tandemesh-agentd; both are killed on normal exit.
-- Set TANDEMESH_AGENTD_BIN to override the agentd path.
-`n## Next
+With LAN mode on, open `http://<this-host>:<port>/?token=...` once from the other device; the
+plane then sets an HttpOnly cookie. The exact URL is printed to the log.
 
-- Start/stop agentd with the same lifecycle.
-- Bundle web/dist into the executable for release.
-- Add single-instance and tray behavior.
-- Wire `wails3 build` packaging.
+## Data
+
+| OS | Path |
+|---|---|
+| Windows | `%APPDATA%\Tandemesh` |
+| macOS | `~/Library/Application Support/Tandemesh` |
+| Linux | `~/.config/Tandemesh` |
+
+The directory holds `tandemesh.db` (with `-wal` and `-shm`), `local.token` and `work/`. Stop the
+app before copying the database for a backup.

@@ -23,15 +23,40 @@ Requirements:
 - Go 1.27+
 - Node 20+
 - pnpm
-- optional: Wails 3, NSIS and a supported ACP agent CLI for desktop/agent testing
+- optional: a supported ACP agent CLI for real execution
+- optional: Wails 3 (`go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0`) for desktop;
+  NSIS on Windows, Xcode on macOS
 
 Install the repository-local Git hook once:
 
-```powershell
-pwsh scripts/setup-git-hooks.ps1
+```bash
+git config core.hooksPath .githooks    # or: pwsh scripts/setup-git-hooks.ps1
 ```
 
-This sets `core.hooksPath=.githooks` and enables Conventional Commit validation.
+This enables Conventional Commit validation.
+
+## Repository layout
+
+```text
+cmd/tandemesh-plane       control plane
+cmd/tandemesh-agentd      execution host
+cmd/tandemesh             CLI
+internal/domain           types and invariants
+internal/agent            ACP runner and ACP registry
+internal/store            SQLite/Postgres persistence
+internal/api              REST, SSE and WebSocket handlers
+internal/scheduler        lease scheduling
+internal/workspace        repository cache and worktrees
+internal/ingress          webhook verification and normalization
+internal/integration      source and write-back adapters
+pkg/plugin                gRPC runner plugin SDK
+web/                      React control panel
+apps/tandemesh-desktop    Wails 3 desktop shell
+apps/mobile               React Native app (Android, iOS, HarmonyOS)
+api/openapi.yaml          API contract
+migrations/               SQL migrations
+deploy/                   Dockerfile, compose and nginx config
+```
 
 ## Build and test
 
@@ -52,18 +77,33 @@ pnpm exec tsc --noEmit
 pnpm run build
 ```
 
-Desktop (Windows):
+Desktop from source (looks for the sidecars in `../../bin` and the UI in `../../web/dist`):
 
-```powershell
+```bash
+make build
+(cd web && pnpm run build)
+cd apps/tandemesh-desktop && go run .
+```
+
+Set `TANDEMESH_WEB_URL=http://127.0.0.1:5173` to load the UI from the Vite dev server, or
+`TANDEMESH_MANAGE_PLANE=0` to attach to a plane you started yourself. Desktop data lives in
+`%APPDATA%\Tandemesh`, `~/Library/Application Support/Tandemesh` or `~/.config/Tandemesh`.
+
+Desktop packaging:
+
+```bash
 cd apps/tandemesh-desktop
-powershell -ExecutionPolicy Bypass -File scripts\build.ps1
-```
 
-Desktop packaging requires Wails 3 and NSIS:
-
-```powershell
+# Windows: NSIS installer (unsigned)
 wails3 package
+
+# macOS: ad-hoc .app, Developer ID signed .app, or notarized .dmg
+wails3 task darwin:package
+wails3 task darwin:sign SIGN_IDENTITY="Developer ID Application: ..."
+wails3 task darwin:release SIGN_IDENTITY="Developer ID Application: ..." NOTARY_PROFILE=<profile>
 ```
+
+Create the notary profile once with `xcrun notarytool store-credentials <profile>`.
 
 All checks must pass before opening a pull request. If a check cannot run in your environment,
 explain why in the pull request.
