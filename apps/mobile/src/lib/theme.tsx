@@ -1,5 +1,6 @@
-import { createContext, useContext, useMemo, useState, type PropsWithChildren } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react'
 import { useColorScheme } from 'react-native'
+import { loadPreference, savePreference } from './preferences'
 
 export type ThemeMode = 'system' | 'light' | 'dark'
 
@@ -86,7 +87,18 @@ const ThemeContext = createContext<ThemeValue | null>(null)
 
 export function ThemeProvider({ children }: PropsWithChildren) {
   const scheme = useColorScheme()
-  const [mode, setMode] = useState<ThemeMode>('system')
+  const [mode, setModeState] = useState<ThemeMode>('system')
+
+  useEffect(() => {
+    void loadPreference('theme').then((value) => {
+      if (value === 'system' || value === 'light' || value === 'dark') setModeState(value)
+    })
+  }, [])
+
+  const setMode = (next: ThemeMode) => {
+    setModeState(next)
+    void savePreference('theme', next)
+  }
   const isDark = mode === 'system' ? scheme !== 'light' : mode === 'dark'
   const colors = isDark ? dark : light
   const value = useMemo(() => ({ mode, setMode, isDark, colors }), [mode, isDark, colors])

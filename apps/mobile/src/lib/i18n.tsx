@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useMemo, useState, type PropsWithChildren } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react'
 import { NativeModules } from 'react-native'
+import { loadPreference, savePreference } from './preferences'
 
 export type Lang = 'en' | 'zh'
 
@@ -142,7 +143,18 @@ interface I18nValue {
 const I18nContext = createContext<I18nValue | null>(null)
 
 export function I18nProvider({ children }: PropsWithChildren) {
-  const [lang, setLang] = useState<Lang>(detectLang)
+  const [lang, setLangState] = useState<Lang>(detectLang)
+
+  useEffect(() => {
+    void loadPreference('language').then((value) => {
+      if (value === 'en' || value === 'zh') setLangState(value)
+    })
+  }, [])
+
+  const setLang = useCallback((next: Lang) => {
+    setLangState(next)
+    void savePreference('language', next)
+  }, [])
   const t = useCallback(
     (key: TranslationKey, params?: Record<string, string | number>) => {
       let text: string = dictionaries[lang][key] ?? dictionaries.en[key] ?? key
