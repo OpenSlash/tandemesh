@@ -1,10 +1,24 @@
 import type { ComponentType } from 'react'
-import { Platform, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 
 export type TabIconName = 'tasks' | 'sessions' | 'approvals' | 'alerts' | 'settings'
 
+const LUCIDE: Record<TabIconName, string> = {
+  tasks: 'List',
+  sessions: 'MessageSquare',
+  approvals: 'CheckCircle2',
+  alerts: 'Bell',
+  settings: 'Settings',
+}
+
 export function TabIcon({ name, active }: { name: TabIconName; active: boolean }) {
   const color = active ? '#f3f4f6' : '#6e7787'
+  {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const lucide = require('lucide-react-native') as Record<string, ComponentType<{ size?: number; color?: string; strokeWidth?: number }>>
+    const Icon = lucide[LUCIDE[name]]
+    if (Icon) return <Icon size={20} color={color} strokeWidth={1.8} />
+  }
   if (name === 'tasks') {
     return (
       <View style={styles.tasks}>

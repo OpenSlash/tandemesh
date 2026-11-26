@@ -14,6 +14,9 @@ importers:
       '@react-native-ohos/async-storage':
         specifier: 1.21.2
         version: 1.21.2(react-native@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(@react-native-community/cli@20.0.0(supports-color@8.1.1)(typescript@5.9.3))(@react-native/metro-config@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.1.1)(supports-color@8.1.1))
+      '@react-native-ohos/react-native-svg':
+        specifier: 15.13.0
+        version: 15.13.0(react-native-svg@15.13.0(react-native@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(@react-native-community/cli@20.0.0(supports-color@8.1.1)(typescript@5.9.3))(@react-native/metro-config@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.1.1)(supports-color@8.1.1))(react@19.1.1))(react-native@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(@react-native-community/cli@20.0.0(supports-color@8.1.1)(typescript@5.9.3))(@react-native/metro-config@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.1.1)(supports-color@8.1.1))(react@19.1.1)
       '@react-native/new-app-screen':
         specifier: 0.82.0
         version: 0.82.0(@types/react@19.3.0)(react-native@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(@react-native-community/cli@20.0.0(supports-color@8.1.1)(typescript@5.9.3))(@react-native/metro-config@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.1.1)(supports-color@8.1.1))(react@19.1.1)
@@ -1202,6 +1205,13 @@ packages:
     resolution: {integrity: sha512-3ArbdtKsRNoao7atKHx6qeQoBfyUByQWWIIRTsdZl7YHGntRntmQfSOh8yoRjZ83NuzT05RJtg3YC3eUkgG1EQ==}
     peerDependencies:
       react-native: ^0.0.0-0 || >=0.60 <1.0
+
+  '@react-native-ohos/react-native-svg@15.13.0':
+    resolution: {integrity: sha512-1AlCa0xg1krOtCkBG7gvsxSySRLy6Rb24hIAN5ZDZreQV57bMrLBmMkEYjYBzCwscdMhb6jPR1QTNADK6XLYxQ==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+      react-native-svg: 15.15.0
 
   '@react-native/assets-registry@0.82.0':
     resolution: {integrity: sha512-SHRZxH+VHb6RwcHNskxyjso6o91Lq0DPgOpE5cDrppn1ziYhI723rjufFgh59RcpH441eci0/cXs/b0csXTtnw==}
@@ -6016,6 +6026,12 @@ snapshots:
       '@react-native-async-storage/async-storage': 1.24.0(react-native@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(@react-native-community/cli@20.0.0(supports-color@8.1.1)(typescript@5.9.3))(@react-native/metro-config@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.1.1)(supports-color@8.1.1))
       merge-options: 3.0.4
       react-native: 0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(@react-native-community/cli@20.0.0(supports-color@8.1.1)(typescript@5.9.3))(@react-native/metro-config@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.1.1)(supports-color@8.1.1)
+
+  '@react-native-ohos/react-native-svg@15.13.0(react-native-svg@15.13.0(react-native@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(@react-native-community/cli@20.0.0(supports-color@8.1.1)(typescript@5.9.3))(@react-native/metro-config@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.1.1)(supports-color@8.1.1))(react@19.1.1))(react-native@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(@react-native-community/cli@20.0.0(supports-color@8.1.1)(typescript@5.9.3))(@react-native/metro-config@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.1.1)(supports-color@8.1.1))(react@19.1.1)':
+    dependencies:
+      react: 19.1.1
+      react-native: 0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(@react-native-community/cli@20.0.0(supports-color@8.1.1)(typescript@5.9.3))(@react-native/metro-config@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.1.1)(supports-color@8.1.1)
+      react-native-svg: 15.13.0(react-native@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(@react-native-community/cli@20.0.0(supports-color@8.1.1)(typescript@5.9.3))(@react-native/metro-config@0.82.0(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.1.1)(supports-color@8.1.1))(react@19.1.1)
 
   '@react-native/assets-registry@0.82.0': {}
 

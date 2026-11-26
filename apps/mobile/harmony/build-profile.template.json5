@@ -43,5 +43,17 @@
         },
       ],
     },
+    {
+      "name": 'svg',
+      "srcPath": './svg',
+      "targets": [
+        {
+          "name": 'default',
+          "applyToProducts": [
+            'default'
+          ],
+        },
+      ],
+    },
   ],
 }

@@ -1,0 +1,79 @@
+/**
+ * MIT License
+ *
+ * Copyright (C) 2025 Huawei Device Co., Ltd.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+#include "SvgMarker.h"
+#include "properties/Rect.h"
+#include "properties/ViewBox.h"
+#include <string>
+#include <cstdlib>
+#include <vector>
+
+namespace rnoh {
+namespace svg {
+
+void SvgMarker::renderMarker(OH_Drawing_Canvas *canvas, const SvgMarkerPosition &position, float strokeWidth) {
+    const auto count = OH_Drawing_CanvasGetSaveCount(canvas);
+    saveAndSetupCanvas(canvas, cTM_);
+
+    if (markerTransform.get() != nullptr) {
+        markerTransform.Reset();
+    }
+    Point origin = position.origin;
+    markerTransform.Translate(origin.x, origin.y);
+    double markerAngle = (markerAttribute_.orient == "auto") ? -1 : std::atof(markerAttribute_.orient.c_str());
+    float degrees = 180 + (markerAngle == -1 ? position.angle : static_cast<float>(markerAngle));
+    // fix me? float rad = deg2rad(angle); this code only in ios
+    markerTransform.PreRotate(degrees, 0, 0);
+
+    if (markerAttribute_.markerUnits == "strokeWidth") {
+        markerTransform.PreScale(strokeWidth / scale_, strokeWidth / scale_, 0, 0);
+    }
+    if (!markerAttribute_.align.empty()) {
+        double width = relativeOnWidth(markerAttribute_.markerWidth);
+        double height = relativeOnHeight(markerAttribute_.markerHeight);
+        Rect eRect(0, 0, width, height);
+        Rect vbRect(markerAttribute_.minX.ConvertToPx(scale_), markerAttribute_.minY.ConvertToPx(scale_),
+                    markerAttribute_.minX.ConvertToPx(scale_) + markerAttribute_.vbWidth.ConvertToPx(scale_),
+                    markerAttribute_.minY.ConvertToPx(scale_) + markerAttribute_.vbHeight.ConvertToPx(scale_));
+        if (vbRect.IsValid()) {
+            drawing::Matrix viewBoxMatrix =
+                ViewBox::getTransform(vbRect, eRect, markerAttribute_.align, markerAttribute_.meetOrSlice);
+            float sx = viewBoxMatrix.GetValue(0);
+            float sy = viewBoxMatrix.GetValue(4);
+            markerTransform.PreScale(sx, sy, 0, 0);
+        }
+    }
+
+    double x = relativeOnWidth(markerAttribute_.refX);
+    double y = relativeOnHeight(markerAttribute_.refY);
+    markerTransform.PreTranslate(-x, -y);
+    OH_Drawing_CanvasConcatMatrix(canvas, markerTransform.get());
+
+    OnDrawTraversed(canvas);
+
+    OH_Drawing_CanvasRestoreToCount(canvas, count);
+}
+
+} // namespace svg
+} // namespace rnoh

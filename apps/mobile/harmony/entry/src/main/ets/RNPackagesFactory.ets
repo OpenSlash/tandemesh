@@ -7,7 +7,8 @@
 
 import type {RNPackageContext, RNPackage} from '@rnoh/react-native-openharmony/ts';
 import { AsyncStoragePackage } from '@react-native-ohos/async-storage';
+import { SvgPackage } from '@react-native-ohos/react-native-svg';
 
 export function createRNPackages(ctx: RNPackageContext): RNPackage[] {
-  return [new AsyncStoragePackage(ctx)];
+  return [new AsyncStoragePackage(ctx), new SvgPackage(ctx)];
 }

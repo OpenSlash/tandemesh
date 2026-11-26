@@ -1,4 +1,5 @@
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
+const path = require('path');
 const { createHarmonyMetroConfig } = require('@react-native-oh/react-native-harmony/metro.config');
 
 /**
@@ -8,6 +9,11 @@ const { createHarmonyMetroConfig } = require('@react-native-oh/react-native-harm
  * @type {import('@react-native/metro-config').MetroConfig}
  */
 const config = {
+  resolve: {
+    extraNodeModules: {
+      'react-native-svg': path.resolve(__dirname, 'node_modules/@react-native-ohos/react-native-svg'),
+    },
+  },
   transformer: {
     getTransformOptions: async () => ({
       transform: {
