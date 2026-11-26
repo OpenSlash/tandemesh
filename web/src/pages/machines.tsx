@@ -8,6 +8,7 @@ import { cn } from '../lib/utils'
 import { Button } from '../components/ui/button'
 import { ConnectMachineDialog } from '../components/connect-machine-dialog'
 import { MachinesTabs } from '../components/machines-tabs'
+import { AgentIcon } from '../components/agent-icon'
 
 export default function MachinesPage() {
   const { t } = useI18n()
@@ -17,6 +18,8 @@ export default function MachinesPage() {
     refetchInterval: 10000,
   })
   const machines = data?.items ?? []
+  const { data: catalogData } = useQuery({ queryKey: ['runtimes'], queryFn: api.runtimes })
+  const registryIdOf = new Map((catalogData?.items ?? []).map((runtime) => [runtime.id, runtime.registryId]))
   const now = Date.now()
 
   return (
@@ -83,9 +86,10 @@ export default function MachinesPage() {
                     {runtimes.map(([name, version]) => (
                       <span
                         key={name}
-                        className="rounded bg-panel2 px-1.5 py-0.5 font-mono text-[10.5px] text-fg/80"
+                        className="inline-flex items-center gap-1 rounded bg-panel2 px-1.5 py-0.5 font-mono text-[10.5px] text-fg/80"
                         title={version}
                       >
+                        <AgentIcon registryId={registryIdOf.get(name) ?? (machine.runtimeDetails ?? []).find((d) => d.id === name)?.registryId} name={name} className="h-3 w-3" />
                         {name} <span className="text-muted">{version.slice(0, 18)}</span>
                       </span>
                     ))}
@@ -93,9 +97,10 @@ export default function MachinesPage() {
                       <Link
                         key={item.id}
                         to={`/machines/${machine.id}`}
-                        className="rounded bg-warn/10 px-1.5 py-0.5 font-mono text-[10.5px] text-warn hover:underline"
+                        className="inline-flex items-center gap-1 rounded bg-warn/10 px-1.5 py-0.5 font-mono text-[10.5px] text-warn hover:underline"
                         title={t('machines.adapterMissingHint', { launcher: item.launcher ?? '' })}
                       >
+                        <AgentIcon registryId={registryIdOf.get(item.id)} name={item.id} className="h-3 w-3" />
                         {item.id} <span className="font-sans">· {t('machines.statusAdapterMissing')}</span>
                       </Link>
                     ))}

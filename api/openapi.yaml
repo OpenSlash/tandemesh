@@ -187,6 +187,21 @@ paths:
         "400": { description: Invalid registry id or version }
         "404": { description: Machine not found }
         "409": { description: Machine is not online }
+  /api/v1/acp/icons/{id}:
+    get:
+      summary: Get an ACP Registry agent's icon
+      description: Fetched from the registry once and cached by the plane, so icons work offline. Only plain SVGs are served.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Single-colour SVG
+          content:
+            image/svg+xml:
+              schema: { type: string }
+        "400": { description: Invalid registry id }
+        "404": { description: The registry lists no icon for this agent }
+        "502": { description: The registry or icon could not be fetched or is unsafe }
   /api/v1/machine-jobs/{id}:
     get:
       summary: Get a machine job

@@ -8,6 +8,7 @@ import { cn } from '../lib/utils'
 import { isLocalHost } from '../lib/hosts'
 import { Input } from '../components/ui/input'
 import { MachinesTabs } from '../components/machines-tabs'
+import { AgentIcon } from '../components/agent-icon'
 
 function isOnline(machine: { status: string; lastSeen: string }) {
   return machine.status === 'online' && Date.now() - new Date(machine.lastSeen).getTime() < 45000
@@ -129,6 +130,7 @@ export default function AgentCatalogPage() {
           const fromThisRegistry = !!row.registryId && status?.registryId === row.registryId
           return (
             <div key={row.registryId ?? row.backend} className="flex items-start gap-3 px-3 py-2.5">
+              <AgentIcon registryId={row.registryId} name={row.name} className="mt-0.5 text-fg/80" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[12.5px] font-medium">{row.name}</span>

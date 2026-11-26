@@ -61,3 +61,38 @@ func TestNPMBin(t *testing.T) {
 		})
 	}
 }
+
+func TestSafeSVG(t *testing.T) {
+	tests := []struct {
+		name string
+		svg  string
+		safe bool
+	}{
+		{"plain path", `<svg viewBox="0 0 24 24"><path fill="currentColor" d="M0 0h24v24H0z"/></svg>`, true},
+		{"not svg", `<html></html>`, false},
+		{"script", `<svg><script>alert(1)</script></svg>`, false},
+		{"event handler", `<svg onload="alert(1)"></svg>`, false},
+		{"javascript url", `<svg><a href="javascript:alert(1)"/></svg>`, false},
+		{"external href", `<svg><image href="https://evil.example/x.png"/></svg>`, false},
+		{"foreign object", `<svg><foreignObject/></svg>`, false},
+		{"entity", `<!DOCTYPE svg [<!ENTITY x "y">]><svg/>`, false},
+		{"public doctype", `<?xml version="1.0"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg/>`, true},
+	}
+	for _, tc := range tests {
+		if got := SafeSVG([]byte(tc.svg)); got != tc.safe {
+			t.Errorf("%s: SafeSVG = %v, want %v", tc.name, got, tc.safe)
+		}
+	}
+}
+
+func TestACPIconServesCache(t *testing.T) {
+	dir := t.TempDir()
+	want := []byte(`<svg viewBox="0 0 1 1"/>`)
+	if err := os.WriteFile(filepath.Join(dir, "cached.svg"), want, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ACPIcon(t.Context(), "cached", dir)
+	if err != nil || string(got) != string(want) {
+		t.Fatalf("ACPIcon = %q, %v; want the cached file without a download", got, err)
+	}
+}

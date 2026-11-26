@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bot, Plus, Trash2, AlertTriangle } from 'lucide-react'
+import { Bot, Check, ChevronDown, Plus, Trash2, AlertTriangle } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { api, type Agent, type Machine } from '../lib/api'
 import { useI18n } from '../lib/i18n'
@@ -8,6 +8,8 @@ import { useWorkspace } from '../lib/workspace'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Dialog, DialogContent, DialogTrigger } from '../components/ui/dialog'
+import { AgentIcon, registryIdsByBackend } from '../components/agent-icon'
+import { isLocalHost } from '../lib/hosts'
 
 const MODEL_OPTIONS: Record<string, string[]> = {
   claude: ['claude-sonnet-4-5', 'claude-opus-4-1', 'claude-haiku-4-5'],
@@ -35,6 +37,8 @@ export default function AgentsPage() {
     refetchInterval: 15000,
   })
   const machines = machinesData?.items ?? []
+  const { data: runtimeCatalog } = useQuery({ queryKey: ['runtimes'], queryFn: api.runtimes })
+  const registryIds = registryIdsByBackend(runtimeCatalog?.items ?? [], machines)
   const available = new Set(
     machines.flatMap((machine) => [...machine.agents, ...Object.keys(machine.runtimes ?? {})]),
   )
@@ -172,6 +176,7 @@ export default function AgentsPage() {
                   machines={machines}
                   backend={backend}
                   machineId={machineId}
+                  registryIds={registryIds}
                   onChange={(nextBackend, nextMachine) => {
                     setBackend(nextBackend)
                     setMachineId(nextMachine)
@@ -313,7 +318,8 @@ export default function AgentsPage() {
                 .join(', ')}
             </p>
             <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
-              <span className="rounded border border-line2 px-1.5 py-0.5 text-muted">
+              <span className="inline-flex items-center gap-1 rounded border border-line2 px-1.5 py-0.5 text-muted">
+                <AgentIcon registryId={registryIds.get(a.backend)} name={a.backend} className="h-3 w-3" />
                 {a.backend}
                 {a.model ? ` · ${a.model}` : ''}
               </span>
@@ -363,6 +369,7 @@ export default function AgentsPage() {
                 machines={machines}
                 backend={editBackend}
                 machineId={editMachineId}
+                registryIds={registryIds}
                 onChange={(nextBackend, nextMachine) => {
                   setEditBackend(nextBackend)
                   setEditMachineId(nextMachine)
@@ -490,55 +497,86 @@ function BackendHostSelect({
   machines,
   backend,
   machineId,
+  registryIds,
   onChange,
 }: {
   machines: Machine[]
   backend: string
   machineId: string
+  registryIds: Map<string, string>
   onChange: (backend: string, machineId: string) => void
 }) {
   const { t } = useI18n()
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    // Escape is left to the surrounding dialog, which closes on it.
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+
   const groups = machines
     .filter((machine) => machine.status === 'online' || machine.id === machineId)
     .map((machine) => ({
-      machine,
+      id: machine.id,
+      label: isLocalHost(machine) ? t('acp.localHost', { name: machine.name }) : machine.name,
       backends: [...new Set([...machine.agents, ...Object.keys(machine.runtimes ?? {})])],
     }))
     .filter((group) => group.backends.length > 0)
   const any = [...new Set(groups.flatMap((group) => group.backends))].sort()
   const fallback = any.length > 0 ? any : ['claude', 'codex', 'opencode', 'deepseek', 'gemini', 'cursor', 'qwen']
-  const current = machineId ? `${machineId}::${backend}` : `any::${backend}`
-  const options = new Set<string>(fallback.map((value) => `any::${value}`))
-  for (const group of groups) {
-    for (const value of group.backends) options.add(`${group.machine.id}::${value}`)
-  }
+  const sections = [{ id: '', label: t('agents.anyCompatibleHost'), backends: fallback }, ...groups]
+  const selectedHost = groups.find((group) => group.id === machineId)
+  const icon = (value: string) => <AgentIcon registryId={registryIds.get(value)} name={value} className="h-3.5 w-3.5" />
 
   return (
-    <select
-      className="mt-1 h-8 w-full rounded-md border border-line2 bg-panel px-2 text-[13px]"
-      value={options.has(current) ? current : `any::${backend}`}
-      onChange={(event) => {
-        const [nextMachine, nextBackend] = event.target.value.split('::')
-        onChange(nextBackend, nextMachine === 'any' ? '' : nextMachine)
-      }}
-    >
-      <optgroup label={t('agents.anyCompatibleHost')}>
-        {fallback.map((value) => (
-          <option key={`any::${value}`} value={`any::${value}`}>
-            {value} · {t('agents.anyHost')}
-          </option>
-        ))}
-      </optgroup>
-      {groups.map((group) => (
-        <optgroup key={group.machine.id} label={group.machine.name}>
-          {group.backends.map((value) => (
-            <option key={`${group.machine.id}::${value}`} value={`${group.machine.id}::${value}`}>
-              {value}
-            </option>
+    <div ref={rootRef} className="relative mt-1">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="flex h-8 w-full items-center gap-2 rounded-md border border-line2 bg-panel px-2 text-left text-[13px] text-fg"
+      >
+        {icon(backend)}
+        <span className="truncate">{backend}</span>
+        <span className="truncate text-[11.5px] text-muted">· {selectedHost?.label ?? t('agents.anyHost')}</span>
+        <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 text-muted" />
+      </button>
+      {open && (
+        <div role="listbox" className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border border-line2 bg-panel py-1 shadow-lg">
+          {sections.map((section) => (
+            <div key={section.id || 'any'}>
+              <p className="px-2 pb-0.5 pt-1.5 text-[10px] uppercase tracking-wider text-muted/70">{section.label}</p>
+              {section.backends.map((value) => {
+                const selected = value === backend && section.id === (selectedHost ? machineId : '')
+                return (
+                  <button
+                    key={`${section.id}::${value}`}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => {
+                      onChange(value, section.id)
+                      setOpen(false)
+                    }}
+                    className={`flex w-full items-center gap-2 px-2 py-1.5 text-left text-[12.5px] hover:bg-panel2 ${selected ? 'bg-panel2 text-fg' : 'text-fg/90'}`}
+                  >
+                    {icon(value)}
+                    {value}
+                    {selected && <Check className="ml-auto h-3.5 w-3.5 text-accent2" />}
+                  </button>
+                )
+              })}
+            </div>
           ))}
-        </optgroup>
-      ))}
-    </select>
+        </div>
+      )}
+    </div>
   )
 }
 

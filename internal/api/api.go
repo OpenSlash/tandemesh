@@ -118,6 +118,7 @@ func (s *Server) Router() http.Handler {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/usage/trend", s.usageTrend)
 		r.Get("/acp/registry", s.acpRegistry)
+		r.Get("/acp/icons/{id}", s.acpIcon)
 		r.Post("/workflow-artifacts/cleanup", s.cleanupWorkflowArtifacts)
 		r.Get("/version", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]string{"version": Version})

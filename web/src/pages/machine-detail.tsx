@@ -15,6 +15,7 @@ import {
 import { api, waitForMachineJob, type MachineJob, type RuntimeInfo, type RuntimeStatus } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { cn } from '../lib/utils'
+import { AgentIcon } from '../components/agent-icon'
 
 export default function MachineDetailPage() {
   const { t } = useI18n()
@@ -191,10 +192,11 @@ export default function MachineDetailPage() {
                     key={status.id}
                     title={status.launcher}
                     className={cn(
-                      'rounded px-2 py-1 font-mono text-[10.5px]',
+                      'inline-flex items-center gap-1.5 rounded px-2 py-1 font-mono text-[10.5px]',
                       status.status === 'ready' ? 'bg-panel2 text-muted' : 'bg-warn/10 text-warn',
                     )}
                   >
+                    <AgentIcon registryId={status.registryId} name={status.id} className="h-3 w-3" />
                     {status.id} <span className="text-fg/60">{status.version}</span>
                     {status.source && status.source !== 'path' && (
                       <span className="ml-1 text-muted/70">· {sourceLabel(t, status.source)}</span>
@@ -257,7 +259,7 @@ function RuntimeRow({ runtime, status, machineId }: { runtime: RuntimeInfo; stat
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-line/60 px-3 py-2.5 last:border-0">
-      <Terminal className="h-3.5 w-3.5 text-muted" />
+      <AgentIcon registryId={status.registryId ?? runtime.registryId} name={runtime.name} className="h-3.5 w-3.5 text-fg/80" />
       <span className="text-[12.5px] font-medium">{runtime.name}</span>
       <span className="font-mono text-[10.5px] text-muted">{runtime.id}</span>
       {runtime.acp && <span className="rounded bg-accent/10 px-1 py-0.5 text-[9.5px] text-accent2">ACP</span>}
