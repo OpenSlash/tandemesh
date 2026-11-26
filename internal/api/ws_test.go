@@ -137,3 +137,39 @@ func writeMessage(t *testing.T, ctx context.Context, conn *websocket.Conn, msg h
 		t.Fatalf("write: %v", err)
 	}
 }
+
+func TestWebSocketJoinTokenWithLocalToken(t *testing.T) {
+	st, err := store.Open(filepath.Join(t.TempDir(), "ws3.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	_ = st.Migrate(context.Background())
+
+	cfg := config.Config{JoinToken: "join", LocalToken: "desk-token"}
+	srv := New(cfg, st, nil, hub.New(), testRegistry(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	ts := httptest.NewServer(srv.Router())
+	t.Cleanup(ts.Close)
+	base := "ws" + strings.TrimPrefix(ts.URL, "http") + "/ws?machineId=m1&token="
+
+	tests := []struct {
+		name  string
+		token string
+		ok    bool
+	}{
+		{"join token accepted", "join", true},
+		{"local token is not a join token", "desk-token", false},
+		{"bad token rejected", "bad", false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			conn, _, err := websocket.Dial(context.Background(), base+tc.token, nil)
+			if conn != nil {
+				_ = conn.Close(websocket.StatusNormalClosure, "")
+			}
+			if (err == nil) != tc.ok {
+				t.Fatalf("dial err = %v, want ok=%v", err, tc.ok)
+			}
+		})
+	}
+}

@@ -19,6 +19,12 @@ func (s *Server) localTokenAuth(next http.Handler) http.Handler {
 		case strings.HasPrefix(r.URL.Path, "/api/v1/agentd/"):
 			next.ServeHTTP(w, r)
 			return
+		case r.URL.Path == "/ws":
+			// The daemon socket authenticates with the join token in its own
+			// `token` query parameter, which would otherwise be mistaken for
+			// a local token and rejected.
+			next.ServeHTTP(w, r)
+			return
 		case r.URL.Path == "/api/v1/mobile/pairings/exchange":
 			next.ServeHTTP(w, r)
 			return
