@@ -37,7 +37,7 @@ func main() {
 				if os.Getenv("TANDEMESH_LAN") == "1" {
 					log.Printf("LAN access enabled. Open http://<this-host>:%d/?token=%s once to set the access cookie.", plane.Port, localToken)
 				}
-				agentd := startAgentd(planeURL, dataDirPath())
+				agentd := startAgentd(planeURL, dataDirPath(), localToken)
 				defer agentd.Stop()
 			}
 		}

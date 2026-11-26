@@ -81,10 +81,11 @@ func main() {
 	dataDir := flag.String("data-dir", env("TANDEMESH_DATA_DIR", ""), "workspace data directory")
 	gitPath := flag.String("git", env("TANDEMESH_GIT", ""), "git executable")
 	retain := flag.Duration("retain", 7*24*time.Hour, "workspace retention")
+	localToken := flag.String("local-token", os.Getenv("TANDEMESH_LOCAL_TOKEN"), "plane local token (desktop-managed planes)")
 	flag.Parse()
 
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	client := &http.Client{Timeout: 35 * time.Second}
+	client := newPlaneClient(*plane, *localToken, 35*time.Second)
 
 	customACP, err := agent.LoadACPBackends(*acpBackendsFile)
 	if err != nil {

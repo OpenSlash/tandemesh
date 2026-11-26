@@ -40,7 +40,7 @@ func dataDirPath() string {
 	return filepath.Join(home, "Tandemesh")
 }
 
-func startAgentd(planeURL, dataDir string) *localAgentd {
+func startAgentd(planeURL, dataDir, localToken string) *localAgentd {
 	binary := findAgentdBinary()
 	if binary == "" {
 		log.Printf("tandemesh-agentd not found; desktop will run without a local execution host")
@@ -59,6 +59,8 @@ func startAgentd(planeURL, dataDir string) *localAgentd {
 		"-codex-acp-command", "codex-acp",
 		"-workdir", workdir,
 	)
+	// Passed through the environment so the token stays out of process listings.
+	cmd.Env = append(os.Environ(), "TANDEMESH_LOCAL_TOKEN="+localToken)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
