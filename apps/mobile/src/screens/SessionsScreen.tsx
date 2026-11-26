@@ -16,11 +16,13 @@ import { TandemeshClient, type AgentSession } from '../lib/api'
 import { useSession } from '../lib/SessionContext'
 import { useWorkspace } from '../lib/WorkspaceContext'
 import { useRouter } from '../lib/RouterContext'
+import { useI18n } from '../lib/i18n'
 
 export function SessionsScreen() {
   const { host, token } = useSession()
   const { workspace } = useWorkspace()
   const router = useRouter()
+  const { t } = useI18n()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [sessions, setSessions] = useState<AgentSession[]>([])
   const [error, setError] = useState('')
@@ -72,30 +74,30 @@ export function SessionsScreen() {
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.brand}>Tandemesh</Text>
-          <Text style={styles.title}>Sessions</Text>
+          <Text style={styles.title}>{t('sessions.title')}</Text>
         </View>
         <Pressable style={styles.newButton} onPress={() => setNewOpen(true)}>
-          <Text style={styles.newButtonText}>New session</Text>
+          <Text style={styles.newButtonText}>{t('sessions.new')}</Text>
         </Pressable>
       </View>
 
       <Modal visible={newOpen} transparent animationType="fade" onRequestClose={() => setNewOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setNewOpen(false)}>
           <View style={styles.dialog}>
-            <Text style={styles.dialogTitle}>New session</Text>
+            <Text style={styles.dialogTitle}>{t('sessions.newTitle')}</Text>
             <TextInput
               value={newTitle}
               onChangeText={setNewTitle}
-              placeholder="Session title"
+              placeholder={t('sessions.titlePlaceholder')}
               placeholderTextColor="#6b7280"
               style={styles.input}
             />
             <View style={styles.dialogActions}>
               <Pressable style={styles.cancel} onPress={() => setNewOpen(false)}>
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={styles.cancelText}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable style={styles.create} disabled={creating} onPress={() => void create()}>
-                <Text style={styles.createText}>{creating ? 'Creating…' : 'Create'}</Text>
+                <Text style={styles.createText}>{creating ? t('common.creating') : t('common.create')}</Text>
               </Pressable>
             </View>
           </View>
@@ -125,7 +127,7 @@ export function SessionsScreen() {
           }
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text style={styles.empty}>No agent sessions yet.</Text>
+              <Text style={styles.empty}>{t('sessions.empty')}</Text>
             </View>
           }
           renderItem={({ item }) => (

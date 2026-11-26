@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, FlatList, Pressable, RefreshControl,  StyleSheet, Text, View } from 'react-native'
 import { Screen } from '../components/Screen'
 import { TandemeshClient } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 import { useSession } from '../lib/SessionContext'
 import { useWorkspace } from '../lib/WorkspaceContext'
 
@@ -14,6 +15,7 @@ interface Notification {
 
 export function NotificationsScreen() {
   const { host, token } = useSession()
+  const { t } = useI18n()
   const { workspace } = useWorkspace()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [items, setItems] = useState<Notification[]>([])
@@ -69,7 +71,7 @@ export function NotificationsScreen() {
     <Screen>
       <View style={styles.header}>
         <Text style={styles.brand}>Tandemesh</Text>
-        <Text style={styles.title}>Notifications</Text>
+        <Text style={styles.title}>{t('notifications.title')}</Text>
       </View>
       {loading ? (
         <View style={styles.center}>
@@ -87,7 +89,7 @@ export function NotificationsScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor="#d6d9e0" />}
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text style={styles.empty}>Nothing new.</Text>
+              <Text style={styles.empty}>{t('notifications.empty')}</Text>
             </View>
           }
           renderItem={({ item }) => (

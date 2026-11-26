@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, FlatList, Pressable, RefreshControl,  StyleSheet, Text, View } from 'react-native'
 import { Screen } from '../components/Screen'
 import { TandemeshClient } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 import { useSession } from '../lib/SessionContext'
 import { useWorkspace } from '../lib/WorkspaceContext'
 
@@ -15,6 +16,7 @@ interface Approval {
 
 export function ApprovalsScreen() {
   const { host, token } = useSession()
+  const { t } = useI18n()
   const { workspace } = useWorkspace()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [items, setItems] = useState<Approval[]>([])
@@ -70,7 +72,7 @@ export function ApprovalsScreen() {
     <Screen>
       <View style={styles.header}>
         <Text style={styles.brand}>Tandemesh</Text>
-        <Text style={styles.title}>Approvals</Text>
+        <Text style={styles.title}>{t('approvals.title')}</Text>
       </View>
       {loading ? (
         <View style={styles.center}>
@@ -88,7 +90,7 @@ export function ApprovalsScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor="#d6d9e0" />}
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text style={styles.empty}>No pending approvals.</Text>
+              <Text style={styles.empty}>{t('approvals.empty')}</Text>
             </View>
           }
           renderItem={({ item }) => (

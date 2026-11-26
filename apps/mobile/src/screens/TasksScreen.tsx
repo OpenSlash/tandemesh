@@ -15,11 +15,13 @@ import { TandemeshClient, type Task } from '../lib/api'
 import { useSession } from '../lib/SessionContext'
 import { useWorkspace } from '../lib/WorkspaceContext'
 import { useRouter } from '../lib/RouterContext'
+import { useI18n } from '../lib/i18n'
 
 export function TasksScreen() {
   const { host, token } = useSession()
   const { workspace, workspaces, selectWorkspace } = useWorkspace()
   const router = useRouter()
+  const { t } = useI18n()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [tasks, setTasks] = useState<Task[]>([])
   const [error, setError] = useState('')
@@ -60,10 +62,10 @@ export function TasksScreen() {
 
       <View style={styles.filters}>
         {[
-          ['', 'All'],
-          ['open', 'Open'],
-          ['in_progress', 'In progress'],
-          ['done', 'Done'],
+          ['', t('tasks.filter.all')],
+          ['open', t('tasks.filter.open')],
+          ['in_progress', t('tasks.filter.progress')],
+          ['done', t('tasks.filter.done')],
         ].map(([value, label]) => (
           <Pressable
             key={value}
@@ -122,7 +124,7 @@ export function TasksScreen() {
           }
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text style={styles.empty}>No tasks in this workspace.</Text>
+              <Text style={styles.empty}>{t('tasks.empty')}</Text>
             </View>
           }
           renderItem={({ item }) => (

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { TabIcon, type TabIconName } from './TabIcon'
+import { useI18n, type TranslationKey } from '../lib/i18n'
 
 export interface AppTabItem {
   key: string
@@ -75,9 +76,10 @@ export function AppTabBar({
   insets,
   badges,
 }: BottomTabBarProps & { badges?: Record<string, number> }) {
+  const { t } = useI18n()
   const items = state.routes.map((route) => ({
     key: route.key,
-    label: TAB_META[route.name]?.label ?? route.name,
+    label: TAB_META[route.name] ? t(`tabs.${TAB_META[route.name].label.toLowerCase()}` as TranslationKey) : route.name,
     icon: TAB_META[route.name]?.icon ?? 'tasks',
     badge: badges?.[route.name],
   }))

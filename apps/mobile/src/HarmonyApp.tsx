@@ -15,6 +15,7 @@ import { TandemeshClient, type Workspace } from './lib/api'
 import { SessionContext } from './lib/SessionContext'
 import { WorkspaceContext } from './lib/WorkspaceContext'
 import { RouterContext, type RouteName } from './lib/RouterContext'
+import { useI18n } from './lib/i18n'
 import { clearSession, loadSession, saveSession, type MobileSession } from './lib/session'
 
 type Tab = 'tasks' | 'sessions' | 'approvals' | 'notifications' | 'settings'
@@ -53,6 +54,7 @@ export default function HarmonyApp() {
 }
 
 function Home({ session, onSignOut }: { session: MobileSession; onSignOut: () => void }) {
+  const { t } = useI18n()
   const [client] = useState(() => new TandemeshClient(session.host, session.token))
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [workspaceId, setWorkspaceId] = useState('')
@@ -115,11 +117,11 @@ function Home({ session, onSignOut }: { session: MobileSession; onSignOut: () =>
   const { width, height } = useWindowDimensions()
   const wide = width >= 720 && width > height
   const tabs: AppTabItem[] = [
-    { key: 'tasks', label: 'Tasks', icon: 'tasks' },
-    { key: 'sessions', label: 'Sessions', icon: 'sessions' },
-    { key: 'approvals', label: 'Approvals', icon: 'approvals' },
-    { key: 'notifications', label: 'Alerts', icon: 'alerts', badge: unread },
-    { key: 'settings', label: 'Settings', icon: 'settings' },
+    { key: 'tasks', label: t('tabs.tasks'), icon: 'tasks' },
+    { key: 'sessions', label: t('tabs.sessions'), icon: 'sessions' },
+    { key: 'approvals', label: t('tabs.approvals'), icon: 'approvals' },
+    { key: 'notifications', label: t('tabs.alerts'), icon: 'alerts', badge: unread },
+    { key: 'settings', label: t('tabs.settings'), icon: 'settings' },
   ]
   const tabBar = (
     <AppTabBarView items={tabs} active={tab} onChange={(key) => setTab(key as Tab)} bottomInset={18} />
