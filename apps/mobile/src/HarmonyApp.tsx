@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { ActivityIndicator, Pressable, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { useEffect, useMemo, useState } from 'react'
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { AppTabBarView, type AppTabItem } from './components/AppTabBar'
 import { PairScreen } from './screens/PairScreen'
 import { TasksScreen } from './screens/TasksScreen'
@@ -16,6 +16,8 @@ import { SessionContext } from './lib/SessionContext'
 import { WorkspaceContext } from './lib/WorkspaceContext'
 import { RouterContext, type RouteName } from './lib/RouterContext'
 import { useI18n } from './lib/i18n'
+import { useTheme, type ThemeColors } from './lib/theme'
+import { ThemedStatusBar } from './components/ThemedStatusBar'
 import { clearSession, loadSession, saveSession, type MobileSession } from './lib/session'
 
 type Tab = 'tasks' | 'sessions' | 'approvals' | 'notifications' | 'settings'
@@ -26,6 +28,8 @@ interface RouteState {
 }
 
 export default function HarmonyApp() {
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
   const [session, setSession] = useState<MobileSession | null | undefined>(undefined)
 
   useEffect(() => {
@@ -35,7 +39,7 @@ export default function HarmonyApp() {
   if (session === undefined) {
     return (
       <View style={styles.center}>
-        <StatusBar barStyle="light-content" backgroundColor="#07080f" />
+        <ThemedStatusBar />
         <ActivityIndicator color="#d6d9e0" />
       </View>
     )
@@ -55,6 +59,8 @@ export default function HarmonyApp() {
 
 function Home({ session, onSignOut }: { session: MobileSession; onSignOut: () => void }) {
   const { t } = useI18n()
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
   const [client] = useState(() => new TandemeshClient(session.host, session.token))
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [workspaceId, setWorkspaceId] = useState('')
@@ -151,7 +157,7 @@ function Home({ session, onSignOut }: { session: MobileSession; onSignOut: () =>
       <WorkspaceContext.Provider value={{ workspace, workspaces, selectWorkspace: setWorkspaceId }}>
         <RouterContext.Provider value={router}>
           <View style={styles.screen}>
-            <StatusBar barStyle="light-content" backgroundColor="#07080f" />
+            <ThemedStatusBar />
             {wide && !route ? (
               <View style={styles.wide}>
                 {tabBar}
@@ -170,12 +176,12 @@ function Home({ session, onSignOut }: { session: MobileSession; onSignOut: () =>
   )
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#07080f', paddingTop: 32 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#07080f', paddingTop: 32 },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.background, paddingTop: 32 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background, paddingTop: 32 },
   body: { flex: 1 },
   wide: { flex: 1, flexDirection: 'row' },
-  error: { color: '#f87171', fontSize: 12 },
+  error: { color: c.danger, fontSize: 12 },
   back: { paddingHorizontal: 16, paddingVertical: 10 },
-  backText: { color: '#8fb7e0', fontSize: 13 },
+  backText: { color: c.textMuted, fontSize: 13 },
 })

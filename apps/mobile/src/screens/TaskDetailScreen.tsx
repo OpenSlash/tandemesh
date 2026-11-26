@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   Pressable,
@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import { TandemeshClient, type Run, type Task, type TaskComment } from '../lib/api'
 import { useRouter } from '../lib/RouterContext'
+import { useTheme, type ThemeColors } from '../lib/theme'
 import { useSession } from '../lib/SessionContext'
 
 const STATUSES: { value: string; label: string }[] = [
@@ -20,6 +21,9 @@ const STATUSES: { value: string; label: string }[] = [
 
 export function TaskDetailScreen() {
   const { params } = useRouter()
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
+
   const id = params?.id ?? ''
   const { host, token } = useSession()
   const router = useRouter()
@@ -165,41 +169,41 @@ export function TaskDetailScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#07080f' },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.background },
   content: { padding: 20, paddingBottom: 40 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#07080f', padding: 24 },
-  error: { color: '#f87171', fontSize: 12, marginTop: 12 },
-  title: { color: '#f3f4f6', fontSize: 22, fontWeight: '600', lineHeight: 30 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background, padding: 24 },
+  error: { color: c.danger, fontSize: 12, marginTop: 12 },
+  title: { color: c.text, fontSize: 22, fontWeight: '600', lineHeight: 30 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
-  badge: { overflow: 'hidden', borderRadius: 5, backgroundColor: '#1a1f2b', color: '#c7ccd8', paddingHorizontal: 7, paddingVertical: 3, fontSize: 11 },
-  id: { color: '#6e7787', fontSize: 11 },
+  badge: { overflow: 'hidden', borderRadius: 5, backgroundColor: '#1a1f2b', color: c.textSecondary, paddingHorizontal: 7, paddingVertical: 3, fontSize: 11 },
+  id: { color: c.textSoft, fontSize: 11 },
   statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
   statusButton: { borderRadius: 7, borderWidth: 1, borderColor: '#2a3040', paddingHorizontal: 11, paddingVertical: 7 },
-  statusActive: { borderColor: '#6b7a96', backgroundColor: '#1a2130' },
-  statusText: { color: '#d7dbe4', fontSize: 12 },
-  section: { color: '#f3f4f6', fontSize: 15, fontWeight: '600', marginTop: 28, marginBottom: 8 },
-  empty: { color: '#8b94a7', fontSize: 12 },
-  run: { borderRadius: 8, borderWidth: 1, borderColor: '#202433', backgroundColor: '#10131c', padding: 12, marginBottom: 8 },
-  runStatus: { color: '#f3f4f6', fontSize: 13 },
-  runMeta: { color: '#8b94a7', fontSize: 11, marginTop: 4 },
-  comment: { borderRadius: 8, backgroundColor: '#10131c', padding: 12, marginBottom: 8 },
-  commentMeta: { color: '#6e7787', fontSize: 10.5, marginBottom: 4 },
-  commentBody: { color: '#d7dbe4', fontSize: 12, lineHeight: 18 },
+  statusActive: { borderColor: c.borderStrong, backgroundColor: c.surfaceAlt },
+  statusText: { color: c.textSecondary, fontSize: 12 },
+  section: { color: c.text, fontSize: 15, fontWeight: '600', marginTop: 28, marginBottom: 8 },
+  empty: { color: c.textMuted, fontSize: 12 },
+  run: { borderRadius: 8, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, padding: 12, marginBottom: 8 },
+  runStatus: { color: c.text, fontSize: 13 },
+  runMeta: { color: c.textMuted, fontSize: 11, marginTop: 4 },
+  comment: { borderRadius: 8, backgroundColor: c.surface, padding: 12, marginBottom: 8 },
+  commentMeta: { color: c.textSoft, fontSize: 10.5, marginBottom: 4 },
+  commentBody: { color: c.textSecondary, fontSize: 12, lineHeight: 18 },
   input: {
     marginTop: 8,
     minHeight: 76,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#262b3a',
-    backgroundColor: '#0b0d14',
-    color: '#f3f4f6',
+    borderColor: c.borderStrong,
+    backgroundColor: c.surfaceAlt,
+    color: c.text,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
     textAlignVertical: 'top',
   },
-  send: { marginTop: 10, alignSelf: 'flex-end', borderRadius: 7, backgroundColor: '#d6d9e0', paddingHorizontal: 14, paddingVertical: 9 },
+  send: { marginTop: 10, alignSelf: 'flex-end', borderRadius: 7, backgroundColor: c.accent, paddingHorizontal: 14, paddingVertical: 9 },
   sendDisabled: { opacity: 0.4 },
-  sendText: { color: '#0b0d12', fontSize: 12, fontWeight: '600' },
+  sendText: { color: c.accentText, fontSize: 12, fontWeight: '600' },
 })

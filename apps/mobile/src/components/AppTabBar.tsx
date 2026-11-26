@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-na
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { TabIcon, type TabIconName } from './TabIcon'
 import { useI18n, type TranslationKey } from '../lib/i18n'
+import { useTheme } from '../lib/theme'
 
 export interface AppTabItem {
   key: string
@@ -30,6 +31,7 @@ export function AppTabBarView({
   bottomInset?: number
 }) {
   const { width, height } = useWindowDimensions()
+  const { colors } = useTheme()
   const vertical = width >= 720 && width > height
 
   return (
@@ -40,7 +42,7 @@ export function AppTabBarView({
         !vertical && { paddingBottom: Math.max(bottomInset, 12) },
       ]}
     >
-      <View style={[styles.bar, vertical ? styles.rail : styles.pill]}>
+      <View style={[styles.bar, vertical ? styles.rail : styles.pill, { backgroundColor: colors.tabBar, borderColor: colors.tabBarBorder }]}>
         {items.map((item) => {
           const focused = active === item.key
           return (
@@ -51,7 +53,7 @@ export function AppTabBarView({
               accessibilityLabel={item.label}
               android_ripple={{ color: '#202433', borderless: true }}
               onPress={() => onChange(item.key)}
-              style={[styles.item, vertical ? styles.itemVertical : styles.itemHorizontal, focused && styles.itemActive]}
+              style={[styles.item, vertical ? styles.itemVertical : styles.itemHorizontal, focused && { backgroundColor: colors.surfaceAlt }]}
             >
               <TabIcon name={item.icon} active={focused} />
               {item.badge ? (
@@ -59,7 +61,7 @@ export function AppTabBarView({
                   <Text style={styles.badgeText}>{item.badge > 9 ? '9+' : item.badge}</Text>
                 </View>
               ) : null}
-              <Text style={[styles.label, focused && styles.labelActive]} numberOfLines={1}>
+              <Text style={[styles.label, { color: focused ? colors.tabActive : colors.tabInactive }]} numberOfLines={1}>
                 {item.label}
               </Text>
             </Pressable>

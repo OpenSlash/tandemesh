@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
 import { StyleSheet, View } from 'react-native'
+import { useTheme } from '../lib/theme'
 
 export type TabIconName = 'tasks' | 'sessions' | 'approvals' | 'alerts' | 'settings'
 

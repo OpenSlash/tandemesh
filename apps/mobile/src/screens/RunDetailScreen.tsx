@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { TandemeshClient, type Run } from '../lib/api'
 import { useRouter } from '../lib/RouterContext'
+import { useTheme, type ThemeColors } from '../lib/theme'
 import { useSession } from '../lib/SessionContext'
 
 interface TranscriptEntry {
@@ -13,6 +14,9 @@ interface TranscriptEntry {
 
 export function RunDetailScreen() {
   const { params } = useRouter()
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
+
   const id = params?.id ?? ''
   const { host, token } = useSession()
   const router = useRouter()
@@ -91,19 +95,19 @@ export function RunDetailScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#07080f' },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.background },
   content: { padding: 20 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#07080f', padding: 24 },
-  title: { color: '#f3f4f6', fontSize: 22, fontWeight: '600', textTransform: 'capitalize' },
-  meta: { color: '#8b94a7', fontSize: 11, marginTop: 6 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background, padding: 24 },
+  title: { color: c.text, fontSize: 22, fontWeight: '600', textTransform: 'capitalize' },
+  meta: { color: c.textMuted, fontSize: 11, marginTop: 6 },
   diffButton: { alignSelf: 'flex-start', marginTop: 14, borderRadius: 7, borderWidth: 1, borderColor: '#2a3040', paddingHorizontal: 12, paddingVertical: 7 },
-  diffButtonText: { color: '#d7dbe4', fontSize: 12 },
-  error: { color: '#f87171', fontSize: 12, marginTop: 12 },
-  section: { color: '#f3f4f6', fontSize: 15, fontWeight: '600', marginTop: 26, marginBottom: 8 },
-  prompt: { color: '#c7ccd8', fontSize: 12, lineHeight: 18 },
-  empty: { color: '#8b94a7', fontSize: 12 },
-  entry: { borderRadius: 8, borderWidth: 1, borderColor: '#202433', backgroundColor: '#10131c', padding: 10, marginBottom: 8 },
-  kind: { color: '#6e7787', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 },
-  text: { color: '#d7dbe4', fontSize: 12, lineHeight: 18, marginTop: 4 },
+  diffButtonText: { color: c.textSecondary, fontSize: 12 },
+  error: { color: c.danger, fontSize: 12, marginTop: 12 },
+  section: { color: c.text, fontSize: 15, fontWeight: '600', marginTop: 26, marginBottom: 8 },
+  prompt: { color: c.textSecondary, fontSize: 12, lineHeight: 18 },
+  empty: { color: c.textMuted, fontSize: 12 },
+  entry: { borderRadius: 8, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, padding: 10, marginBottom: 8 },
+  kind: { color: c.textSoft, fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 },
+  text: { color: c.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 4 },
 })

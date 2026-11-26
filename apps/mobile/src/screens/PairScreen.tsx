@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   Pressable,
@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native'
 import { Screen } from '../components/Screen'
+import { useTheme, type ThemeColors } from '../lib/theme'
 import { Platform } from 'react-native'
 import { exchangePairing } from '../lib/api'
 
@@ -23,6 +24,9 @@ export function PairScreen({ initialHost, initialCode, onPaired }: Props) {
   const [code, setCode] = useState(initialCode ?? '')
   const [deviceName, setDeviceName] = useState('Tandemesh Mobile')
   const [busy, setBusy] = useState(false)
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
+
   const [error, setError] = useState('')
 
   const pair = async () => {
@@ -90,25 +94,25 @@ export function PairScreen({ initialHost, initialCode, onPaired }: Props) {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   content: { flex: 1, justifyContent: 'center', padding: 20 },
-  card: { borderRadius: 16, borderWidth: 1, borderColor: '#202433', backgroundColor: '#10131c', padding: 20 },
-  brand: { color: '#9aa4b2', fontSize: 13, letterSpacing: 2, textTransform: 'uppercase' },
-  title: { color: '#f3f4f6', fontSize: 26, fontWeight: '600', marginTop: 8 },
-  hint: { color: '#8b94a7', fontSize: 13, lineHeight: 19, marginTop: 8, marginBottom: 16 },
-  label: { color: '#8b94a7', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginTop: 10, marginBottom: 5 },
+  card: { borderRadius: 16, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, padding: 20 },
+  brand: { color: c.textMuted, fontSize: 13, letterSpacing: 2, textTransform: 'uppercase' },
+  title: { color: c.text, fontSize: 26, fontWeight: '600', marginTop: 8 },
+  hint: { color: c.textMuted, fontSize: 13, lineHeight: 19, marginTop: 8, marginBottom: 16 },
+  label: { color: c.textMuted, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginTop: 10, marginBottom: 5 },
   input: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#262b3a',
-    backgroundColor: '#0b0d14',
-    color: '#f3f4f6',
+    borderColor: c.borderStrong,
+    backgroundColor: c.surfaceAlt,
+    color: c.text,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
   },
-  error: { color: '#f87171', fontSize: 12, marginTop: 12 },
-  button: { marginTop: 20, alignItems: 'center', borderRadius: 8, backgroundColor: '#d6d9e0', paddingVertical: 12 },
+  error: { color: c.danger, fontSize: 12, marginTop: 12 },
+  button: { marginTop: 20, alignItems: 'center', borderRadius: 8, backgroundColor: c.accent, paddingVertical: 12 },
   buttonDisabled: { opacity: 0.4 },
-  buttonText: { color: '#0b0d12', fontSize: 14, fontWeight: '600' },
+  buttonText: { color: c.accentText, fontSize: 14, fontWeight: '600' },
 })

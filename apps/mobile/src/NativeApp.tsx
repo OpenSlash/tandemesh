@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Linking, StatusBar, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { NavigationContainer, DarkTheme } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
@@ -50,7 +50,6 @@ function App() {
     return (
       <SafeAreaProvider>
       <View style={styles.root}>
-        <StatusBar barStyle="light-content" backgroundColor="#07080f" />
         <View style={styles.loading}>
           <ActivityIndicator color="#d6d9e0" />
         </View>
@@ -63,7 +62,6 @@ function App() {
     return (
       <SafeAreaProvider>
       <View style={styles.root}>
-        <StatusBar barStyle="light-content" backgroundColor="#07080f" />
         <PairScreen
           // Remount when a pairing link arrives while this screen is open.
           key={`${pairLink.host ?? ''}|${pairLink.code ?? ''}`}
@@ -82,7 +80,6 @@ function App() {
   return (
     <SafeAreaProvider>
     <SessionContext.Provider value={{ host: paired.host, token: paired.token, onSignOut: signOut }}>
-      <StatusBar barStyle="light-content" backgroundColor="#07080f" />
       <NavigationContainer theme={DarkTheme}>
         <Stack.Navigator
           screenOptions={{

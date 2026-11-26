@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, FlatList, Pressable, RefreshControl,  StyleSheet, Text, View } from 'react-native'
 import { Screen } from '../components/Screen'
+import { useTheme, type ThemeColors } from '../lib/theme'
 import { TandemeshClient } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { useSession } from '../lib/SessionContext'
@@ -16,6 +17,9 @@ interface Notification {
 export function NotificationsScreen() {
   const { host, token } = useSession()
   const { t } = useI18n()
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
+
   const { workspace } = useWorkspace()
   const [client] = useState(() => new TandemeshClient(host, token))
   const [items, setItems] = useState<Notification[]>([])
@@ -108,17 +112,17 @@ export function NotificationsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#07080f' },
-  header: { paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#202433' },
-  brand: { color: '#9aa4b2', fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
-  title: { color: '#f3f4f6', fontSize: 20, fontWeight: '600', marginTop: 2 },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.background },
+  header: { paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border },
+  brand: { color: c.textMuted, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
+  title: { color: c.text, fontSize: 20, fontWeight: '600', marginTop: 2 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  error: { color: '#f87171', fontSize: 12, marginTop: 6 },
-  empty: { color: '#8b94a7', fontSize: 13 },
+  error: { color: c.danger, fontSize: 12, marginTop: 6 },
+  empty: { color: c.textMuted, fontSize: 13 },
   list: { padding: 16, gap: 8, paddingBottom: 110 },
-  card: { borderRadius: 10, borderWidth: 1, borderColor: '#202433', backgroundColor: '#10131c', padding: 14 },
+  card: { borderRadius: 10, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface, padding: 14 },
   read: { opacity: 0.55 },
-  cardTitle: { color: '#f3f4f6', fontSize: 14 },
-  cardBody: { color: '#8b94a7', fontSize: 12, marginTop: 5 },
+  cardTitle: { color: c.text, fontSize: 14 },
+  cardBody: { color: c.textMuted, fontSize: 12, marginTop: 5 },
 })

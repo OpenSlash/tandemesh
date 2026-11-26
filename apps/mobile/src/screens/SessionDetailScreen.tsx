@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Pressable,
@@ -11,12 +11,16 @@ import {
 import { TandemeshClient, type AgentSession, type SessionMessage } from '../lib/api'
 import { useRouter } from '../lib/RouterContext'
 import { groupSessionMessages } from '../lib/messages'
+import { useTheme, type ThemeColors } from '../lib/theme'
 import { useSession } from '../lib/SessionContext'
 
 export function SessionDetailScreen() {
   const { params } = useRouter()
   const id = params?.id ?? ''
   const { host, token } = useSession()
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
+
   const [client] = useState(() => new TandemeshClient(host, token))
   const [session, setSession] = useState<AgentSession | null>(null)
   const [messages, setMessages] = useState<SessionMessage[]>([])
@@ -187,44 +191,44 @@ export function SessionDetailScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#07080f' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#07080f' },
-  header: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#202433' },
-  title: { color: '#f3f4f6', fontSize: 16, fontWeight: '600' },
-  meta: { color: '#8b94a7', fontSize: 11, marginTop: 3 },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
+  header: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border },
+  title: { color: c.text, fontSize: 16, fontWeight: '600' },
+  meta: { color: c.textMuted, fontSize: 11, marginTop: 3 },
   messages: { flex: 1 },
   messagesContent: { padding: 14, gap: 8 },
-  empty: { color: '#8b94a7', fontSize: 12, textAlign: 'center', marginTop: 20 },
+  empty: { color: c.textMuted, fontSize: 12, textAlign: 'center', marginTop: 20 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
-  statusText: { color: '#7f8ba0', fontSize: 11.5 },
+  statusText: { color: c.textMuted, fontSize: 11.5 },
   message: { maxWidth: '92%', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9 },
-  userMessage: { alignSelf: 'flex-end', backgroundColor: '#1d2331' },
+  userMessage: { alignSelf: 'flex-end', backgroundColor: c.userBubble },
   agentMessage: { alignSelf: 'stretch', maxWidth: '100%', backgroundColor: 'transparent', borderWidth: 0, borderRadius: 0, paddingHorizontal: 0, paddingVertical: 2 },
-  toolMessage: { alignSelf: 'stretch', backgroundColor: '#0b0f16', borderWidth: 1, borderColor: '#1a202b' },
+  toolMessage: { alignSelf: 'stretch', backgroundColor: c.codeBg, borderWidth: 1, borderColor: c.codeBorder },
   thinking: { alignSelf: 'stretch', paddingVertical: 2 },
   thinkingHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
-  thinkingLabel: { color: '#6e7787', fontSize: 11.5 },
-  thinkingChevron: { color: '#6e7787', fontSize: 11 },
-  thinkingText: { color: '#8d99ac', fontSize: 11.5, lineHeight: 17, paddingVertical: 4 },
-  role: { color: '#6e7787', fontSize: 9.5, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
-  text: { color: '#d7dbe4', fontSize: 12.5, lineHeight: 18 },
-  error: { color: '#f87171', fontSize: 11, marginTop: 6 },
-  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: '#202433' },
+  thinkingLabel: { color: c.textSoft, fontSize: 11.5 },
+  thinkingChevron: { color: c.textSoft, fontSize: 11 },
+  thinkingText: { color: c.textMuted, fontSize: 11.5, lineHeight: 17, paddingVertical: 4 },
+  role: { color: c.textSoft, fontSize: 9.5, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  text: { color: c.textSecondary, fontSize: 12.5, lineHeight: 18 },
+  error: { color: c.danger, fontSize: 11, marginTop: 6 },
+  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: c.border },
   input: {
     flex: 1,
     minHeight: 42,
     maxHeight: 120,
     borderRadius: 9,
     borderWidth: 1,
-    borderColor: '#262b3a',
-    backgroundColor: '#0b0d14',
-    color: '#f3f4f6',
+    borderColor: c.borderStrong,
+    backgroundColor: c.surfaceAlt,
+    color: c.text,
     paddingHorizontal: 12,
     paddingVertical: 9,
     fontSize: 13,
   },
-  send: { borderRadius: 8, backgroundColor: '#d6d9e0', paddingHorizontal: 16, paddingVertical: 11 },
+  send: { borderRadius: 8, backgroundColor: c.accent, paddingHorizontal: 16, paddingVertical: 11 },
   sendDisabled: { opacity: 0.4 },
-  sendText: { color: '#0b0d12', fontSize: 12, fontWeight: '600' },
+  sendText: { color: c.accentText, fontSize: 12, fontWeight: '600' },
 })

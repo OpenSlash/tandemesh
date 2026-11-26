@@ -1,18 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, View } from 'react-native'
 import { TandemeshClient } from '../lib/api'
 import { useRouter } from '../lib/RouterContext'
+import { useTheme, type ThemeColors } from '../lib/theme'
 import { useSession } from '../lib/SessionContext'
-
-function lineStyle(line: string) {
-  if (line.startsWith('@@')) return styles.hunk
-  if (line.startsWith('+')) return styles.added
-  if (line.startsWith('-')) return styles.removed
-  return styles.context
-}
 
 export function DiffScreen() {
   const { params } = useRouter()
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
+  const lineStyle = (line: string) => {
+    if (line.startsWith('@@')) return styles.hunk
+    if (line.startsWith('+')) return styles.added
+    if (line.startsWith('-')) return styles.removed
+    return styles.context
+  }
+
   const id = params?.id ?? ''
   const { host, token } = useSession()
   const [client] = useState(() => new TandemeshClient(host, token))
@@ -78,15 +81,15 @@ export function DiffScreen() {
 
 const mono = Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' })
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#07080f' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#07080f', padding: 24 },
-  error: { color: '#f87171', fontSize: 13, textAlign: 'center' },
-  empty: { color: '#8b94a7', fontSize: 13 },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: c.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background, padding: 24 },
+  error: { color: c.danger, fontSize: 13, textAlign: 'center' },
+  empty: { color: c.textMuted, fontSize: 13 },
   truncated: { color: '#d8b46a', backgroundColor: '#1b160d', paddingHorizontal: 14, paddingVertical: 8, fontSize: 11 },
   line: { fontFamily: mono, fontSize: 11, lineHeight: 17, paddingHorizontal: 12 },
   added: { color: '#7bc98b', backgroundColor: '#0f1a12' },
   removed: { color: '#e08b8b', backgroundColor: '#1a0f12' },
   hunk: { color: '#8fb7e0', backgroundColor: '#0f141c' },
-  context: { color: '#c7ccd8' },
+  context: { color: c.textSecondary },
 })
