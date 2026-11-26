@@ -74,7 +74,7 @@ func DetectRuntimes(ctx context.Context, opts DetectOptions) Detection {
 	known := map[string]bool{}
 	for _, runtime := range RuntimeCatalog {
 		known[runtime.ID] = true
-		st := domain.RuntimeStatus{ID: runtime.ID, Name: runtime.Name}
+		st := domain.RuntimeStatus{ID: runtime.ID, Name: runtime.Name, RegistryID: runtime.RegistryID}
 		cliName := runtime.Command
 		if cliName == "" {
 			cliName = runtime.ID

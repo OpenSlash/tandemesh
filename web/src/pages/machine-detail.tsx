@@ -31,6 +31,13 @@ export default function MachineDetailPage() {
   const detected = machine?.runtimes ?? {}
   const details = machine?.runtimeDetails
   const knownIds = new Set(catalog.map((runtime) => runtime.id))
+  const registryIdOf = new Map<string, string>()
+  for (const runtime of catalog) {
+    if (runtime.registryId) registryIdOf.set(runtime.id, runtime.registryId)
+  }
+  for (const status of details ?? []) {
+    if (status.registryId) registryIdOf.set(status.id, status.registryId)
+  }
   const extras = details
     ? details.filter((status) => !knownIds.has(status.id))
     : Object.entries(detected)
@@ -214,8 +221,9 @@ export default function MachineDetailPage() {
               {machine.agents.map((agent) => (
                 <span
                   key={agent}
-                  className="rounded bg-accent/10 px-2 py-1 text-[11px] text-accent2"
+                  className="inline-flex items-center gap-1.5 rounded bg-accent/10 px-2 py-1 text-[11px] text-accent2"
                 >
+                  <AgentIcon registryId={registryIdOf.get(agent)} name={agent} className="h-3 w-3" />
                   {agent}
                 </span>
               ))}

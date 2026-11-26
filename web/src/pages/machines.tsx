@@ -116,7 +116,15 @@ export default function MachinesPage() {
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {machine.agents.map((agent) => (
-                      <span key={agent} className="rounded bg-accent/10 px-1.5 py-0.5 text-[10.5px] text-accent2">
+                      <span
+                        key={agent}
+                        className="inline-flex items-center gap-1 rounded bg-accent/10 px-1.5 py-0.5 text-[10.5px] text-accent2"
+                      >
+                        <AgentIcon
+                          registryId={registryIdOf.get(agent) ?? (machine.runtimeDetails ?? []).find((d) => d.id === agent)?.registryId}
+                          name={agent}
+                          className="h-3 w-3"
+                        />
                         {agent}
                       </span>
                     ))}

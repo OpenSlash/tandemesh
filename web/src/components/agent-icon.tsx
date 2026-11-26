@@ -20,12 +20,21 @@ export function AgentIcon({ registryId, name, className }: { registryId?: string
       </span>
     )
   }
-  const mask = `url(/api/v1/acp/icons/${encodeURIComponent(registryId)}) center / contain no-repeat`
+  const iconUrl = `/api/v1/acp/icons/${encodeURIComponent(registryId)}`
   return (
     <span
       aria-hidden
       className={cn('inline-block h-4 w-4 shrink-0 bg-current', className)}
-      style={{ mask, WebkitMask: mask }}
+      style={{
+        maskImage: `url(${iconUrl})`,
+        WebkitMaskImage: `url(${iconUrl})`,
+        maskRepeat: 'no-repeat',
+        WebkitMaskRepeat: 'no-repeat',
+        maskPosition: 'center',
+        WebkitMaskPosition: 'center',
+        maskSize: 'contain',
+        WebkitMaskSize: 'contain',
+      }}
     />
   )
 }

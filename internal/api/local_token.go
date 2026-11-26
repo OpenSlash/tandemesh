@@ -28,6 +28,11 @@ func (s *Server) localTokenAuth(next http.Handler) http.Handler {
 		case r.URL.Path == "/api/v1/mobile/pairings/exchange":
 			next.ServeHTTP(w, r)
 			return
+		case strings.HasPrefix(r.URL.Path, "/api/v1/acp/icons/"):
+			// Public registry icons are loaded via CSS mask/img, which cannot
+			// attach an Authorization header. They contain no private data.
+			next.ServeHTTP(w, r)
+			return
 		}
 
 		presented := bearerCredential(r)
