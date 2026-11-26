@@ -100,7 +100,7 @@ export function AppTabBar({
 
 const styles = StyleSheet.create({
   wrap: { backgroundColor: 'transparent' },
-  bottomWrap: { paddingHorizontal: 26, paddingTop: 8 },
+  bottomWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 20, paddingHorizontal: 26, paddingTop: 8 },
   railWrap: { paddingHorizontal: 14, paddingVertical: 16 },
   bar: {
     backgroundColor: 'rgba(15,18,27,0.96)',

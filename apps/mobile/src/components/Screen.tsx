@@ -16,6 +16,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#07080f',
-    paddingTop: (Platform.OS as string) === 'harmony' ? 32 : Platform.OS === 'android' ? 24 : 0,
+    paddingTop: (Platform.OS as string) === 'harmony' ? 24 : 0,
   },
 })

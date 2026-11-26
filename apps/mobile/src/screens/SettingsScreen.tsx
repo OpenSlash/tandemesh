@@ -50,10 +50,10 @@ export function SettingsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#07080f' },
-  content: { paddingBottom: 32 },
-  header: { padding: 20, borderBottomWidth: 1, borderBottomColor: '#202433' },
-  brand: { color: '#9aa4b2', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' },
-  title: { color: '#f3f4f6', fontSize: 22, fontWeight: '600', marginTop: 4 },
+  content: { paddingBottom: 130 },
+  header: { paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#202433' },
+  brand: { color: '#9aa4b2', fontSize: 10, letterSpacing: 2, textTransform: 'uppercase' },
+  title: { color: '#f3f4f6', fontSize: 20, fontWeight: '600', marginTop: 2 },
   card: { marginHorizontal: 16, marginTop: 16, borderRadius: 10, borderWidth: 1, borderColor: '#202433', backgroundColor: '#10131c', padding: 14, gap: 4 },
   label: { color: '#8b94a7', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, marginTop: 6 },
   value: { color: '#f3f4f6', fontSize: 13 },
