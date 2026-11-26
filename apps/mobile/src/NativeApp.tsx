@@ -65,6 +65,8 @@ function App() {
       <View style={styles.root}>
         <StatusBar barStyle="light-content" backgroundColor="#07080f" />
         <PairScreen
+          // Remount when a pairing link arrives while this screen is open.
+          key={`${pairLink.host ?? ''}|${pairLink.code ?? ''}`}
           initialHost={pairLink.host}
           initialCode={pairLink.code}
           onPaired={async (host, token) => {
