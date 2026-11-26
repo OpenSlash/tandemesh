@@ -125,6 +125,16 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Machine" }
         "401": { description: Invalid join token }
+  /api/v1/machines/{id}:
+    delete:
+      summary: Delete an offline machine
+      description: Removes the host and its queued jobs. Runs keep their machine id as history.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Deleted }
+        "404": { description: Machine not found }
+        "409": { description: Machine is online, or agents or connections still use it }
   /api/v1/machines/{id}/runtime-checks:
     post:
       summary: Ask a host to detect its agent runtimes again

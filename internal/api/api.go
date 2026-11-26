@@ -309,6 +309,7 @@ func (s *Server) Router() http.Handler {
 
 		r.Get("/machines", s.listMachines)
 		r.Get("/machines/{id}", s.getMachine)
+		r.Delete("/machines/{id}", s.deleteMachine)
 		r.Get("/runtimes", s.listRuntimes)
 		r.Get("/system/info", s.systemInfo)
 		r.Post("/machines/join-token", s.createMachineJoinToken)

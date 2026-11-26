@@ -11,6 +11,7 @@ import (
 	"embed"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -1280,6 +1281,46 @@ func (s *Store) ListStaleMachines(ctx context.Context, cutoff time.Time) ([]*dom
 		out = append(out, m)
 	}
 	return out, rows.Err()
+}
+
+// ErrMachineInUse means agents or connections still run on the machine.
+var ErrMachineInUse = errors.New("machine still has agents or connections")
+
+// DeleteMachine removes a host and the per-host queues and caches that only
+// it would consume. Runs keep their machine id: they are execution history.
+func (s *Store) DeleteMachine(ctx context.Context, id string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("delete machine: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	var refs int
+	if err := tx.QueryRowContext(ctx, `SELECT
+		(SELECT COUNT(*) FROM agents WHERE machine_id = ?) +
+		(SELECT COUNT(*) FROM connections WHERE runner_machine_id = ?)`, id, id).Scan(&refs); err != nil {
+		return fmt.Errorf("count machine references: %w", err)
+	}
+	if refs > 0 {
+		return ErrMachineInUse
+	}
+	for _, stmt := range []string{
+		`DELETE FROM machine_jobs WHERE machine_id = ?`,
+		`DELETE FROM history_scans WHERE machine_id = ?`,
+		`DELETE FROM machine_history WHERE machine_id = ?`,
+		`DELETE FROM history_cache WHERE machine_id = ?`,
+	} {
+		if _, err := tx.ExecContext(ctx, stmt, id); err != nil {
+			return fmt.Errorf("delete machine: %w", err)
+		}
+	}
+	res, err := tx.ExecContext(ctx, `DELETE FROM machines WHERE id = ?`, id)
+	if err != nil {
+		return fmt.Errorf("delete machine: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return sql.ErrNoRows
+	}
+	return tx.Commit()
 }
 
 // SetMachineStatus updates a machine's scheduling status.

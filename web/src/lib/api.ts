@@ -1683,6 +1683,7 @@ export const api = {
 
   machines: () => request<List<Machine>>('/api/v1/machines'),
   machine: (id: string) => request<Machine>(`/api/v1/machines/${id}`),
+  deleteMachine: (id: string) => request<void>(`/api/v1/machines/${id}`, { method: 'DELETE' }),
   checkMachineRuntimes: (id: string) =>
     request<MachineJob>(`/api/v1/machines/${id}/runtime-checks`, { method: 'POST' }),
   installMachineACP: (id: string, registryId: string) =>

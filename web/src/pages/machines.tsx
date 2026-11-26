@@ -154,6 +154,7 @@ export default function MachinesPage() {
                 </p>
               )}
               {!online && <TakeoverControl machine={machine} machines={machines} />}
+              {!online && <DeleteMachineControl machine={machine} />}
             </div>
           )
         })}
@@ -243,6 +244,40 @@ function TakeoverControl({ machine, machines }: { machine: Machine; machines: Ma
     </div>
   )
 }
+// Deleting is for hosts that will not come back, such as a renamed desktop.
+// The server refuses while agents or connections still point at the host.
+function DeleteMachineControl({ machine }: { machine: Machine }) {
+  const { t } = useI18n()
+  const qc = useQueryClient()
+  // Confirmed inline: the desktop webview does not implement window.confirm.
+  const [confirming, setConfirming] = useState(false)
+  const remove = useMutation({
+    mutationFn: () => api.deleteMachine(machine.id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['machines'] }),
+    onError: () => setConfirming(false),
+  })
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+      <p className="flex-1 text-[11px] text-muted">{t('machines.deleteHint')}</p>
+      {confirming ? (
+        <>
+          <Button size="sm" variant="ghost" disabled={remove.isPending} onClick={() => setConfirming(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button size="sm" variant="danger" disabled={remove.isPending} onClick={() => remove.mutate()}>
+            {t('machines.deleteConfirm')}
+          </Button>
+        </>
+      ) : (
+        <Button size="sm" variant="danger" onClick={() => setConfirming(true)}>
+          {t('machines.delete')}
+        </Button>
+      )}
+      {remove.error && <p className="w-full text-[11px] text-err">{remove.error.message}</p>}
+    </div>
+  )
+}
+
 function ResourceBar({ label, value, ratio }: { label: string; value: string; ratio: number }) {
   const percent = Math.max(0, Math.min(100, Math.round(ratio * 100)))
   return (

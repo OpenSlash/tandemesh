@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/OpenSlash/tandemesh/internal/domain"
+	"github.com/OpenSlash/tandemesh/internal/store"
 )
 
 // registryIDPattern limits registry ids and versions to safe path segments;
@@ -138,4 +139,33 @@ func (s *Server) agentdMachineJobResult(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": req.Status})
+}
+
+// deleteMachine removes an offline host. Online hosts would re-register on
+// their next heartbeat, and hosts with agents or connections would strand
+// them, so both are refused.
+func (s *Server) deleteMachine(w http.ResponseWriter, r *http.Request) {
+	machine, err := s.store.GetMachine(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
+		return
+	}
+	if machine == nil {
+		writeErr(w, http.StatusNotFound, "E_MACHINE", "machine not found")
+		return
+	}
+	if machine.Status == "online" {
+		writeErr(w, http.StatusConflict, "E_MACHINE_ONLINE", "only offline machines can be deleted")
+		return
+	}
+	err = s.store.DeleteMachine(r.Context(), machine.ID)
+	if errors.Is(err, store.ErrMachineInUse) {
+		writeErr(w, http.StatusConflict, "E_MACHINE_IN_USE", "move this machine's agents to another host first")
+		return
+	}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -93,3 +93,29 @@ func TestMachineJobFlow(t *testing.T) {
 		t.Fatalf("machine runtimes not updated from job result: %+v err=%v", m, err)
 	}
 }
+
+func TestDeleteMachineEndpoint(t *testing.T) {
+	ts, st := newTestServerWithStore(t)
+	for _, m := range []*domain.Machine{
+		{ID: "mch_on", Name: "on", Status: "online"},
+		{ID: "mch_off", Name: "off", Status: "offline"},
+	} {
+		if err := st.UpsertMachine(t.Context(), m); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tests := []struct {
+		name string
+		id   string
+		want int
+	}{
+		{"online is refused", "mch_on", http.StatusConflict},
+		{"offline is deleted", "mch_off", http.StatusNoContent},
+		{"already gone", "mch_off", http.StatusNotFound},
+	}
+	for _, tc := range tests {
+		if resp, body := doJSON(t, http.MethodDelete, ts.URL+"/api/v1/machines/"+tc.id, nil); resp.StatusCode != tc.want {
+			t.Fatalf("%s: status %d, want %d (%v)", tc.name, resp.StatusCode, tc.want, body)
+		}
+	}
+}

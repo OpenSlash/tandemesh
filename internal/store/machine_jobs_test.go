@@ -80,3 +80,42 @@ func TestSetMachineRuntimes(t *testing.T) {
 		t.Fatalf("agents not replaced: %+v", m)
 	}
 }
+
+func TestDeleteMachine(t *testing.T) {
+	ctx := context.Background()
+	st, err := Open(t.TempDir() + "/test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	if err := st.Migrate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"mch_free", "mch_busy"} {
+		if err := st.UpsertMachine(ctx, &domain.Machine{ID: id, Name: id, Status: "offline"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := st.CreateMachineJob(ctx, "mch_free", domain.MachineJobRuntimeCheck, struct{}{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.DB().ExecContext(ctx, `INSERT INTO agents (id, name, machine_id, created_at_ms, updated_at_ms) VALUES ('agt_1', 'a', 'mch_busy', 0, 0)`); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := st.DeleteMachine(ctx, "mch_busy"); !errors.Is(err, ErrMachineInUse) {
+		t.Fatalf("delete with an agent bound: err=%v", err)
+	}
+	if err := st.DeleteMachine(ctx, "mch_free"); err != nil {
+		t.Fatal(err)
+	}
+	if m, _ := st.GetMachine(ctx, "mch_free"); m != nil {
+		t.Fatalf("machine still present: %+v", m)
+	}
+	if jobs, _ := st.ClaimMachineJobs(ctx, "mch_free", 5); len(jobs) != 0 {
+		t.Fatalf("queued jobs not removed: %+v", jobs)
+	}
+	if err := st.DeleteMachine(ctx, "mch_free"); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("second delete: err=%v", err)
+	}
+}
