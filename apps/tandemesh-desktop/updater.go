@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -52,16 +53,23 @@ func updateManifestURL() string {
 	return releaseDownloadBase + "update-" + runtime.GOOS + "-" + runtime.GOARCH + ".json"
 }
 
+// describeSuffix matches what git describe appends between tags
+// (0.1.0-12-gabc1234): such a build comes after its tag, not before it.
+var describeSuffix = regexp.MustCompile(`-\d+-g[0-9a-f]+$`)
+
+// compareVersions orders x.y.z versions. A prerelease such as 0.2.0-rc.1
+// sorts before 0.2.0, so release candidate users are offered the release.
 func compareVersions(a, b string) int {
-	pa := strings.Split(strings.TrimPrefix(a, "v"), ".")
-	pb := strings.Split(strings.TrimPrefix(b, "v"), ".")
+	a, b = strings.TrimPrefix(a, "v"), strings.TrimPrefix(b, "v")
+	pa := strings.Split(strings.SplitN(a, "-", 2)[0], ".")
+	pb := strings.Split(strings.SplitN(b, "-", 2)[0], ".")
 	for i := 0; i < 3; i++ {
 		var x, y int
 		if i < len(pa) {
-			x, _ = strconv.Atoi(strings.Split(pa[i], "-")[0])
+			x, _ = strconv.Atoi(pa[i])
 		}
 		if i < len(pb) {
-			y, _ = strconv.Atoi(strings.Split(pb[i], "-")[0])
+			y, _ = strconv.Atoi(pb[i])
 		}
 		if x < y {
 			return -1
@@ -70,7 +78,18 @@ func compareVersions(a, b string) int {
 			return 1
 		}
 	}
+	preA, preB := isPrerelease(a), isPrerelease(b)
+	switch {
+	case preA && !preB:
+		return -1
+	case !preA && preB:
+		return 1
+	}
 	return 0
+}
+
+func isPrerelease(v string) bool {
+	return strings.Contains(v, "-") && !describeSuffix.MatchString(v)
 }
 
 func fetchUpdate(ctx context.Context, url string) (*updateManifest, error) {
