@@ -884,7 +884,7 @@ export interface Connection {
   createdAt: string
   updatedAt: string
   bindings?: { id: string; externalId: string; name: string; kind: string; enabled: boolean }[]
-  allBindings?: { id: string; externalId: string; name: string; kind: string; enabled: boolean }[]
+  allBindings?: { id: string; workspaceId: string; externalId: string; name: string; kind: string; enabled: boolean }[]
 }
 
 export interface ConnectionAccount {
@@ -1357,7 +1357,7 @@ export const api = {
     commentTemplate?: string
     fields?: Record<string, string>
   }) =>
-    request<{ provider: string; automation?: UnifiedAutomation; webhookId?: string }>('/api/v1/integrations/connect', {
+    request<{ provider: string; connection?: Connection; automation?: UnifiedAutomation; webhookId?: string }>('/api/v1/integrations/connect', {
       method: 'POST',
       headers: JSON_HEADERS,
       body: JSON.stringify(body),

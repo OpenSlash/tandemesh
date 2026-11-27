@@ -30,8 +30,8 @@ export function OAuthAppsDialog({ open, onOpenChange }: { open: boolean; onOpenC
   const save = useMutation({
     mutationFn: () => api.saveOAuthApp(provider, { clientId, clientSecret }),
     onSuccess: () => {
-      setMessage(t('common.saved'))
       setClientSecret('')
+      onOpenChange(false)
       qc.invalidateQueries({ queryKey: ['oauth-app', provider] })
       qc.invalidateQueries({ queryKey: ['github-oauth'] })
       qc.invalidateQueries({ queryKey: ['oauth-status'] })

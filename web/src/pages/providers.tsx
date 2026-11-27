@@ -9,7 +9,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { cn } from '../lib/utils'
 import { OAuthAppsDialog } from '../components/oauth-apps-dialog'
-import { PlaneCatalogPicker } from '../components/plane-catalog-picker'
+import { PlaneCatalogPicker, type PlaneSelection } from '../components/plane-catalog-picker'
 import { ProviderIcon } from '../components/provider-icon'
 import { Drawer } from '../components/ui/drawer'
 
@@ -95,6 +95,7 @@ export default function ProvidersPage() {
   const [token, setToken] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
   const [instance, setInstance] = useState('')
+  const [planeSelection, setPlaneSelection] = useState<PlaneSelection>({ instances: [], names: {} })
   const [transition, setTransition] = useState('')
   const [syncDirection, setSyncDirection] = useState('read_write')
   const [webhookSecret, setWebhookSecret] = useState('')
@@ -156,7 +157,7 @@ export default function ProvidersPage() {
   })
   const connect = useMutation({
     mutationFn: async () => {
-      await api.connectProvider({
+      const created = await api.connectProvider({
         provider: connectFor,
         token,
         baseUrl: baseUrl || undefined,
@@ -170,13 +171,32 @@ export default function ProvidersPage() {
         fields: { ...fields, syncDirection: syncDirection },
       })
       if (activeProvider?.kind !== 'task') return { synced: 0 }
-      return api.workSync(connectFor, instance || undefined, workspaceId)
+      // Plane binds each picked project to this workspace; the first one came
+      // with the new connection, the rest reuse it.
+      const extra = connectFor === 'plane' ? planeSelection.instances.slice(1) : []
+      const connectionID = created.connection?.id ?? reuseConnectionId
+      for (const next of extra) {
+        await api.connectProvider({
+          provider: connectFor,
+          token: '',
+          workspaceId,
+          reuseConnectionId: connectionID,
+          instance: next,
+          name: planeSelection.names[next],
+        })
+      }
+      let synced = 0
+      for (const next of [instance, ...extra]) {
+        synced += (await api.workSync(connectFor, next || undefined, workspaceId)).synced
+      }
+      return { synced }
     },
     onSuccess: (result) => {
       setConnectMsg(activeProvider?.kind === 'task'
         ? t('providers.connected', { count: result.synced })
         : t('providers.connectedChat'))
       qc.invalidateQueries({ queryKey: ['connections', workspaceId] })
+      qc.invalidateQueries({ queryKey: ['connections', 'all'] })
       setConnectFor('')
       setToken('')
       setWebhookSecret('')
@@ -298,7 +318,7 @@ export default function ProvidersPage() {
       result: await api.workSync(connection.provider, connection.instance, workspaceId, connection.id),
     }),
     onSuccess: ({ id, result }) =>
-      setSyncState((prev) => ({ ...prev, [id]: `synced ${result.synced}` })),
+      setSyncState((prev) => ({ ...prev, [id]: t('providers.syncedCount', { count: result.synced }) })),
     onError: (err, connection) => setSyncState((prev) => ({ ...prev, [connection.id]: String(err) })),
   })
   const reconnect = useMutation({
@@ -926,7 +946,11 @@ export default function ProvidersPage() {
                 baseUrl={fieldValue('baseUrl')}
                 connectionId={reuseConnectionId}
                 initialWorkspace={(connections.find((c) => c.id === reuseConnectionId)?.allBindings ?? connections.find((c) => c.id === reuseConnectionId)?.bindings)?.[0]?.externalId.split('/')[0]}
-                onSelect={(value) => setFieldValue('instance', value)}
+                workspaceId={workspaceId}
+                onChange={(selection) => {
+                  setPlaneSelection(selection)
+                  setFieldValue('instance', selection.instances[0] ?? '')
+                }}
               />
             )}
             {oauthProviders.includes(connectFor) && (
