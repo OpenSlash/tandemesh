@@ -64,6 +64,8 @@ func targetStateName(b *domain.Automation, status string) string {
 		key = "stateInProgress"
 	case domain.TaskDone:
 		key = "stateDone"
+	case domain.TaskCancelled:
+		key = "stateCancelled"
 	}
 	if key != "" && b.Writeback != nil {
 		if value, ok := b.Writeback[key].(string); ok && value != "" {

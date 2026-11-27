@@ -115,7 +115,9 @@ func (s *Server) deleteAssignmentRule(w http.ResponseWriter, r *http.Request) {
 
 // applyAssignmentRules assigns a synced task and optionally dispatches it.
 func (s *Server) applyAssignmentRules(ctx context.Context, task *domain.Task) *domain.Run {
-	if task == nil {
+	// Closed tasks (done or cancelled on the platform) are not routed or
+	// dispatched; syncing an old closed issue must not start an agent.
+	if task == nil || domain.TaskClosed(task.Status) {
 		return nil
 	}
 	rules, err := s.store.ListAssignmentRules(ctx, task.WorkspaceID)

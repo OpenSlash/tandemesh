@@ -77,6 +77,7 @@ func (a *Adapter) ListAssigned(ctx context.Context, cred integration.Credential,
 		RepositoryURL string          `json:"repository_url"`
 		UpdatedAt     string          `json:"updated_at"`
 		State         string          `json:"state"`
+		StateReason   string          `json:"state_reason"`
 		PullRequest   json.RawMessage `json:"pull_request"`
 		Labels        []struct {
 			Name string `json:"name"`
@@ -115,7 +116,7 @@ func (a *Adapter) ListAssigned(ctx context.Context, cred integration.Credential,
 				ID: strconv.Itoa(row.Number), URL: row.HTMLURL, Revision: row.UpdatedAt,
 			},
 			Title: row.Title, Body: row.Body, Labels: labels, Author: author, Assignee: assignee, Updated: updated, Attachments: attachmentsFromText(row.Body),
-			Status: row.State, StatusGroup: map[string]string{"closed": "completed", "open": "unstarted"}[row.State],
+			Status: row.State, StatusGroup: issueGroup(row.State, row.StateReason),
 		})
 	}
 	return out, nil
@@ -126,4 +127,18 @@ func repoFromURL(raw string) string {
 		return strings.Trim(raw[i+len("/repos/"):], "/")
 	}
 	return raw
+}
+
+// issueGroup maps an issue's state onto the shared status groups; an issue
+// closed as "not planned" was cancelled rather than completed.
+func issueGroup(state, reason string) string {
+	switch {
+	case state == "open":
+		return "unstarted"
+	case state == "closed" && reason == "not_planned":
+		return "cancelled"
+	case state == "closed":
+		return "completed"
+	}
+	return ""
 }

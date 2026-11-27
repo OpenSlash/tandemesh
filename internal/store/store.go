@@ -176,7 +176,9 @@ func (s *Store) Migrate(ctx context.Context) error {
 		`ALTER TABLE import_batches ADD COLUMN next_start_at INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE import_batches ADD COLUMN limit_count INTEGER NOT NULL DEFAULT 100`,
 		`ALTER TABLE task_attachments ADD COLUMN source TEXT NOT NULL DEFAULT 'issue'`,
-		`UPDATE tasks SET execution_state = 'pending' WHERE status != 'done' AND EXISTS (SELECT 1 FROM task_dependencies d JOIN tasks dep ON dep.id = d.depends_on WHERE d.task_id = tasks.id AND dep.status != 'done')`,
+		// Platform-cancelled tasks used to map to open; they are cancelled now.
+		`UPDATE tasks SET status = 'cancelled' WHERE status = 'open' AND platform_state_group IN ('cancelled', 'canceled')`,
+		`UPDATE tasks SET execution_state = 'pending' WHERE status NOT IN ('done', 'cancelled') AND EXISTS (SELECT 1 FROM task_dependencies d JOIN tasks dep ON dep.id = d.depends_on WHERE d.task_id = tasks.id AND dep.status NOT IN ('done', 'cancelled'))`,
 	} {
 		if _, err := s.db.ExecContext(ctx, stmt); err != nil && !isDuplicateColumn(err) {
 			return fmt.Errorf("migrate: %w", err)

@@ -20,7 +20,7 @@ func (s *Store) CreateIteration(ctx context.Context, it *domain.Iteration) error
 func (s *Store) ListIterations(ctx context.Context, workspaceID string) ([]*domain.Iteration, error) {
 	q := `SELECT id, workspace_id, name, start_date, end_date, status, created_at_ms,
 		(SELECT COUNT(*) FROM tasks WHERE tasks.iteration_id = iterations.id),
-		(SELECT COUNT(*) FROM tasks WHERE tasks.iteration_id = iterations.id AND tasks.status = 'done')
+		(SELECT COUNT(*) FROM tasks WHERE tasks.iteration_id = iterations.id AND tasks.status IN ('done', 'cancelled'))
 		FROM iterations`
 	var args []any
 	if workspaceID != "" {
@@ -63,7 +63,7 @@ func (s *Store) SetTaskDoneAt(ctx context.Context, id string, at *time.Time) err
 func (s *Store) GetIteration(ctx context.Context, id string) (*domain.Iteration, error) {
 	row := s.db.QueryRowContext(ctx, `SELECT id, workspace_id, name, start_date, end_date, status, created_at_ms,
 		(SELECT COUNT(*) FROM tasks WHERE tasks.iteration_id = iterations.id),
-		(SELECT COUNT(*) FROM tasks WHERE tasks.iteration_id = iterations.id AND tasks.status = 'done')
+		(SELECT COUNT(*) FROM tasks WHERE tasks.iteration_id = iterations.id AND tasks.status IN ('done', 'cancelled'))
 		FROM iterations WHERE id = ?`, id)
 	var (
 		it      domain.Iteration
@@ -94,7 +94,7 @@ func (s *Store) IterationBurndown(ctx context.Context, iterationID string) (*dom
 	stats := domain.IterationStats{Total: len(tasks)}
 	for _, task := range tasks {
 		switch task.Status {
-		case domain.TaskDone:
+		case domain.TaskDone, domain.TaskCancelled:
 			stats.Done++
 		case domain.TaskOpen:
 			stats.Open++
@@ -121,7 +121,7 @@ func (s *Store) IterationBurndown(ctx context.Context, iterationID string) (*dom
 		dayEnd := day.AddDate(0, 0, 1)
 		remaining := 0
 		for _, task := range tasks {
-			if task.Status == domain.TaskDone {
+			if domain.TaskClosed(task.Status) {
 				if task.DoneAt == nil || task.DoneAt.Before(dayEnd) {
 					continue
 				}

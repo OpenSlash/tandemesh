@@ -86,12 +86,12 @@ func (s *Store) EvaluateTaskReadiness(ctx context.Context, taskID string) error 
 	if err != nil {
 		return err
 	}
-	if task.Status == domain.TaskDone || state == domain.TaskExecutionDispatched || state == domain.TaskExecutionCompleted || state == domain.TaskExecutionBlocked {
+	if domain.TaskClosed(task.Status) || state == domain.TaskExecutionDispatched || state == domain.TaskExecutionCompleted || state == domain.TaskExecutionBlocked {
 		return nil
 	}
 	var unmet int
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM task_dependencies d JOIN tasks dep ON dep.id = d.depends_on
-		WHERE d.task_id = ? AND dep.status != ?`, taskID, domain.TaskDone).Scan(&unmet); err != nil {
+		WHERE d.task_id = ? AND dep.status NOT IN (?, ?)`, taskID, domain.TaskDone, domain.TaskCancelled).Scan(&unmet); err != nil {
 		return err
 	}
 	next := domain.TaskExecutionReady
@@ -105,10 +105,10 @@ func (s *Store) EvaluateTaskReadiness(ctx context.Context, taskID string) error 
 // PromoteDependents moves pending dependents to ready once a task is done.
 func (s *Store) PromoteDependents(ctx context.Context, completedTaskID string) ([]string, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT d.task_id FROM task_dependencies d JOIN tasks t ON t.id = d.task_id
-		WHERE d.depends_on = ? AND t.status != ? AND t.execution_state = ?
+		WHERE d.depends_on = ? AND t.status NOT IN (?, ?) AND t.execution_state = ?
 		AND NOT EXISTS (SELECT 1 FROM task_dependencies d2 JOIN tasks dep ON dep.id = d2.depends_on
-			WHERE d2.task_id = d.task_id AND dep.status != ?)`,
-		completedTaskID, domain.TaskDone, domain.TaskExecutionPending, domain.TaskDone)
+			WHERE d2.task_id = d.task_id AND dep.status NOT IN (?, ?))`,
+		completedTaskID, domain.TaskDone, domain.TaskCancelled, domain.TaskExecutionPending, domain.TaskDone, domain.TaskCancelled)
 	if err != nil {
 		return nil, err
 	}

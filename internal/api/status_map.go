@@ -29,7 +29,7 @@ func (s *Server) applyPlatformState(ctx context.Context, task *domain.Task, snap
 		}
 	}
 	_ = s.store.SetTaskPlatformState(ctx, task.ID, snap.Status, snap.StatusGroup, local)
-	if local == domain.TaskDone {
+	if domain.TaskClosed(local) {
 		_ = s.store.SetTaskExecutionState(ctx, task.ID, domain.TaskExecutionCompleted)
 		_, _ = s.store.PromoteDependents(ctx, task.ID)
 	} else if local == domain.TaskOpen {
@@ -45,7 +45,7 @@ func mapPlatformStatusWith(stateMap map[string]string, group, state string) stri
 		}
 		if value, ok := stateMap[key]; ok {
 			switch value {
-			case domain.TaskOpen, domain.TaskInProgress, domain.TaskDone:
+			case domain.TaskOpen, domain.TaskInProgress, domain.TaskDone, domain.TaskCancelled:
 				return value
 			}
 		}
@@ -62,14 +62,16 @@ func mapPlatformStatus(group, state string) string {
 		return domain.TaskInProgress
 	case "unstarted", "backlog":
 		return domain.TaskOpen
-	case "cancelled":
-		return domain.TaskOpen
+	case "cancelled", "canceled":
+		return domain.TaskCancelled
 	}
 	switch strings.ToLower(state) {
 	case "done", "closed", "completed", "resolved":
 		return domain.TaskDone
 	case "in progress", "in_progress", "started", "doing":
 		return domain.TaskInProgress
+	case "cancelled", "canceled":
+		return domain.TaskCancelled
 	}
 	return ""
 }

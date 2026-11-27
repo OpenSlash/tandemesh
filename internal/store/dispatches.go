@@ -205,10 +205,10 @@ func (s *Store) CompleteDispatch(ctx context.Context, id, taskID, outcome, resul
 	var promoted []string
 	if taskStatus == domain.TaskDone {
 		rows, err := tx.QueryContext(ctx, `SELECT d.task_id FROM task_dependencies d JOIN tasks t ON t.id = d.task_id
-			WHERE d.depends_on = ? AND t.status != ? AND t.execution_state = ?
+			WHERE d.depends_on = ? AND t.status NOT IN (?, ?) AND t.execution_state = ?
 			AND NOT EXISTS (SELECT 1 FROM task_dependencies d2 JOIN tasks dep ON dep.id = d2.depends_on
-				WHERE d2.task_id = d.task_id AND dep.status != ?)`,
-			d.TaskID, domain.TaskDone, domain.TaskExecutionPending, domain.TaskDone)
+				WHERE d2.task_id = d.task_id AND dep.status NOT IN (?, ?))`,
+			d.TaskID, domain.TaskDone, domain.TaskCancelled, domain.TaskExecutionPending, domain.TaskDone, domain.TaskCancelled)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -72,3 +72,30 @@ func TestListTasksForMember(t *testing.T) {
 		t.Fatalf("tasks = %+v err=%v", tasks, err)
 	}
 }
+
+func TestCancelledDependencyIsSatisfied(t *testing.T) {
+	ctx := context.Background()
+	st, err := Open(t.TempDir() + "/test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	if err := st.Migrate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	dep, _ := st.EnsureTaskIn(ctx, "ws", domain.WorkRef{Provider: "plane", Instance: "acme/p1", Type: "issue", ID: "dep"}, domain.Snapshot{Title: "dep"})
+	task, _ := st.EnsureTaskIn(ctx, "ws", domain.WorkRef{Provider: "plane", Instance: "acme/p1", Type: "issue", ID: "task"}, domain.Snapshot{Title: "task"})
+	if _, err := st.DB().ExecContext(ctx, `INSERT INTO task_dependencies (task_id, depends_on) VALUES (?, ?)`, task.ID, dep.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetTaskStatus(ctx, dep.ID, domain.TaskCancelled); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.EvaluateTaskReadiness(ctx, task.ID); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := st.GetTask(ctx, task.ID)
+	if got.ExecutionState != domain.TaskExecutionReady {
+		t.Fatalf("a cancelled dependency should not block: %q", got.ExecutionState)
+	}
+}

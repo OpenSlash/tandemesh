@@ -125,7 +125,7 @@ func (s *Server) patchTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch req.Status {
-	case domain.TaskOpen, domain.TaskInProgress, domain.TaskDone:
+	case domain.TaskOpen, domain.TaskInProgress, domain.TaskDone, domain.TaskCancelled:
 	default:
 		writeErr(w, http.StatusBadRequest, "E_STATUS", "status must be open, in_progress or done")
 		return
@@ -134,7 +134,7 @@ func (s *Server) patchTask(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
 		return
 	}
-	if req.Status == domain.TaskDone {
+	if domain.TaskClosed(req.Status) {
 		now := time.Now().UTC()
 		_ = s.store.SetTaskDoneAt(r.Context(), task.ID, &now)
 		_ = s.store.SetTaskExecutionState(r.Context(), task.ID, domain.TaskExecutionCompleted)

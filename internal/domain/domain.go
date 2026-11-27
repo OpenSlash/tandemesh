@@ -576,6 +576,9 @@ const (
 	TaskOpen       = "open"
 	TaskInProgress = "in_progress"
 	TaskDone       = "done"
+	// TaskCancelled is a task closed without being done (a platform
+	// "cancelled" state); it is never dispatched to an agent.
+	TaskCancelled = "cancelled"
 )
 
 // Agent roles on a task.
@@ -1013,3 +1016,9 @@ func InstanceCovers(scope, instance string) bool {
 // PlatformStateUnbound marks a synced task whose project is no longer bound
 // to its workspace but which has execution history worth keeping.
 const PlatformStateUnbound = "unbound"
+
+// TaskClosed reports whether a task status means no more work: done or
+// cancelled. Closed tasks satisfy dependencies and are not dispatched.
+func TaskClosed(status string) bool {
+	return status == TaskDone || status == TaskCancelled
+}
