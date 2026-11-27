@@ -45,3 +45,30 @@ func TestPruneUnboundTask(t *testing.T) {
 		t.Fatalf("unbound task listed: %+v", listed)
 	}
 }
+
+func TestListTasksForMember(t *testing.T) {
+	ctx := context.Background()
+	st, err := Open(t.TempDir() + "/test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	if err := st.Migrate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	add := func(id, assignee string) {
+		if _, err := st.EnsureTaskIn(ctx, "ws", domain.WorkRef{Provider: "plane", Instance: "acme/p1", Type: "issue", ID: id}, domain.Snapshot{Title: id, Assignee: assignee}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	add("mine", "Alice Zhang")
+	add("theirs", "Bob")
+	add("nobody", "")
+	if err := st.UpsertMemberIdentity(ctx, &domain.MemberIdentity{ID: "mid_1", WorkspaceID: "ws", MemberID: "me", Provider: "plane", ExternalID: "u-1", Login: "Alice Zhang"}); err != nil {
+		t.Fatal(err)
+	}
+	tasks, err := st.ListTasks(ctx, TaskFilter{Workspace: "ws", Member: "me"})
+	if err != nil || len(tasks) != 1 || tasks[0].WorkID != "mine" {
+		t.Fatalf("tasks = %+v err=%v", tasks, err)
+	}
+}

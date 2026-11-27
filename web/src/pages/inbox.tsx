@@ -31,7 +31,8 @@ export default function InboxPage() {
     refetchInterval: 30000,
   })
   const all = data?.items ?? []
-  const base = onlyMine ? all.filter((task) => task.assignee === me?.name) : all
+  // assigneeMemberId resolves the platform assignee through my linked accounts.
+  const base = onlyMine ? all.filter((task) => task.assigneeMemberId === me?.name) : all
   const items = base.filter((task) => task.inboxState === tab)
   const count = (state: string) => base.filter((task) => task.inboxState === state).length
   const currentTab = TABS.find((entry) => entry.value === tab)

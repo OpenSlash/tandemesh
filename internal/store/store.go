@@ -496,14 +496,17 @@ func (s *Store) GetTask(ctx context.Context, id string) (*domain.Task, error) {
 
 // TaskFilter narrows a task list.
 type TaskFilter struct {
-	Workspace  string
-	Status     string
-	Provider   string
-	Instance   string
-	Label      string
-	Agent      string
-	Inbox      string
-	Assignee   string
+	Workspace string
+	Status    string
+	Provider  string
+	Instance  string
+	Label     string
+	Agent     string
+	Inbox     string
+	Assignee  string
+	// Member keeps tasks assigned to this member: locally, or on the
+	// platform through one of the member's linked or mapped accounts.
+	Member     string
 	Iteration  string
 	Parent     string
 	Query      string
@@ -539,6 +542,14 @@ func (s *Store) ListTasks(ctx context.Context, filter TaskFilter) ([]*domain.Tas
 	if filter.Workspace != "" {
 		where = append(where, "workspace_id = ?")
 		args = append(args, filter.Workspace)
+	}
+	if filter.Member != "" {
+		where = append(where, `(assignee_member_id = ?
+			OR EXISTS (SELECT 1 FROM member_identities mi WHERE mi.member_id = ? AND mi.workspace_id = tasks.workspace_id
+				AND mi.provider = tasks.provider AND tasks.assignee != '' AND (mi.login = tasks.assignee OR mi.external_id = tasks.assignee))
+			OR EXISTS (SELECT 1 FROM external_identities ei WHERE ei.member_id = ? AND ei.workspace_id = tasks.workspace_id
+				AND ei.provider = tasks.provider AND tasks.assignee != '' AND ei.external_id = tasks.assignee))`)
+		args = append(args, filter.Member, filter.Member, filter.Member)
 	}
 	if filter.Status != "" {
 		where = append(where, "status = ?")

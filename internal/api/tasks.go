@@ -36,6 +36,7 @@ func (s *Server) listTasks(w http.ResponseWriter, r *http.Request) {
 		Label:      r.URL.Query().Get("label"),
 		Agent:      r.URL.Query().Get("agent"),
 		Assignee:   r.URL.Query().Get("assignee"),
+		Member:     r.URL.Query().Get("member"),
 		Iteration:  r.URL.Query().Get("iteration"),
 		Unassigned: r.URL.Query().Get("unassigned") == "1",
 		Limit:      limit,
