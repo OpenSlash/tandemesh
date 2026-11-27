@@ -268,6 +268,19 @@ type Prober interface {
 	Probe(ctx context.Context, cred Credential) error
 }
 
+// Account is the platform user a credential belongs to.
+type Account struct {
+	ID    string
+	Login string
+	Email string
+}
+
+// AccountReader reports who a credential belongs to, so connecting an account
+// also tells Tandemesh which platform user is the person connecting it.
+type AccountReader interface {
+	CurrentAccount(ctx context.Context, cred Credential) (Account, error)
+}
+
 // ListOptions narrows an inbox query.
 type ListOptions struct {
 	Instance string

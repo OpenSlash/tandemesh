@@ -141,6 +141,28 @@ func decodeIssues(raw []byte) ([]issue, error) {
 	return page.Results, nil
 }
 
+// CurrentAccount implements integration.AccountReader. Login is the display
+// name because that is what synced work items carry as their assignee.
+func (a *Adapter) CurrentAccount(ctx context.Context, cred integration.Credential) (integration.Account, error) {
+	raw, _, err := a.do(ctx, "GET", a.apiAt(cred, "/users/me/"), cred, nil)
+	if err != nil {
+		return integration.Account{}, err
+	}
+	var me struct {
+		ID          string `json:"id"`
+		DisplayName string `json:"display_name"`
+		Email       string `json:"email"`
+	}
+	if err := json.Unmarshal(raw, &me); err != nil {
+		return integration.Account{}, fmt.Errorf("plane: decode current user: %w", err)
+	}
+	login := me.DisplayName
+	if login == "" {
+		login = me.Email
+	}
+	return integration.Account{ID: me.ID, Login: login, Email: me.Email}, nil
+}
+
 // Probe implements integration.Prober.
 func (a *Adapter) Probe(ctx context.Context, cred integration.Credential) error {
 	_, _, err := a.do(ctx, "GET", a.apiAt(cred, "/users/me/"), cred, nil)

@@ -73,6 +73,18 @@ func (s *Server) SyncConnections(ctx context.Context) int {
 				}
 			}
 		}
+		if !s.isPublicProfile() {
+			// A local install has one person; connections made before accounts
+			// were recorded on connect get theirs here, once per workspace.
+			member := s.cfg.User
+			if member == "" {
+				member = "me"
+			}
+			s.rememberMyAccount(ctx, ad, conn.WorkspaceID, member, cred)
+			for _, binding := range own {
+				s.rememberMyAccount(ctx, ad, binding.WorkspaceID, member, cred)
+			}
+		}
 		if len(own) > 0 {
 			for _, binding := range own {
 				synced += s.syncBinding(ctx, conn, ad, cred, binding)
@@ -157,7 +169,6 @@ func (s *Server) SyncConnections(ctx context.Context) int {
 			}
 			_ = s.store.ReplaceTaskAttachments(ctx, task.ID, conn.Provider, "issue", attachments)
 			_ = s.store.ReplaceTaskFields(ctx, task.ID, conn.Provider, item.Fields)
-			s.ensureTaskIdentities(ctx, task)
 			s.applyAssignmentRules(ctx, task)
 			s.syncPlatformComments(ctx, ad, cred, conn.Provider, task.ID, item.Ref)
 			_ = s.store.TouchTaskComments(ctx, task.ID)
@@ -290,7 +301,6 @@ func (s *Server) syncBinding(ctx context.Context, conn *domain.Connection, ad *i
 		_ = s.store.ReplaceTaskFields(ctx, task.ID, conn.Provider, item.Fields)
 		s.syncPlatformComments(ctx, ad, cred, conn.Provider, task.ID, item.Ref)
 		_ = s.store.TouchTaskComments(ctx, task.ID)
-		s.ensureTaskIdentities(ctx, task)
 		s.applyAssignmentRules(ctx, task)
 		if item.Updated.After(latest) {
 			latest = item.Updated
@@ -386,15 +396,4 @@ func parseCustomFields(raw string) map[string]string {
 		}
 	}
 	return out
-}
-
-// ensureTaskIdentities lists a synced task's author and assignee under
-// Identity mapping, so the workspace can map them to members without typing
-// platform ids by hand.
-func (s *Server) ensureTaskIdentities(ctx context.Context, task *domain.Task) {
-	for _, actor := range []string{task.Author, task.Assignee} {
-		if actor != "" {
-			_, _ = s.store.EnsureExternalIdentity(ctx, task.WorkspaceID, task.Provider, actor, actor, "")
-		}
-	}
 }

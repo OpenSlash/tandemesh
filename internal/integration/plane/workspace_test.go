@@ -46,6 +46,8 @@ func TestWorkspaceInstanceCoversEveryProject(t *testing.T) {
 			_, _ = w.Write([]byte(`[{"id":"s1","name":"Todo","group":"unstarted"},{"id":"s2","name":"Done","group":"completed"}]`))
 		case "/api/v1/workspaces/acme/projects/p2/states/":
 			_, _ = w.Write([]byte(`[{"id":"s3","name":"Done","group":"completed"}]`))
+		case "/api/v1/users/me/":
+			_, _ = w.Write([]byte(`{"id":"u-1","display_name":"alice","email":"a@example.test"}`))
 		case "/api/v1/workspaces/acme/webhooks/":
 			_ = json.NewDecoder(r.Body).Decode(&webhook)
 			_, _ = w.Write([]byte(`{"id":"wh1"}`))
@@ -76,5 +78,10 @@ func TestWorkspaceInstanceCoversEveryProject(t *testing.T) {
 	}
 	if _, scoped := webhook["project"]; scoped {
 		t.Fatalf("workspace webhook should not be project-scoped: %+v", webhook)
+	}
+
+	account, err := a.CurrentAccount(ctx, cred)
+	if err != nil || account.ID != "u-1" || account.Login != "alice" {
+		t.Fatalf("account = %+v err=%v", account, err)
 	}
 }

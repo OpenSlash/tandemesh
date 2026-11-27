@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -67,42 +66,5 @@ func TestRemovingLastBindingStopsConnectionSync(t *testing.T) {
 	conn, err := st.GetConnection(ctx, "conn_a")
 	if err != nil || conn == nil || conn.Instance != "" {
 		t.Fatalf("connection should no longer sync its own instance: %+v err=%v", conn, err)
-	}
-}
-
-func TestEnsureTaskIdentities(t *testing.T) {
-	_, st := newTestServerWithStore(t)
-	s := &Server{store: st}
-	task := &domain.Task{WorkspaceID: "ws_default", Provider: "plane", Author: "alice", Assignee: "bob"}
-	s.ensureTaskIdentities(t.Context(), task)
-	items, err := st.ListExternalIdentities(t.Context(), "ws_default", "plane")
-	if err != nil || len(items) != 2 {
-		t.Fatalf("identities = %+v err=%v", items, err)
-	}
-}
-
-func TestIdentityListIncludesExistingTaskActors(t *testing.T) {
-	ts, st := newTestServerWithStore(t)
-	if _, err := st.EnsureTaskIn(t.Context(), "ws_default", domain.WorkRef{Provider: "plane", Instance: "acme/p1", Type: "issue", ID: "i1"},
-		domain.Snapshot{Title: "x", Author: "carol", Assignee: "dave"}); err != nil {
-		t.Fatal(err)
-	}
-	resp, err := http.Get(ts.URL + "/api/v1/workspaces/ws_default/identities")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	var listed struct {
-		Items []domain.ExternalIdentity `json:"items"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&listed); err != nil {
-		t.Fatal(err)
-	}
-	logins := map[string]bool{}
-	for _, item := range listed.Items {
-		logins[item.Login] = true
-	}
-	if !logins["carol"] || !logins["dave"] {
-		t.Fatalf("identities = %+v", listed.Items)
 	}
 }

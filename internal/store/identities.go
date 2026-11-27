@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -131,33 +130,4 @@ func (s *Store) EnsureExternalIdentity(ctx context.Context, workspaceID, provide
 		return nil, err
 	}
 	return identity, nil
-}
-
-// TaskActor is a platform user named as a task's author or assignee.
-type TaskActor struct {
-	Provider string
-	Login    string
-}
-
-// ListTaskActors returns the distinct authors and assignees of platform
-// tasks in a workspace (local and manual tasks have no platform users).
-func (s *Store) ListTaskActors(ctx context.Context, workspaceID string) ([]TaskActor, error) {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT provider, author FROM tasks WHERE workspace_id = ? AND author != '' AND provider NOT IN ('local', 'manual')
-		UNION
-		SELECT provider, assignee FROM tasks WHERE workspace_id = ? AND assignee != '' AND provider NOT IN ('local', 'manual')`,
-		workspaceID, workspaceID)
-	if err != nil {
-		return nil, fmt.Errorf("list task actors: %w", err)
-	}
-	defer rows.Close()
-	var out []TaskActor
-	for rows.Next() {
-		var a TaskActor
-		if err := rows.Scan(&a.Provider, &a.Login); err != nil {
-			return nil, err
-		}
-		out = append(out, a)
-	}
-	return out, rows.Err()
 }

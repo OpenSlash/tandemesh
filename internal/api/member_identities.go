@@ -132,3 +132,27 @@ func (s *Server) memberCredentialFor(ctx context.Context, workspaceID, provider,
 	}
 	return integration.Credential{}, false
 }
+
+// rememberMyAccount records the platform user behind a credential as the
+// member's account, so tasks assigned to that user show as theirs and
+// assignments can be written back without manual mapping. It asks the
+// platform only when the member has no account for the provider yet.
+func (s *Server) rememberMyAccount(ctx context.Context, ad *integration.Integration, workspaceID, member string, cred integration.Credential) {
+	reader, ok := ad.Probe.(integration.AccountReader)
+	if !ok || cred.AccessToken == "" {
+		return
+	}
+	existing, _ := s.store.ListMemberIdentities(ctx, workspaceID, member)
+	for _, item := range existing {
+		if item.Provider == cred.Provider {
+			return
+		}
+	}
+	account, err := reader.CurrentAccount(ctx, cred)
+	if err != nil || account.Login == "" {
+		return
+	}
+	if err := s.saveMemberIdentity(ctx, cred.Provider, workspaceID, member, account.ID, account.Login, account.Email, cred.AccessToken); err != nil {
+		s.log.Warn("remember platform account", "provider", cred.Provider, "err", err)
+	}
+}

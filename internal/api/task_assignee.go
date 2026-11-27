@@ -23,7 +23,25 @@ func (s *Server) enrichTaskAssignees(ctx context.Context, tasks []*domain.Task) 
 		if err == nil && identity != nil {
 			memberID = identity.MemberID
 		}
+		if memberID == "" {
+			memberID = s.memberForAccount(ctx, task.WorkspaceID, task.Provider, task.Assignee)
+		}
 		cache[key] = memberID
 		task.AssigneeMemberID = memberID
 	}
+}
+
+// memberForAccount finds the member whose linked platform account (usually
+// recorded when they connected it) is login.
+func (s *Server) memberForAccount(ctx context.Context, workspaceID, provider, login string) string {
+	items, err := s.store.ListMemberIdentities(ctx, workspaceID, "")
+	if err != nil {
+		return ""
+	}
+	for _, item := range items {
+		if item.Provider == provider && (item.Login == login || item.ExternalID == login) {
+			return item.MemberID
+		}
+	}
+	return ""
 }
