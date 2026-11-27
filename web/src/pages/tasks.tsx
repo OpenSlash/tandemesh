@@ -17,12 +17,14 @@ const TABS = [
   { value: 'open', labelKey: 'status.open' },
   { value: 'in_progress', labelKey: 'status.in_progress' },
   { value: 'done', labelKey: 'status.done' },
+  { value: 'cancelled', labelKey: 'status.cancelled' },
 ]
 
 const COLUMNS = [
   { status: 'open', labelKey: 'status.open' },
   { status: 'in_progress', labelKey: 'status.in_progress' },
   { status: 'done', labelKey: 'status.done' },
+  { status: 'cancelled', labelKey: 'status.cancelled' },
 ]
 
 export default function TasksPage() {

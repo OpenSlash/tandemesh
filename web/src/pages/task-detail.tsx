@@ -317,6 +317,7 @@ export default function TaskDetailPage() {
                   <option value="open">{t('status.open')}</option>
                   <option value="in_progress">{t('status.in_progress')}</option>
                   <option value="done">{t('status.done')}</option>
+                  <option value="cancelled">{t('status.cancelled')}</option>
                 </select>
                 {task.url && (
                   <a
