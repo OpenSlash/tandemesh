@@ -1085,6 +1085,19 @@ export const api = {
       body: JSON.stringify({ state }),
     }),
   markTaskRead: (id: string) => request<void>(`/api/v1/tasks/${id}/read`, { method: 'POST' }),
+  batchTaskInbox: (body: {
+    ids?: string[]
+    closed?: boolean
+    workspace?: string
+    from?: 'inbox' | 'later' | 'cleared'
+    state?: 'inbox' | 'later' | 'cleared'
+    read?: boolean
+  }) =>
+    request<{ updated: number }>('/api/v1/tasks/inbox', {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify(body),
+    }),
   me: () => request<{ name: string }>('/api/v1/me'),
   search: (q: string, workspace: string) =>
     request<{ tasks: Task[]; groups: Group[] }>(

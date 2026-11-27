@@ -1,8 +1,8 @@
 import { useI18n } from '../lib/i18n'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Inbox, Search, UserRound } from 'lucide-react'
+import { CheckCheck, Inbox, Search, Trash2, UserRound } from 'lucide-react'
 import { api, type Task } from '../lib/api'
 import { useWorkspace } from '../lib/workspace'
 import { cn, compactId } from '../lib/utils'
@@ -44,6 +44,27 @@ export default function InboxPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['inbox-tasks', scope] }),
   })
   const read = useMutation({ mutationFn: (id: string) => api.markTaskRead(id) })
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  useEffect(() => setSelected(new Set()), [tab, scope, onlyMine])
+  const batch = useMutation({
+    mutationFn: (body: Parameters<typeof api.batchTaskInbox>[0]) => api.batchTaskInbox(body),
+    onSuccess: () => {
+      setSelected(new Set())
+      void qc.invalidateQueries({ queryKey: ['inbox-tasks'] })
+    },
+  })
+  const selectedIds = items.filter((task) => selected.has(task.id)).map((task) => task.id)
+  const allSelected = items.length > 0 && selectedIds.length === items.length
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  const unreadIds = items.filter((task) => !task.inboxReadAt).map((task) => task.id)
+  const closedCount = items.filter((task) => task.status === 'done' || task.status === 'cancelled').length
+  const batchButton = 'inline-flex h-7 items-center gap-1 rounded-md border border-line px-2 text-[11px] text-muted hover:text-fg disabled:opacity-40'
 
   return (
     <div className="mx-auto max-w-[1180px] px-6 py-5">
@@ -98,6 +119,65 @@ export default function InboxPage() {
         ))}
       </div>
 
+      {items.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 px-1 py-1.5">
+          <input
+            type="checkbox"
+            aria-label={t('inbox.selectAll')}
+            checked={allSelected}
+            onChange={() => setSelected(allSelected ? new Set() : new Set(items.map((task) => task.id)))}
+          />
+          {selectedIds.length > 0 ? (
+            <>
+              <span className="text-[11.5px] text-fg">{t('inbox.selected', { count: selectedIds.length })}</span>
+              <button className={batchButton} disabled={batch.isPending} onClick={() => batch.mutate({ ids: selectedIds, read: true })}>
+                <CheckCheck className="h-3.5 w-3.5" /> {t('inbox.markRead')}
+              </button>
+              {tab !== 'later' && (
+                <button className={batchButton} disabled={batch.isPending} onClick={() => batch.mutate({ ids: selectedIds, state: 'later' })}>
+                  {t('inbox.actionLater')}
+                </button>
+              )}
+              {tab !== 'cleared' && (
+                <button className={batchButton} disabled={batch.isPending} onClick={() => batch.mutate({ ids: selectedIds, state: 'cleared' })}>
+                  {t('inbox.actionClear')}
+                </button>
+              )}
+              {tab !== 'inbox' && (
+                <button className={batchButton} disabled={batch.isPending} onClick={() => batch.mutate({ ids: selectedIds, state: 'inbox' })}>
+                  {t('inbox.actionRestore')}
+                </button>
+              )}
+              <button className="text-[11px] text-muted hover:text-fg" onClick={() => setSelected(new Set())}>
+                {t('inbox.clearSelection')}
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="text-[11.5px] text-muted">{t('inbox.selectHint')}</span>
+              <div className="ml-auto flex items-center gap-2">
+                {unreadIds.length > 0 && (
+                  <button className={batchButton} disabled={batch.isPending} onClick={() => batch.mutate({ ids: unreadIds, read: true })}>
+                    <CheckCheck className="h-3.5 w-3.5" /> {t('inbox.markAllRead')}
+                  </button>
+                )}
+                {tab !== 'cleared' && closedCount > 0 && (
+                  <button
+                    className={batchButton}
+                    disabled={batch.isPending}
+                    title={t('inbox.clearClosedHint')}
+                    onClick={() => batch.mutate({ closed: true, workspace: scope, from: tab as 'inbox' | 'later', state: 'cleared' })}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> {t('inbox.clearClosed')}
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+          {batch.error && <span className="text-[11px] text-err">{batch.error.message}</span>}
+        </div>
+      )}
+
       {isLoading && <p className="mt-6 text-[12px] text-muted">{t('common.loading')}</p>}
 
       <div className="mt-2">
@@ -105,6 +185,9 @@ export default function InboxPage() {
           <InboxRow
             key={task.id}
             task={task}
+            selected={selected.has(task.id)}
+            selecting={selected.size > 0}
+            onToggle={() => toggle(task.id)}
             onOpen={() => {
               if (!task.inboxReadAt) read.mutate(task.id)
             }}
@@ -127,17 +210,30 @@ export default function InboxPage() {
 
 function InboxRow({
   task,
+  selected,
+  selecting,
+  onToggle,
   onOpen,
   onMove,
 }: {
   task: Task
+  selected: boolean
+  selecting: boolean
+  onToggle: () => void
   onOpen: () => void
   onMove: (state: 'inbox' | 'later' | 'cleared') => void
 }) {
   const { t } = useI18n()
   const unread = !task.inboxReadAt && task.inboxState === 'inbox'
   return (
-    <div className="group flex items-center gap-3 border-b border-line px-1 py-2.5">
+    <div className={cn('group flex items-center gap-3 border-b border-line px-1 py-2.5', selected && 'bg-panel2/60')}>
+      <input
+        type="checkbox"
+        aria-label={task.title}
+        checked={selected}
+        onChange={onToggle}
+        className={cn('shrink-0', selecting || selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')}
+      />
       <span
         className={cn(
           'h-1.5 w-1.5 shrink-0 rounded-full',
