@@ -24,7 +24,7 @@ import raster
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 REPO = ROOT.parent.parent
-FONT_REGULAR = REPO / "apps" / "tandemesh-desktop" / "frontend" / "public" / "Inter-Medium.ttf"
+FONT_REGULAR = REPO / "apps" / "desktop" / "frontend" / "public" / "Inter-Medium.ttf"
 FONT_FALLBACK = Path(r"C:\Windows\Fonts\segoeui.ttf")
 FONT_BOLD_PATH = Path(r"C:\Windows\Fonts\seguisb.ttf")
 

@@ -18,7 +18,7 @@ from kit import FIN_H, FIN_W, INK, KIT, fin_path, svg, tile_svg
 
 ROOT = KIT.parent
 REPO = ROOT.parent.parent
-DESKTOP = REPO / "apps" / "tandemesh-desktop" / "build"
+DESKTOP = REPO / "apps" / "desktop" / "build"
 WEB = REPO / "web" / "public"
 
 
@@ -53,7 +53,7 @@ def desktop() -> None:
             for name in ("ic_launcher.png", "ic_launcher_round.png"):
                 (res / name).write_bytes(raster_bytes(tile_svg(), size))
     for path in [DESKTOP / "appicon.png", DESKTOP / "windows" / "icon.ico", DESKTOP / "darwin" / "icons.icns"]:
-        print(f"apps/tandemesh-desktop/{path.relative_to(DESKTOP).as_posix()}")
+        print(f"apps/desktop/{path.relative_to(DESKTOP).as_posix()}")
 
     # macOS 26 Icon Composer template: keep the viewBox, swap the silhouette
     vector = DESKTOP / "appicon.icon" / "Assets" / "wails_icon_vector.svg"
@@ -70,7 +70,7 @@ def desktop() -> None:
             f'    <path d="{fin_path()}"/>\n  </g>\n</svg>\n',
             encoding="utf-8",
         )
-        print("apps/tandemesh-desktop/build/appicon.icon/Assets/wails_icon_vector.svg")
+        print("apps/desktop/build/appicon.icon/Assets/wails_icon_vector.svg")
 
 
 def raster_bytes(svg_text: str, size: int) -> bytes:

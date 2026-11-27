@@ -95,5 +95,5 @@ License, which permits logo use; the outlines are baked into the SVG, so no font
 $py = "C:\Users\<you>\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\python.exe"
 & $py design\logo\tools\kit.py             # svg + png + ico + icns + manifest
 & $py design\logo\tools\kitboard.py        # renders/kit-board.png
-& $py design\logo\tools\install_assets.py  # web/public + apps/tandemesh-desktop/build
+& $py design\logo\tools\install_assets.py  # web/public + apps/desktop/build
 ```

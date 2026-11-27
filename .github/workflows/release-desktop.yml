@@ -52,7 +52,7 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: |
             go.sum
-            apps/tandemesh-desktop/go.sum
+            apps/desktop/go.sum
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -63,7 +63,7 @@ jobs:
           cache-dependency-path: web/pnpm-lock.yaml
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@$WAILS_VERSION
       - name: Build universal app, DMG and update manifest
-        working-directory: apps/tandemesh-desktop
+        working-directory: apps/desktop
         env:
           TANDEMESH_UPDATE_KEY: ${{ secrets.TANDEMESH_UPDATE_KEY }}
         run: |
@@ -76,7 +76,7 @@ jobs:
           cp bin/update-darwin-universal.json bin/update-darwin-arm64.json
           cp bin/update-darwin-universal.json bin/update-darwin-amd64.json
       - name: Upload
-        working-directory: apps/tandemesh-desktop
+        working-directory: apps/desktop
         run: |
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
             bin/Tandemesh.dmg \
@@ -96,7 +96,7 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: |
             go.sum
-            apps/tandemesh-desktop/go.sum
+            apps/desktop/go.sum
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -111,7 +111,7 @@ jobs:
           command -v makensis || choco install nsis -y --no-progress
           echo "C:/Program Files (x86)/NSIS" >> "$GITHUB_PATH"
       - name: Build installer and update manifest
-        working-directory: apps/tandemesh-desktop
+        working-directory: apps/desktop
         env:
           TANDEMESH_UPDATE_KEY: ${{ secrets.TANDEMESH_UPDATE_KEY }}
         run: |
@@ -120,7 +120,7 @@ jobs:
           wails3 task windows:update:manifest VERSION="$version" ARCH=amd64 \
             NOTES="https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
       - name: Upload
-        working-directory: apps/tandemesh-desktop
+        working-directory: apps/desktop
         run: |
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
             bin/Tandemesh-Setup-amd64.exe bin/update-windows-amd64.json

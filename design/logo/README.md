@@ -18,7 +18,7 @@ tools/             all the code that draws, renders, audits and exports
 
 - `web/public/*` — favicon.ico, favicon.svg, apple-touch-icon, PWA icons and manifest,
   linked from `web/index.html`
-- `apps/tandemesh-desktop/build/` — `appicon.png` (Wails source), `windows/icon.ico`,
+- `apps/desktop/build/` — `appicon.png` (Wails source), `windows/icon.ico`,
   `darwin/icons.icns`, `ios/icon.png`, Android mipmaps, and the macOS 26 Icon Composer
   vector
 
@@ -31,7 +31,7 @@ $py = "C:\Users\<you>\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\python\
 
 & $py design\logo\tools\kit.py             # svg + png + ico + icns + manifest
 & $py design\logo\tools\kitboard.py        # renders/kit-board.png
-& $py design\logo\tools\install_assets.py  # web/public + apps/tandemesh-desktop/build
+& $py design\logo\tools\install_assets.py  # web/public + apps/desktop/build
 & $py design\logo\tools\audit.py design\logo\kit\svg\*.svg
 ```
 

@@ -22,7 +22,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 REPO = ROOT.parent.parent
 KIT = ROOT / "kit"
-FONT = REPO / "apps" / "tandemesh-desktop" / "frontend" / "public" / "Inter-Medium.ttf"
+FONT = REPO / "apps" / "desktop" / "frontend" / "public" / "Inter-Medium.ttf"
 
 INK = "0B0C0E"
 PAPER = "F5F6F7"

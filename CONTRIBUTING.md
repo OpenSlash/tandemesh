@@ -51,7 +51,7 @@ internal/ingress          webhook verification and normalization
 internal/integration      source and write-back adapters
 pkg/plugin                gRPC runner plugin SDK
 web/                      React control panel
-apps/tandemesh-desktop    Wails 3 desktop shell
+apps/desktop              Wails 3 desktop shell
 apps/mobile               React Native app (Android, iOS, HarmonyOS)
 api/openapi.yaml          API contract
 migrations/               SQL migrations
@@ -82,7 +82,7 @@ Desktop from source (looks for the sidecars in `../../bin` and the UI in `../../
 ```bash
 make build
 (cd web && pnpm run build)
-cd apps/tandemesh-desktop && go run .
+cd apps/desktop && go run .
 ```
 
 Set `TANDEMESH_WEB_URL=http://127.0.0.1:5173` to load the UI from the Vite dev server, or
@@ -92,7 +92,7 @@ Set `TANDEMESH_WEB_URL=http://127.0.0.1:5173` to load the UI from the Vite dev s
 Desktop packaging:
 
 ```bash
-cd apps/tandemesh-desktop
+cd apps/desktop
 
 # Windows: per-user NSIS installer (cross-compiles from macOS or Linux with makensis)
 wails3 task windows:package

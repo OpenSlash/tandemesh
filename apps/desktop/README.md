@@ -20,7 +20,7 @@ From the repository root:
 ```bash
 make build                    # bin/tandemesh-plane, bin/tandemesh-agentd
 (cd web && pnpm install && pnpm run build)
-cd apps/tandemesh-desktop && go run .
+cd apps/desktop && go run .
 ```
 
 Packaging (Windows installer, signed and notarized macOS `.dmg`) is described in
