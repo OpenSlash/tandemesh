@@ -235,6 +235,15 @@ function PinnableNavList({
     return defaultPinned
   })
   const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onDown = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
   const visible = items.filter((item) => pinned.includes(item.to))
   const hidden = items.filter((item) => !pinned.includes(item.to))
 
@@ -252,7 +261,7 @@ function PinnableNavList({
         <NavItem key={item.to} {...item} onClick={onNavigate} />
       ))}
       {hidden.length > 0 && (
-        <div className="relative">
+        <div ref={menuRef} className="relative">
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}
@@ -274,8 +283,8 @@ function PinnableNavList({
                 const isPinned = pinned.includes(item.to)
                 return (
                   <div key={item.to} className="flex items-center gap-1 rounded-md px-1 hover:bg-panel2/70">
-                    <button
-                      type="button"
+                    <Link
+                      to={item.to}
                       onClick={() => {
                         setOpen(false)
                         onNavigate?.()
@@ -284,7 +293,7 @@ function PinnableNavList({
                     >
                       <Icon className="h-3.5 w-3.5 shrink-0 text-muted" />
                       <span className="truncate">{item.label}</span>
-                    </button>
+                    </Link>
                     <button
                       type="button"
                       title={isPinned ? t('shell.unpinItem') : t('shell.pinItem')}
