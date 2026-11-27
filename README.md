@@ -98,7 +98,15 @@ cd web && pnpm install && pnpm dev
 Open <http://127.0.0.1:5173>, create a task and assign it to an agent.
 
 Prefer a single app? The [desktop client](apps/tandemesh-desktop/README.md) starts the plane and
-the daemon for you.
+the daemon for you. Download it from [Releases](https://github.com/OpenSlash/tandemesh/releases/latest):
+`Tandemesh.dmg` for macOS (Apple silicon and Intel) or `Tandemesh-Setup-amd64.exe` for Windows.
+The builds are not notarized or code-signed yet, so the first launch needs one extra step:
+
+- **macOS:** System Settings → Privacy & Security → **Open Anyway**, or
+  `xattr -dr com.apple.quarantine /Applications/Tandemesh.app`.
+- **Windows:** SmartScreen → **More info** → **Run anyway**.
+
+After that the app updates itself.
 
 ## Configuration
 

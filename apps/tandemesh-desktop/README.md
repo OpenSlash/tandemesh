@@ -36,7 +36,11 @@ Packaging (Windows installer, signed and notarized macOS `.dmg`) is described in
 | `TANDEMESH_WEB_URL` | load the UI from a dev server instead of the bundled build |
 | `TANDEMESH_WEB_DIST` | serve the UI from this directory |
 | `TANDEMESH_LAN=1` | listen on all interfaces for other devices on a trusted network |
-| `TANDEMESH_UPDATE_URL` | update manifest URL (Windows installer) |
+| `TANDEMESH_UPDATE_URL` | update manifest URL instead of the latest GitHub release |
+
+Release builds check the latest GitHub release at launch and every six hours; the tray menu shows
+the version and has **Check for updates**. Manifests must carry a valid signature from the release
+key.
 
 With LAN mode on, open `http://<this-host>:<port>/?token=...` once from the other device; the
 plane then sets an HttpOnly cookie. The exact URL is printed to the log.

@@ -94,16 +94,31 @@ Desktop packaging:
 ```bash
 cd apps/tandemesh-desktop
 
-# Windows: NSIS installer (unsigned)
-wails3 package
+# Windows: per-user NSIS installer (cross-compiles from macOS or Linux with makensis)
+wails3 task windows:package
 
-# macOS: ad-hoc .app, Developer ID signed .app, or notarized .dmg
+# macOS: ad-hoc .app, universal .app, .dmg
 wails3 task darwin:package
+wails3 task darwin:package:universal
+wails3 task darwin:create:dmg
+
+# Optional Apple signing and notarization
 wails3 task darwin:sign SIGN_IDENTITY="Developer ID Application: ..."
 wails3 task darwin:release SIGN_IDENTITY="Developer ID Application: ..." NOTARY_PROFILE=<profile>
 ```
 
-Create the notary profile once with `xcrun notarytool store-credentials <profile>`.
+Releases are built by `.github/workflows/release-desktop.yml`. Push a tag to publish one:
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0        # release
+git tag v0.2.0-rc.1 && git push origin v0.2.0-rc.1  # prerelease, not offered as an update
+```
+
+The workflow builds the universal macOS app and the Windows installer, signs the update manifests
+with the `TANDEMESH_UPDATE_KEY` secret and publishes everything to one release. Installed apps poll
+`releases/latest/download/update-<os>-<arch>.json` and only accept manifests signed with that key;
+generate a new pair with `go run ./tools/sign-update -genkey` (and update `updatePublicKey`) only
+if the key is lost, since existing installs will then need a manual reinstall.
 
 All checks must pass before opening a pull request. If a check cannot run in your environment,
 explain why in the pull request.
