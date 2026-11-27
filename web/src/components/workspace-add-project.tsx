@@ -83,6 +83,7 @@ export function WorkspaceAddProject({
             />
           )}
 
+          {connection?.provider !== 'plane' && (
           <label className="text-[12px] text-muted">
             {t('addProject.instance')}
             <Input
@@ -92,6 +93,7 @@ export function WorkspaceAddProject({
               onChange={(e) => setInstance(e.target.value)}
             />
           </label>
+          )}
           <label className="text-[12px] text-muted">
             {t('addProject.name')}
             <Input

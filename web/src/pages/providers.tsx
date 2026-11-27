@@ -858,7 +858,10 @@ export default function ProvidersPage() {
                 </select>
               </label>
             )}
-            {configFields.length > 0 ? configFields.map((field, index) => {
+            {configFields.length > 0 ? configFields
+              // The Plane picker below fills in the instance.
+              .filter((field) => !(connectFor === 'plane' && field.key === 'instance'))
+              .map((field, index) => {
               const label = field.labelKey ? t(field.labelKey) : field.label ?? field.key
               const value = fieldValue(field.key)
               return (
