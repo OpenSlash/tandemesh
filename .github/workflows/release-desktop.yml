@@ -1,0 +1,132 @@
+# Builds the desktop app for macOS and Windows when a v* tag is pushed and
+# publishes both to one GitHub release. Builds are not code-signed by Apple
+# or Microsoft; update manifests are signed with TANDEMESH_UPDATE_KEY so the
+# installed apps can verify them. Tags with a hyphen (v0.2.0-rc.1) become
+# prereleases, which releases/latest/download never serves to the apps.
+name: Release desktop
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.ref_name }}
+  WAILS_VERSION: v3.0.0
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      # A draft keeps the manifests unreachable until every asset is uploaded.
+      - name: Create draft release
+        run: |
+          prerelease=""
+          case "$TAG" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft $prerelease \
+            --title "Tandemesh $TAG" --generate-notes --notes "$(cat <<'NOTES'
+          ## Install
+
+          **macOS** — download `Tandemesh.dmg` and drag Tandemesh to Applications. The app is not notarized, so macOS blocks the first launch: open **System Settings → Privacy & Security** and choose **Open Anyway**, or run `xattr -dr com.apple.quarantine /Applications/Tandemesh.app`.
+
+          **Windows** — run `Tandemesh-Setup-amd64.exe`. SmartScreen may warn about an unknown publisher; choose **More info → Run anyway**.
+
+          Installed apps update themselves from here.
+          NOTES
+          )"
+
+  macos:
+    needs: draft
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            apps/tandemesh-desktop/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@$WAILS_VERSION
+      - name: Build universal app, DMG and update manifest
+        working-directory: apps/tandemesh-desktop
+        env:
+          TANDEMESH_UPDATE_KEY: ${{ secrets.TANDEMESH_UPDATE_KEY }}
+        run: |
+          version="${TAG#v}"
+          wails3 task darwin:package:universal VERSION="$version"
+          wails3 task darwin:create:dmg
+          wails3 task darwin:update:archive VERSION="$version" ARCH=universal \
+            NOTES="https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
+          # One universal bundle serves both architectures.
+          cp bin/update-darwin-universal.json bin/update-darwin-arm64.json
+          cp bin/update-darwin-universal.json bin/update-darwin-amd64.json
+      - name: Upload
+        working-directory: apps/tandemesh-desktop
+        run: |
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+            bin/Tandemesh.dmg \
+            "bin/Tandemesh-${TAG#v}-darwin-universal.zip" \
+            bin/update-darwin-arm64.json bin/update-darwin-amd64.json
+
+  windows:
+    needs: draft
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            apps/tandemesh-desktop/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@$WAILS_VERSION
+      - name: Install NSIS
+        run: |
+          command -v makensis || choco install nsis -y --no-progress
+          echo "C:/Program Files (x86)/NSIS" >> "$GITHUB_PATH"
+      - name: Build installer and update manifest
+        working-directory: apps/tandemesh-desktop
+        env:
+          TANDEMESH_UPDATE_KEY: ${{ secrets.TANDEMESH_UPDATE_KEY }}
+        run: |
+          version="${TAG#v}"
+          wails3 task windows:package VERSION="$version" ARCH=amd64
+          wails3 task windows:update:manifest VERSION="$version" ARCH=amd64 \
+            NOTES="https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
+      - name: Upload
+        working-directory: apps/tandemesh-desktop
+        run: |
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+            bin/Tandemesh-Setup-amd64.exe bin/update-windows-amd64.json
+
+  publish:
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
