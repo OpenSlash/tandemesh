@@ -103,6 +103,9 @@ func (s *Server) connectProvider(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if ad.Manifest.Kind == integration.KindTask && instance != "" && s.rejectBoundElsewhere(w, r, req.Provider, instance, req.WorkspaceID) {
+		return
+	}
 	if reuseSource != nil {
 		if instance == "" {
 			writeErr(w, http.StatusBadRequest, "E_FIELDS", "instance is required")

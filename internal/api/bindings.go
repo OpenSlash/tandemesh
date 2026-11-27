@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -92,6 +93,9 @@ func (s *Server) createConnectionBinding(w http.ResponseWriter, r *http.Request)
 	if binding.Kind == "" {
 		binding.Kind = "resource"
 	}
+	if s.rejectBoundElsewhere(w, r, binding.Provider, binding.ExternalID, binding.WorkspaceID) {
+		return
+	}
 	if err := s.store.UpsertBinding(r.Context(), binding); err != nil {
 		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
 		return
@@ -151,5 +155,47 @@ func (s *Server) deleteBinding(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
 		return
 	}
+	// Sync follows bindings; without this, a connection whose last binding
+	// was removed would fall back to syncing its own instance.
+	if all, err := s.store.ListAllBindings(r.Context()); err == nil && !connectionHasBinding(all, binding.ConnectionID) {
+		if conn, err := s.store.GetConnection(r.Context(), binding.ConnectionID); err == nil && conn != nil && conn.Instance != "" {
+			conn.Instance = ""
+			_ = s.store.UpsertConnection(r.Context(), conn)
+		}
+	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// rejectBoundElsewhere answers 409 when another workspace already binds this
+// resource or one that overlaps it (a Plane workspace and one of its
+// projects): one external project belongs to one workspace, or its tasks
+// would be synced into two.
+func (s *Server) rejectBoundElsewhere(w http.ResponseWriter, r *http.Request, provider, externalID, workspaceID string) bool {
+	all, err := s.store.ListAllBindings(r.Context())
+	if err != nil {
+		return false
+	}
+	for _, other := range all {
+		if other.Provider != provider || other.WorkspaceID == workspaceID {
+			continue
+		}
+		if domain.InstanceCovers(other.ExternalID, externalID) || domain.InstanceCovers(externalID, other.ExternalID) {
+			name := other.WorkspaceID
+			if ws, err := s.store.GetWorkspace(r.Context(), other.WorkspaceID); err == nil && ws != nil {
+				name = ws.Name
+			}
+			writeErr(w, http.StatusConflict, "E_BOUND", fmt.Sprintf("%s is already bound to workspace %s", other.ExternalID, name))
+			return true
+		}
+	}
+	return false
+}
+
+func connectionHasBinding(bindings []*domain.ResourceBinding, connectionID string) bool {
+	for _, b := range bindings {
+		if b.ConnectionID == connectionID {
+			return true
+		}
+	}
+	return false
 }

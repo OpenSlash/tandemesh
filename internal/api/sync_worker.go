@@ -79,6 +79,10 @@ func (s *Server) SyncConnections(ctx context.Context) int {
 			}
 			continue
 		}
+		// A connection whose bindings were all removed syncs nothing.
+		if conn.Instance == "" {
+			continue
+		}
 		cursor, _ := s.store.GetSyncCursor(ctx, conn.ID)
 		customFields := map[string]string{}
 		if automations, err := s.store.ListAutomations(ctx, conn.WorkspaceID); err == nil {
@@ -153,6 +157,7 @@ func (s *Server) SyncConnections(ctx context.Context) int {
 			}
 			_ = s.store.ReplaceTaskAttachments(ctx, task.ID, conn.Provider, "issue", attachments)
 			_ = s.store.ReplaceTaskFields(ctx, task.ID, conn.Provider, item.Fields)
+			s.ensureTaskIdentities(ctx, task)
 			s.applyAssignmentRules(ctx, task)
 			s.syncPlatformComments(ctx, ad, cred, conn.Provider, task.ID, item.Ref)
 			_ = s.store.TouchTaskComments(ctx, task.ID)
@@ -285,6 +290,7 @@ func (s *Server) syncBinding(ctx context.Context, conn *domain.Connection, ad *i
 		_ = s.store.ReplaceTaskFields(ctx, task.ID, conn.Provider, item.Fields)
 		s.syncPlatformComments(ctx, ad, cred, conn.Provider, task.ID, item.Ref)
 		_ = s.store.TouchTaskComments(ctx, task.ID)
+		s.ensureTaskIdentities(ctx, task)
 		s.applyAssignmentRules(ctx, task)
 		if item.Updated.After(latest) {
 			latest = item.Updated
@@ -380,4 +386,15 @@ func parseCustomFields(raw string) map[string]string {
 		}
 	}
 	return out
+}
+
+// ensureTaskIdentities lists a synced task's author and assignee under
+// Identity mapping, so the workspace can map them to members without typing
+// platform ids by hand.
+func (s *Server) ensureTaskIdentities(ctx context.Context, task *domain.Task) {
+	for _, actor := range []string{task.Author, task.Assignee} {
+		if actor != "" {
+			_, _ = s.store.EnsureExternalIdentity(ctx, task.WorkspaceID, task.Provider, actor, actor, "")
+		}
+	}
 }

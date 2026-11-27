@@ -26,6 +26,13 @@ func (s *Server) listExternalIdentities(w http.ResponseWriter, r *http.Request) 
 	if !s.requireWorkspace(w, r, workspaceID) {
 		return
 	}
+	// Tasks synced before identities were collected during sync still name
+	// their people; list them too so they can be mapped.
+	if actors, err := s.store.ListTaskActors(r.Context(), workspaceID); err == nil {
+		for _, actor := range actors {
+			_, _ = s.store.EnsureExternalIdentity(r.Context(), workspaceID, actor.Provider, actor.Login, actor.Login, "")
+		}
+	}
 	items, err := s.store.ListExternalIdentities(r.Context(), workspaceID, r.URL.Query().Get("provider"))
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
