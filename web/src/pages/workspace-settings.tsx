@@ -12,6 +12,7 @@ import { ExternalIdentitiesPanel } from '../components/external-identities-panel
 
 export default function WorkspaceSettingsPage() {
   const { t } = useI18n()
+  const { data: capabilities } = useQuery({ queryKey: ['capabilities'], queryFn: api.capabilities })
   const { id = '' } = useParams()
   const qc = useQueryClient()
   const { workspaceId, setWorkspaceId, workspaces } = useWorkspace()
@@ -146,7 +147,8 @@ export default function WorkspaceSettingsPage() {
           )}
         </div>
       </section>
-      <ExternalIdentitiesPanel workspaceId={id} />
+      {/* One person runs a local install; mapping platform users to members only matters for a shared server. */}
+      {capabilities?.profile === 'public' && <ExternalIdentitiesPanel workspaceId={id} />}
       <WorkspaceAddProject
         workspaceId={id}
         connections={connectionsData?.items ?? []}
