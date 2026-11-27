@@ -102,13 +102,13 @@ export default function WorkspaceSettingsPage() {
       <section className="mt-5 rounded-lg border border-line bg-panel/40 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[13px] font-medium">Project bindings</h2>
+            <h2 className="text-[13px] font-medium">{t('workspaceSettings.bindings')}</h2>
             <p className="mt-1 text-[11.5px] text-muted">
-              External projects bound to this workspace. Connections are shared across workspaces.
+              {t('workspaceSettings.bindingsHint')}
             </p>
           </div>
           <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)}>
-            <Plug className="h-3.5 w-3.5" /> Add project
+            <Plug className="h-3.5 w-3.5" /> {t('addProject.title')}
           </Button>
         </div>
         <div className="mt-3 space-y-2">
@@ -118,7 +118,7 @@ export default function WorkspaceSettingsPage() {
                 <span className="font-medium">{connection.name || connection.provider}</span>
                 <span className="text-[10px] uppercase tracking-wide text-muted">{connection.provider}</span>
                 <span className="ml-auto text-[10.5px] text-muted">
-                  {connection.bindings?.length ?? 0} project{(connection.bindings?.length ?? 0) === 1 ? '' : 's'}
+                  {(connection.bindings?.length ?? 0) === 1 ? t('workspaceSettings.projectCountOne') : t('workspaceSettings.projectCount', { count: connection.bindings?.length ?? 0 })}
                 </span>
               </div>
               {(connection.bindings ?? []).map((binding) => (
@@ -128,7 +128,7 @@ export default function WorkspaceSettingsPage() {
                   </span>
                   <button
                     className="text-muted hover:text-err disabled:opacity-40"
-                    title="Remove binding"
+                    title={t('workspaceSettings.removeBinding')}
                     disabled={removeBinding.isPending}
                     onClick={() => removeBinding.mutate(binding.id)}
                   >
@@ -137,7 +137,7 @@ export default function WorkspaceSettingsPage() {
                 </div>
               ))}
               {(connection.bindings?.length ?? 0) === 0 && (
-                <p className="mt-1 text-[10.5px] text-muted/60">No projects bound to this workspace.</p>
+                <p className="mt-1 text-[10.5px] text-muted/60">{t('workspaceSettings.noBindings')}</p>
               )}
             </div>
           ))}

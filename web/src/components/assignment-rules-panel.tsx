@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
 import { api } from '../lib/api'
@@ -55,7 +55,7 @@ export function AssignmentRulesPanel() {
 
   return (
     <section className="mt-8">
-      <h2 className="text-[13px] font-medium">Task routing</h2>
+      <h2 className="text-[13px] font-medium">{t('rules.title')}</h2>
       <p className="mt-0.5 text-[11.5px] text-muted">{t('providers.rulesHint')}</p>
       <div className="mt-2 space-y-2">
         {rules.map((rule) => (

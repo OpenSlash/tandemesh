@@ -212,26 +212,26 @@ export default function AgentsPage() {
                 <p className="mt-1 text-[10.5px] text-muted/60">{t('agents.skillsHint')}</p>
               </div>
               <div className="text-[12px] text-muted">
-                Approval policy
+                {t('agents.approvalPolicy')}
                 <ApprovalPolicy value={askTools} onChange={setAskTools} />
-                <p className="mt-1 text-[10.5px] text-muted/60">Tools listed here pause the run until you approve or deny the call.</p>
+                <p className="mt-1 text-[10.5px] text-muted/60">{t('agents.approvalHint')}</p>
               </div>
               <label className="text-[12px] text-muted">
                 {t('agents.reposCommaSeparated')}
                 <Input className="mt-1" value={repos} onChange={(e) => setRepos(e.target.value)} />
               </label>
               <label className="text-[12px] text-muted">
-                Context
+                {t('agents.context')}
                 <select
                   className="mt-1 w-full rounded-md border border-line2 bg-panel px-2 py-1.5 text-[12px] text-fg"
                   value={sessionMode}
                   onChange={(e) => setSessionMode(e.target.value as 'off' | 'task' | 'agent')}
                 >
-                  <option value="off">Off — fresh context per run</option>
-                  <option value="task">Per task — reuse context for the same task</option>
-                  <option value="agent">Agent — reuse one context across tasks</option>
+                  <option value="off">{t('agents.contextOff')}</option>
+                  <option value="task">{t('agents.contextTask')}</option>
+                  <option value="agent">{t('agents.contextAgent')}</option>
                 </select>
-                <p className="mt-1 text-[10.5px] text-muted/60">Reuse an agent session so later runs remember earlier work.</p>
+                <p className="mt-1 text-[10.5px] text-muted/60">{t('agents.contextHint')}</p>
               </label>
               {create.error && <p className="text-[12px] text-err">{String(create.error.message)}</p>}
               <div className="mt-1 flex justify-end gap-2">
@@ -407,9 +407,9 @@ export default function AgentsPage() {
               <p className="mt-1 text-[10.5px] text-muted/60">{t('agents.skillsHint')}</p>
             </div>
             <div className="text-[12px] text-muted">
-              Approval policy
+              {t('agents.approvalPolicy')}
               <ApprovalPolicy value={editAskTools} onChange={setEditAskTools} />
-              <p className="mt-1 text-[10.5px] text-muted/60">Tools listed here pause the run until you approve or deny the call.</p>
+              <p className="mt-1 text-[10.5px] text-muted/60">{t('agents.approvalHint')}</p>
             </div>
             <label className="text-[12px] text-muted">
               {t('agents.role')}
@@ -425,15 +425,15 @@ export default function AgentsPage() {
               />
             </label>
             <label className="text-[12px] text-muted">
-              Context
+              {t('agents.context')}
               <select
                 className="mt-1 w-full rounded-md border border-line2 bg-panel px-2 py-1.5 text-[12px] text-fg"
                 value={editSessionMode}
                 onChange={(e) => setEditSessionMode(e.target.value as 'off' | 'task' | 'agent')}
               >
-                <option value="off">Off — fresh context per run</option>
-                <option value="task">Per task — reuse context for the same task</option>
-                <option value="agent">Agent — reuse one context across tasks</option>
+                <option value="off">{t('agents.contextOff')}</option>
+                <option value="task">{t('agents.contextTask')}</option>
+                <option value="agent">{t('agents.contextAgent')}</option>
               </select>
             </label>
             <label className="text-[12px] text-muted">
@@ -627,6 +627,7 @@ function ModelSelect({
 const APPROVAL_PRESETS = ['Bash', 'Edit', 'Write', 'Read', 'WebFetch', 'MCP']
 
 function ApprovalPolicy({ value, onChange }: { value: string[]; onChange: (value: string[]) => void }) {
+  const { t } = useI18n()
   const [draft, setDraft] = useState('')
   const toggle = (tool: string) => {
     onChange(value.includes(tool) ? value.filter((item) => item !== tool) : [...value, tool])
@@ -664,10 +665,10 @@ function ApprovalPolicy({ value, onChange }: { value: string[]; onChange: (value
               add()
             }
           }}
-          placeholder="Custom tool name"
+          placeholder={t('agents.customTool')}
           className="h-7 text-[11px]"
         />
-        <Button type="button" variant="secondary" size="sm" onClick={add}>Add</Button>
+        <Button type="button" variant="secondary" size="sm" onClick={add}>{t('common.add')}</Button>
       </div>
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1">

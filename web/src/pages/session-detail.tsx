@@ -61,12 +61,12 @@ function findPaneNode(node: PaneNode, id: string): PaneNode | null {
   return findPaneNode(node.children[0], id) ?? findPaneNode(node.children[1], id)
 }
 const SLASH_COMMANDS = [
-  { command: '/diff', description: 'Open the session diff' },
-  { command: '/chat', description: 'Switch to chat' },
-  { command: '/terminal', description: 'Switch to terminal' },
-  { command: '/ship', description: 'Open commit and push' },
-  { command: '/worktree', description: 'Manage the worktree' },
-  { command: '/clear', description: 'Clear the composer' },
+  { command: '/diff', description: 'session.cmd.diff' },
+  { command: '/chat', description: 'session.cmd.chat' },
+  { command: '/terminal', description: 'session.cmd.terminal' },
+  { command: '/ship', description: 'session.cmd.ship' },
+  { command: '/worktree', description: 'session.cmd.worktree' },
+  { command: '/clear', description: 'session.cmd.clear' },
 ]
 
 function splitInlineImages(text: string) {
@@ -81,24 +81,24 @@ function splitInlineImages(text: string) {
 function toolMeta(name: string) {
   const value = name.toLowerCase()
   if (value.includes('bash') || value.includes('shell') || value.includes('exec') || value.includes('terminal')) {
-    return { label: 'Command', Icon: Terminal }
+    return { label: 'session.tool.command', Icon: Terminal }
   }
   if (value.includes('edit') || value.includes('write') || value.includes('patch')) {
-    return { label: 'Edit', Icon: FilePenLine }
+    return { label: 'session.tool.edit', Icon: FilePenLine }
   }
   if (value.includes('read')) {
-    return { label: 'Read', Icon: FileText }
+    return { label: 'session.tool.read', Icon: FileText }
   }
   if (value.includes('grep') || value.includes('search')) {
-    return { label: 'Search', Icon: Search }
+    return { label: 'session.tool.search', Icon: Search }
   }
   if (value.includes('glob') || value.includes('list') || value.includes('find')) {
-    return { label: 'Files', Icon: FolderSearch }
+    return { label: 'session.tool.files', Icon: FolderSearch }
   }
   if (value.includes('fetch') || value.includes('http') || value.includes('web')) {
-    return { label: 'Fetch', Icon: Globe }
+    return { label: 'session.tool.fetch', Icon: Globe }
   }
-  return { label: 'Tool', Icon: Wrench }
+  return { label: 'session.tool.tool', Icon: Wrench }
 }
 
 type DiffRow = {
@@ -699,7 +699,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
         <ShieldCheck className="h-3.5 w-3.5" />
         <span className="font-medium">{approval.tool}</span>
         <span className="text-[10px] uppercase">{approval.risk}</span>
-        <span className="ml-auto text-[10px] text-muted">Needs your approval</span>
+        <span className="ml-auto text-[10px] text-muted">{t('session.needsApproval')}</span>
       </div>
       {approval.command && (
         <pre className="mt-1 overflow-x-auto rounded border border-warn/20 bg-bg px-2 py-1.5 font-mono text-[11px] text-fg/80">
@@ -730,7 +730,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
     <div key={question.id} className="rounded-xl border border-line bg-panel/40 p-3">
       <div className="flex items-center gap-2 text-[12px] text-fg">
         <HelpCircle className="h-3.5 w-3.5 text-muted" />
-        <span className="font-medium">Agent question</span>
+        <span className="font-medium">{t('session.agentQuestion')}</span>
       </div>
       <p className="mt-1.5 whitespace-pre-wrap text-[12.5px] text-fg">{question.question}</p>
       {question.expiresAt && <p className="mt-1 text-[10px] text-muted">Expires {new Date(question.expiresAt).toLocaleTimeString()}</p>}
@@ -753,7 +753,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
         <Input
           value={questionDrafts[question.id] ?? ''}
           onChange={(event) => setQuestionDrafts((drafts) => ({ ...drafts, [question.id]: event.target.value }))}
-          placeholder="Type an answer"
+          placeholder={t('session.typeAnswer')}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && (questionDrafts[question.id] ?? '').trim()) {
               event.preventDefault()
@@ -767,7 +767,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
           disabled={answerQuestion.isPending || !(questionDrafts[question.id] ?? '').trim()}
           onClick={() => answerQuestion.mutate({ questionId: question.id, answer: questionDrafts[question.id].trim() })}
         >
-          Answer
+          {t('session.answer')}
         </Button>
       </div>
       {answerQuestion.error && <p className="mt-1 text-[10.5px] text-err">{String(answerQuestion.error.message)}</p>}
@@ -782,7 +782,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
             autoFocus
             value={messageSearch}
             onChange={(event) => setMessageSearch(event.target.value)}
-            placeholder="Search this conversation"
+            placeholder={t('session.searchConversation')}
             className="h-7 flex-1 border-0 bg-transparent px-0 focus:ring-0"
           />
           <span className="text-[10.5px] text-muted">{displayMessages.length}/{messages.length}</span>
@@ -813,7 +813,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
                     className="w-full resize-none rounded border border-line2 bg-panel px-2 py-1.5 text-[12.5px] text-fg"
                   />
                   <div className="mt-1 flex justify-end gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => setEditingMessageId(null)}>Cancel</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditingMessageId(null)}>{t('common.cancel')}</Button>
                     <Button
                       size="sm"
                       variant="primary"
@@ -835,14 +835,14 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
                   setMessageDraft(m.text)
                 }}
                 className="text-muted opacity-0 transition-opacity hover:text-fg group-hover:opacity-100"
-                title="Edit message"
+                title={t('session.editMessage')}
               >
                 <Pencil className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => copyMessage(key, m.text)}
                 className="text-muted opacity-0 transition-opacity hover:text-fg group-hover:opacity-100"
-                title="Copy message"
+                title={t('session.copyMessage')}
               >
                 {copiedKey === key ? <Check className="h-3.5 w-3.5 text-ok" /> : <Copy className="h-3.5 w-3.5" />}
               </button>
@@ -876,13 +876,13 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
             <details key={key} className="group ml-10 rounded-lg border border-line bg-panel/30">
               <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-1.5 text-[11px] text-muted">
                 <ToolIcon className="h-3 w-3 shrink-0" />
-                <span className="shrink-0 text-[9.5px] uppercase tracking-wide text-muted">{meta.label}</span>
+                <span className="shrink-0 text-[9.5px] uppercase tracking-wide text-muted">{t(meta.label)}</span>
                 <span className="shrink-0 font-medium text-fg/80">{tool}</span>
                 <span className="min-w-0 truncate font-mono text-[10.5px]">{args}</span>
                 {result && <Check className={`ml-1 h-3 w-3 shrink-0 ${statusClass}`} />}
                 <ChevronDown className="ml-auto h-3 w-3 shrink-0 transition-transform group-open:rotate-180" />
               </summary>
-              {meta.label === 'Command' ? (
+              {meta.label === 'session.tool.command' ? (
                 <div className="border-t border-line bg-[#0b0d10] px-3 py-2 font-mono text-[11px]">
                   <div className="flex gap-2 text-fg/80">
                     <span className="select-none text-muted">$</span>
@@ -909,7 +909,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
         if (m.kind === 'thought') {
           return (
             <details key={key} className="ml-10 text-[11px] text-muted">
-              <summary className="cursor-pointer list-none">Thought</summary>
+              <summary className="cursor-pointer list-none">{t('session.thought')}</summary>
               <p className="mt-1 whitespace-pre-wrap italic">{m.text}</p>
             </details>
           )
@@ -939,7 +939,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
                 <button
                   onClick={() => copyMessage(key, m.text)}
                   className="text-muted opacity-0 transition-opacity hover:text-fg group-hover:opacity-100"
-                  title="Copy message"
+                  title={t('session.copyMessage')}
                 >
                   {copiedKey === key ? <Check className="h-3 w-3 text-ok" /> : <Copy className="h-3 w-3" />}
                 </button>
@@ -947,7 +947,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
                   <button
                     onClick={() => regenerate.mutate()}
                     className="text-muted opacity-0 transition-opacity hover:text-fg group-hover:opacity-100 disabled:opacity-30"
-                    title="Regenerate response"
+                    title={t('session.regenerate')}
                     disabled={regenerate.isPending}
                   >
                     <RotateCcw className="h-3 w-3" />
@@ -972,7 +972,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           </div>
           <div className="text-[12px] text-muted">
-            <span className="font-medium text-fg/80">{queued ? 'Queued' : 'Working…'}</span>
+            <span className="font-medium text-fg/80">{queued ? t('session.queued') : t('session.workingStatus')}</span>
             <p className="mt-0.5">
               {queued ? 'This turn starts after the current run.' : lastTool ? `Running ${lastTool.text.split(' ')[0]}…` : 'The agent is running this turn.'}
             </p>
@@ -1010,7 +1010,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
         <span className="text-[10.5px] text-muted">{openComments.length} open review comments</span>
         {modifiedFiles.length > 0 && (
           <div className="flex items-center gap-1">
-            <button onClick={() => goToDiffFile(diffFileCursor - 1)} className="px-1 text-[12px] text-muted hover:text-fg" title="Previous file">‹</button>
+            <button onClick={() => goToDiffFile(diffFileCursor - 1)} className="px-1 text-[12px] text-muted hover:text-fg" title={t('session.prevFile')}>‹</button>
             <select
               value={modifiedFiles[Math.min(diffFileCursor, modifiedFiles.length - 1)] ?? ''}
               onChange={(event) => goToDiffFile(modifiedFiles.indexOf(event.target.value))}
@@ -1018,12 +1018,12 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
             >
               {modifiedFiles.map((file) => <option key={file} value={file}>{file}</option>)}
             </select>
-            <button onClick={() => goToDiffFile(diffFileCursor + 1)} className="px-1 text-[12px] text-muted hover:text-fg" title="Next file">›</button>
+            <button onClick={() => goToDiffFile(diffFileCursor + 1)} className="px-1 text-[12px] text-muted hover:text-fg" title={t('session.nextFile')}>›</button>
           </div>
         )}
         {gitStatus?.commits && gitStatus.commits.length > 0 && (
           <details className="relative">
-            <summary className="cursor-pointer list-none text-[10px] text-muted hover:text-fg">History</summary>
+            <summary className="cursor-pointer list-none text-[10px] text-muted hover:text-fg">{t('session.history')}</summary>
             <div className="absolute left-0 top-5 z-20 w-[420px] rounded-md border border-line bg-panel p-2 shadow-lg">
               {gitStatus.commits.map((commit) => (
                 <div key={commit.hash} className="flex gap-2 border-b border-line/60 py-1 last:border-0">
@@ -1068,7 +1068,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
             disabled={openComments.length === 0 || sendComments.isPending}
             onClick={() => sendComments.mutate()}
           >
-            Send to agent
+            {t('session.sendToAgent')}
           </Button>
         </div>
       </div>
@@ -1120,14 +1120,14 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
                             className="w-full resize-none rounded border border-line2 bg-panel px-2 py-1 text-[11px] text-fg"
                           />
                           <div className="mt-1 flex justify-end gap-1">
-                            <Button size="sm" variant="ghost" onClick={() => setEditingCommentId(null)}>Cancel</Button>
+                            <Button size="sm" variant="ghost" onClick={() => setEditingCommentId(null)}>{t('common.cancel')}</Button>
                             <Button
                               size="sm"
                               variant="primary"
                               disabled={updateComment.isPending || !commentDraft.trim()}
                               onClick={() => updateComment.mutate({ commentId: comment.id, body: commentDraft.trim() })}
                             >
-                              Save
+                              {t('common.save')}
                             </Button>
                           </div>
                         </div>
@@ -1142,7 +1142,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
                               }}
                               className="ml-2 text-[10px] text-muted hover:text-fg"
                             >
-                              Resolve
+                              {t('session.resolve')}
                             </button>
                           )}
                           <button
@@ -1153,7 +1153,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
                             }}
                             className="ml-2 text-[10px] text-muted hover:text-fg"
                           >
-                            Edit
+                            {t('common.edit')}
                           </button>
                           <button
                             onClick={(event) => {
@@ -1162,7 +1162,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
                             }}
                             className="ml-2 text-[10px] text-muted hover:text-err"
                           >
-                            Delete
+                            {t('common.delete')}
                           </button>
                         </>
                       )}
@@ -1179,14 +1179,14 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
                         className="w-full resize-none rounded border border-line2 bg-panel px-2 py-1 text-[11.5px] text-fg"
                       />
                       <div className="mt-1 flex justify-end gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => setCommentTarget(null)}>Cancel</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setCommentTarget(null)}>{t('common.cancel')}</Button>
                         <Button
                           size="sm"
                           variant="primary"
                           disabled={!commentBody.trim() || createComment.isPending}
                           onClick={() => createComment.mutate()}
                         >
-                          Comment
+                          {t('session.comment')}
                         </Button>
                       </div>
                     </div>
@@ -1196,10 +1196,10 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
             })}
           </div>
         ) : (
-          <p className="p-4 text-[12px] text-muted">No changes in this session yet.</p>
+          <p className="p-4 text-[12px] text-muted">{t('session.noChangesYet')}</p>
         )}
       </div>
-      {diffData?.truncated && <p className="shrink-0 border-t border-line px-3 py-1 text-[10px] text-warn">Diff truncated</p>}
+      {diffData?.truncated && <p className="shrink-0 border-t border-line px-3 py-1 text-[10px] text-warn">{t('session.diffTruncated')}</p>}
     </div>
   )
   const composer = sess && sess.status !== 'closed' ? (
@@ -1240,7 +1240,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
             >
               <Slash className="h-3 w-3 shrink-0" />
               <span className="font-mono text-fg/80">{item.command}</span>
-              <span className="truncate">{item.description}</span>
+              <span className="truncate">{t(item.description)}</span>
             </button>
           ))}
         </div>
@@ -1256,12 +1256,12 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
             event.target.value = ''
           }}
         />
-        <Button type="button" variant="ghost" size="sm" onClick={() => fileRef.current?.click()} title="Attach files or images">
+        <Button type="button" variant="ghost" size="sm" onClick={() => fileRef.current?.click()} title={t('session.attach')}>
           <Paperclip className="h-3.5 w-3.5" />
         </Button>
         {agentSkills.length > 0 && (
           <div className="relative">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setSkillsOpen((value) => !value)} title="Use a skill">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setSkillsOpen((value) => !value)} title={t('session.useSkill')}>
               <Sparkles className="h-3.5 w-3.5" />
             </Button>
             {skillsOpen && (
@@ -1421,7 +1421,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
                 setEditingTitle(true)
               }}
               className="max-w-full text-left"
-              title="Rename session"
+              title={t('session.rename')}
             >
               <h1 className="truncate text-[16px] font-semibold tracking-tight">{sess?.title ?? t('page.session')}</h1>
             </button>
@@ -1537,8 +1537,8 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
             <div className="mt-3 flex min-h-0 flex-1 flex-col">
               <p className="mb-2 text-[11px] text-muted">
                 {sess.backendSessionId
-                  ? 'Resuming the agent CLI with this session’s backend id.'
-                  : 'No backend session yet; the terminal starts the agent CLI without resume.'}
+                  ? t('session.resumeHint')
+                  : t('session.noResumeHint')}
               </p>
               <TerminalPanel session={sess} />
             </div>
@@ -1570,7 +1570,7 @@ export function SessionDetail({ id, embedded = false, pane = false, paneView = '
             {createPR.error && <p className="text-[11px] text-err">{String(createPR.error.message)}</p>}
             {gitJob && (
               <p className="text-[11px] text-muted">
-                {gitJob.action === 'ship' ? 'Commit & push' : 'PR'} queued on {gitJobData?.machineId ?? 'the agent host'} · {gitJobData?.status ?? 'pending'}
+                {t('session.gitJobQueued', { action: gitJob.action === 'ship' ? t('session.commitPush') : 'PR', host: gitJobData?.machineId ?? t('session.agentHost') })} · {gitJobData?.status ?? 'pending'}
               </p>
             )}
             {gitJobData?.error && <p className="text-[11px] text-err">{gitJobData.error}</p>}

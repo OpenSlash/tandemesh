@@ -235,7 +235,7 @@ export default function SessionsPage() {
                     }}
                     className="rounded-md border border-line2 bg-panel px-2 py-1.5 text-[12px] text-fg"
                   >
-                    <option value="">Custom repository…</option>
+                    <option value="">{t('sessions.customRepo')}</option>
                     {repositories.map((item) => (
                       <option key={item.repo} value={item.repo}>
                         {item.repo} · {item.worktreeCount} worktree{item.worktreeCount === 1 ? '' : 's'}

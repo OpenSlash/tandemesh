@@ -178,15 +178,15 @@ export default function WorkflowsPage() {
       </div>
 
       <Dialog open={!!runFor} onOpenChange={(open) => !open && setRunFor(null)}>
-        <DialogContent title={`Run ${runFor?.name ?? ''}`} description="Agent nodes need a task; script/gate workflows can run without one.">
+        <DialogContent title={t('workflows.runTitle', { name: runFor?.name ?? '' })} description={t('workflows.runHint')}>
           <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); start.mutate() }}>
-            <label className="text-[11px] text-muted">Task (optional)
+            <label className="text-[11px] text-muted">{t('workflows.taskOptional')}
               <select className="mt-1 h-8 w-full rounded-md border border-line2 bg-panel px-2 text-[12px]" value={taskId} onChange={(e) => setTaskId(e.target.value)}>
-                <option value="">No task</option>
+                <option value="">{t('workflows.noTask')}</option>
                 {tasks.map((task) => <option key={task.id} value={task.id}>{task.title}</option>)}
               </select>
             </label>
-            <div className="flex justify-end"><Button type="submit" variant="primary" disabled={start.isPending}><Play className="h-3 w-3" /> Start</Button></div>
+            <div className="flex justify-end"><Button type="submit" variant="primary" disabled={start.isPending}><Play className="h-3 w-3" /> {t('workflows.start')}</Button></div>
           </form>
         </DialogContent>
       </Dialog>

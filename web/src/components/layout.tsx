@@ -389,7 +389,7 @@ export default function Layout() {
     { to: '/skills', label: t('nav.skills'), icon: Sparkles },
     { to: '/providers', label: t('nav.providers'), icon: Plug },
     { to: '/credentials', label: t('nav.credentials'), icon: KeyRound },
-    { to: '/audit', label: 'Audit log', icon: ScrollText },
+    { to: '/audit', label: t('nav.audit'), icon: ScrollText },
     { to: '/settings', label: t('nav.settings'), icon: Settings2 },
   ]
 
@@ -602,7 +602,7 @@ export default function Layout() {
       </main>
       <CommandPalette open={searchOpen} onOpenChange={setSearchOpen} />
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent title={t('shell.newWorkspace')} description="Create a workspace for a separate project or team.">
+        <DialogContent title={t('shell.newWorkspace')} description={t('shell.newWorkspaceHint')}>
           <form
             className="flex flex-col gap-3"
             onSubmit={(e) => {
@@ -614,7 +614,7 @@ export default function Layout() {
               autoFocus
               value={newWorkspaceName}
               maxLength={80}
-              placeholder="Workspace name"
+              placeholder={t('shell.workspaceName')}
               onChange={(e) => setNewWorkspaceName(e.target.value)}
             />
             {createWorkspace.isError && (
@@ -626,7 +626,7 @@ export default function Layout() {
                 variant="primary"
                 disabled={!newWorkspaceName.trim() || createWorkspace.isPending}
               >
-                Create
+                {t('common.create')}
               </Button>
             </div>
           </form>

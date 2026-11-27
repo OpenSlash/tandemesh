@@ -4,10 +4,12 @@ import { api } from '../lib/api'
 import { Dialog, DialogContent } from './ui/dialog'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
+import { useI18n } from '../lib/i18n'
 
 const PROVIDERS = ['github', 'gitlab', 'jira', 'linear', 'outlook', 'notion', 'slack']
 
 export function OAuthAppsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { t } = useI18n()
   const qc = useQueryClient()
   const [provider, setProvider] = useState('github')
   const [clientId, setClientId] = useState('')
@@ -28,7 +30,7 @@ export function OAuthAppsDialog({ open, onOpenChange }: { open: boolean; onOpenC
   const save = useMutation({
     mutationFn: () => api.saveOAuthApp(provider, { clientId, clientSecret }),
     onSuccess: () => {
-      setMessage('Saved')
+      setMessage(t('common.saved'))
       setClientSecret('')
       qc.invalidateQueries({ queryKey: ['oauth-app', provider] })
       qc.invalidateQueries({ queryKey: ['github-oauth'] })
@@ -40,7 +42,7 @@ export function OAuthAppsDialog({ open, onOpenChange }: { open: boolean; onOpenC
   const remove = useMutation({
     mutationFn: () => api.deleteOAuthApp(provider),
     onSuccess: () => {
-      setMessage('Removed')
+      setMessage(t('common.removed'))
       setClientId('')
       setClientSecret('')
       qc.invalidateQueries({ queryKey: ['oauth-app', provider] })
@@ -52,9 +54,9 @@ export function OAuthAppsDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="OAuth Apps" description="Configure provider OAuth applications for this deployment.">
+      <DialogContent title={t('oauthApps.title')} description={t('oauthApps.description')}>
         <div className="flex flex-col gap-3">
-          <label className="text-[11px] uppercase tracking-wider text-muted">Provider</label>
+          <label className="text-[11px] uppercase tracking-wider text-muted">{t('oauthApps.provider')}</label>
           <select
             className="h-9 rounded-md border border-line bg-panel px-3 text-[12px]"
             value={provider}
@@ -65,18 +67,18 @@ export function OAuthAppsDialog({ open, onOpenChange }: { open: boolean; onOpenC
             ))}
           </select>
 
-          <label className="text-[11px] uppercase tracking-wider text-muted">Client ID</label>
-          <Input value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="Client ID" />
+          <label className="text-[11px] uppercase tracking-wider text-muted">{t('oauthApps.clientId')}</label>
+          <Input value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder={t('oauthApps.clientId')} />
 
-          <label className="text-[11px] uppercase tracking-wider text-muted">Client Secret</label>
+          <label className="text-[11px] uppercase tracking-wider text-muted">{t('oauthApps.clientSecret')}</label>
           <Input
             type="password"
             value={clientSecret}
             onChange={(e) => setClientSecret(e.target.value)}
-            placeholder={data?.configured ? 'Leave blank to keep the current secret' : 'Client Secret'}
+            placeholder={data?.configured ? t('oauthApps.keepSecret') : t('oauthApps.clientSecret')}
           />
 
-          <label className="text-[11px] uppercase tracking-wider text-muted">Callback URL</label>
+          <label className="text-[11px] uppercase tracking-wider text-muted">{t('oauthApps.callbackUrl')}</label>
           <div className="flex gap-2">
             <Input readOnly value={data?.callbackUrl ?? ''} />
             <Button
@@ -84,19 +86,19 @@ export function OAuthAppsDialog({ open, onOpenChange }: { open: boolean; onOpenC
               variant="secondary"
               onClick={() => navigator.clipboard?.writeText(data?.callbackUrl ?? '')}
             >
-              Copy
+              {t('common.copy')}
             </Button>
           </div>
 
           <p className="text-[11px] text-muted">
-            {isLoading ? 'Loading…' : data?.configured ? 'Configured' : 'Not configured'}
+            {isLoading ? t('common.loading') : data?.configured ? t('oauthApps.configured') : t('oauthApps.notConfigured')}
           </p>
           {message && <p className="text-[11px] text-muted">{message}</p>}
 
           <div className="mt-1 flex justify-end gap-2">
             {data?.configured && (
               <Button type="button" variant="secondary" onClick={() => remove.mutate()} disabled={remove.isPending}>
-                Remove
+                {t('common.remove')}
               </Button>
             )}
             <Button
@@ -104,7 +106,7 @@ export function OAuthAppsDialog({ open, onOpenChange }: { open: boolean; onOpenC
               onClick={() => save.mutate()}
               disabled={save.isPending || !clientId || (!data?.configured && !clientSecret)}
             >
-              Save
+              {t('common.save')}
             </Button>
           </div>
         </div>

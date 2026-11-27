@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
+import { useI18n } from '../lib/i18n'
 
 type Item = { id: string; name: string; slug?: string }
 
@@ -19,6 +20,7 @@ export function PlaneCatalogPicker({
   initialWorkspace?: string
   onSelect: (instance: string, name?: string) => void
 }) {
+  const { t } = useI18n()
   const [workspace, setWorkspace] = useState('')
   const [projects, setProjects] = useState<Item[]>([])
   const [message, setMessage] = useState('')
@@ -40,12 +42,12 @@ export function PlaneCatalogPicker({
 
   return (
     <div className="rounded-md border border-line2 p-2">
-      <span className="text-[11px] uppercase tracking-wider text-muted">Plane workspace / project</span>
+      <span className="text-[11px] uppercase tracking-wider text-muted">{t('plane.workspaceProject')}</span>
       <div className="mt-2 flex gap-2">
         <Input
           value={workspace}
           onChange={(e) => setWorkspace(e.target.value)}
-          placeholder="workspace slug"
+          placeholder={t('plane.workspaceSlug')}
         />
         <Button
           type="button"
@@ -54,7 +56,7 @@ export function PlaneCatalogPicker({
           disabled={(!token && !connectionId) || !workspace || loadProjects.isPending}
           onClick={() => loadProjects.mutate(workspace)}
         >
-          Load projects
+          {t('plane.loadProjects')}
         </Button>
       </div>
       {projects.length > 0 && (
@@ -66,7 +68,7 @@ export function PlaneCatalogPicker({
             if (project) onSelect(`${workspace}/${project.id}`, project.name)
           }}
         >
-          <option value="">Select project</option>
+          <option value="">{t('plane.selectProject')}</option>
           {projects.map((item) => (
             <option key={item.id} value={item.id}>{item.name}</option>
           ))}

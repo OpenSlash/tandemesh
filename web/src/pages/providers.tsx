@@ -427,7 +427,7 @@ export default function ProvidersPage() {
                           className="rounded border border-line2 px-1.5 py-0.5 text-[10px] text-muted hover:text-fg"
                           onClick={() => setDetailsFor(p.id)}
                         >
-                          Details
+                          {t('providers.details')}
                         </button>
                       </div>
                     </div>
@@ -512,7 +512,7 @@ export default function ProvidersPage() {
           open
           onOpenChange={(open) => !open && setDetailsFor('')}
           title={items.find((provider) => provider.id === detailsFor)?.name ?? detailsFor}
-          description="Connections and configuration"
+          description={t('providers.detailsDescription')}
         >
       <section className="mt-8">
         <h2 className="text-[13px] font-medium">{t('providers.connections')}</h2>
@@ -840,7 +840,7 @@ export default function ProvidersPage() {
             )}
             {connectFor === 'plane' && connections.some((c) => c.provider === 'plane') && (
               <label className="text-[12px] text-muted">
-                Use existing Plane account
+                {t('providers.useExistingPlane')}
                 <select
                   className="mt-1 h-8 w-full rounded-md border border-line2 bg-panel px-2 text-[12px]"
                   value={reuseConnectionId}

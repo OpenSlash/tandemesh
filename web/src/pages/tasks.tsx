@@ -635,7 +635,7 @@ function TaskDrawer({ id, onClose }: { id: string; onClose: () => void }) {
             <Button size="sm" variant="ghost" onClick={() => unassign.mutate()}>取消指派</Button>
           )}
           <Button size="sm" variant="primary" disabled={(task?.activeRuns ?? 0) > 0 || summon.isPending || start.isPending} onClick={() => summon.mutate()}>
-            {(task?.activeRuns ?? 0) > 0 ? 'Running...' : 'Summon Agent'}
+            {(task?.activeRuns ?? 0) > 0 ? t('tasks.summonRunning') : t('tasks.summonAgent')}
           </Button>
           <Button size="sm" variant="ghost" disabled={(task?.activeRuns ?? 0) > 0 || !agent || start.isPending} onClick={() => start.mutate()}>
             {(task?.activeRuns ?? 0) > 0 || start.isPending ? 'Running...' : t('task.start')}

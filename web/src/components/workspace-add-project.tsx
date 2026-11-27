@@ -5,6 +5,7 @@ import { Dialog, DialogContent } from './ui/dialog'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { PlaneCatalogPicker } from './plane-catalog-picker'
+import { useI18n } from '../lib/i18n'
 
 export function WorkspaceAddProject({
   workspaceId,
@@ -17,6 +18,7 @@ export function WorkspaceAddProject({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const { t } = useI18n()
   const qc = useQueryClient()
   const [connectionId, setConnectionId] = useState('')
   const [instance, setInstance] = useState('')
@@ -39,17 +41,17 @@ export function WorkspaceAddProject({
       void qc.invalidateQueries({ queryKey: ['connections', workspaceId] })
       setInstance('')
       setName('')
-      setMessage('Project bound')
+      setMessage(t('addProject.bound'))
     },
     onError: (err) => setMessage(String(err)),
   })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="Add project" description="Bind an external project to this workspace using an existing account.">
+      <DialogContent title={t('addProject.title')} description={t('addProject.description')}>
         <div className="flex flex-col gap-3">
           <label className="text-[12px] text-muted">
-            Connection
+            {t('addProject.connection')}
             <select
               className="mt-1 h-8 w-full rounded-md border border-line2 bg-panel px-2 text-[12px]"
               value={connectionId}
@@ -59,7 +61,7 @@ export function WorkspaceAddProject({
                 setMessage('')
               }}
             >
-              <option value="">Select connection</option>
+              <option value="">{t('addProject.selectConnection')}</option>
               {connections.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name || item.provider} · {item.provider}
@@ -82,7 +84,7 @@ export function WorkspaceAddProject({
           )}
 
           <label className="text-[12px] text-muted">
-            Instance
+            {t('addProject.instance')}
             <Input
               className="mt-1"
               value={instance}
@@ -91,11 +93,11 @@ export function WorkspaceAddProject({
             />
           </label>
           <label className="text-[12px] text-muted">
-            Name
+            {t('addProject.name')}
             <Input
               className="mt-1"
               value={name}
-              placeholder="Optional display name"
+              placeholder={t('addProject.namePlaceholder')}
               onChange={(e) => setName(e.target.value)}
             />
           </label>
@@ -108,7 +110,7 @@ export function WorkspaceAddProject({
               disabled={!connection || !instance.trim() || save.isPending}
               onClick={() => save.mutate()}
             >
-              Bind project
+              {t('addProject.bind')}
             </Button>
           </div>
         </div>
