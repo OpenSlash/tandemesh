@@ -121,6 +121,8 @@ tasks:
       - pnpm run build
       - find "{{.ROOT_DIR}}/webdist" -mindepth 1 -maxdepth 1 ! -name .keep -exec rm -rf {} +
       - cp -R dist/ "{{.ROOT_DIR}}/webdist/"
+    env:
+      TANDEMESH_VERSION: '{{.VERSION}}'
 
   build:sidecars:
     summary: Builds tandemesh-plane and tandemesh-agentd for the app bundle

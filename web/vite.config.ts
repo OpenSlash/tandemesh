@@ -6,7 +6,9 @@ import pkg from './package.json'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    // Packaged builds pass their release version; plain web builds fall back
+    // to package.json.
+    __APP_VERSION__: JSON.stringify(process.env.TANDEMESH_VERSION || pkg.version),
   },
   server: {
     port: 5173,
