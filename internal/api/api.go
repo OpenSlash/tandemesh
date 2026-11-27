@@ -357,6 +357,7 @@ func (s *Server) Router() http.Handler {
 		r.Delete("/connections/{id}", s.deleteConnectionByID)
 		r.Post("/connections/{id}/merge/{source}", s.mergeConnection)
 		r.Patch("/bindings/{id}", s.patchBinding)
+		r.Get("/bindings/{id}/states", s.bindingStates)
 		r.Delete("/bindings/{id}", s.deleteBinding)
 		r.Delete("/integrations/{provider}", s.deleteConnection)
 		r.Post("/machines/{id}/takeover", s.takeoverMachine)

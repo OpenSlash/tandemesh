@@ -67,6 +67,9 @@ type Snapshot struct {
 	Assignee    string   `json:"assignee,omitempty"`
 	Status      string   `json:"status,omitempty"`
 	StatusGroup string   `json:"statusGroup,omitempty"`
+	// StatusID is the platform state id, which survives renames; per-binding
+	// state mappings key on it.
+	StatusID string `json:"statusId,omitempty"`
 }
 
 // Run is a single execution instance bound to one WorkRef and one agent.

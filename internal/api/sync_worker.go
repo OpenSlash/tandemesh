@@ -151,7 +151,7 @@ func (s *Server) SyncConnections(ctx context.Context) int {
 			snap := domain.Snapshot{
 				Title: item.Title, Body: item.Body, Labels: item.Labels,
 				Author: item.Author, Assignee: item.Assignee,
-				Status: item.Status, StatusGroup: item.StatusGroup,
+				Status: item.Status, StatusGroup: item.StatusGroup, StatusID: item.StatusID,
 			}
 			task, err := s.store.EnsureTaskIn(ctx, conn.WorkspaceID, item.Ref, snap)
 			if err != nil {
@@ -281,7 +281,7 @@ func (s *Server) syncBinding(ctx context.Context, conn *domain.Connection, ad *i
 		snap := domain.Snapshot{
 			Title: item.Title, Body: item.Body, Labels: item.Labels,
 			Author: item.Author, Assignee: item.Assignee,
-			Status: item.Status, StatusGroup: item.StatusGroup,
+			Status: item.Status, StatusGroup: item.StatusGroup, StatusID: item.StatusID,
 		}
 		task, err := s.store.EnsureTaskIn(ctx, workspaceID, item.Ref, snap)
 		if err != nil {

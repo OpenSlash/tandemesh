@@ -132,7 +132,7 @@ func (s *Server) syncWork(w http.ResponseWriter, r *http.Request) {
 		}
 		snap := domain.Snapshot{
 			Title: item.Title, Body: item.Body, Labels: item.Labels, Author: item.Author, Assignee: item.Assignee,
-			Status: item.Status, StatusGroup: item.StatusGroup,
+			Status: item.Status, StatusGroup: item.StatusGroup, StatusID: item.StatusID,
 		}
 		task, err := s.store.EnsureTaskIn(r.Context(), req.WorkspaceID, item.Ref, snap)
 		if err != nil {

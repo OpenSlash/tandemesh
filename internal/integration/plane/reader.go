@@ -109,7 +109,7 @@ func (a *Adapter) listProjectItems(ctx context.Context, cred integration.Credent
 			},
 			Title: row.Name, Body: body, Labels: mappedLabels(row, labels),
 			Author: mappedAuthor(row, members), Assignee: mappedAssignee(row, members), Updated: updated,
-			Status: stateByID[issueStateID(row.State)].Name, StatusGroup: stateByID[issueStateID(row.State)].Group,
+			Status: stateByID[issueStateID(row.State)].Name, StatusGroup: stateByID[issueStateID(row.State)].Group, StatusID: issueStateID(row.State),
 		})
 	}
 	return out, nil

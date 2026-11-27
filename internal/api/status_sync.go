@@ -81,19 +81,36 @@ func targetStateName(b *domain.Automation, status string) string {
 }
 
 // enqueueStatusWriteback pushes a local status change back to the platform.
+// A binding with writebackStatus on opts in by itself; otherwise the
+// deployment-wide flag and the automation's status option both have to be on.
 func (s *Server) enqueueStatusWriteback(ctx context.Context, task *domain.Task, status string) {
-	if !s.cfg.WritebackState || task == nil {
+	if task == nil {
 		return
 	}
+	binding, _ := s.store.FindBinding(ctx, task.Provider, task.Instance)
+	bindingOn := binding != nil && binding.Settings[settingWritebackStatus] == "true"
 	automation := s.automationForTask(ctx, task)
-	if automation == nil || !boolOption(automation.Writeback, "status", false) {
+	legacyOn := s.cfg.WritebackState && automation != nil && boolOption(automation.Writeback, "status", false)
+	if !bindingOn && !legacyOn {
 		return
 	}
 	ad, ok := s.integrations.Get(task.Provider)
 	if !ok || !hasCapability(ad, integration.CapTransition) {
 		return
 	}
-	target := targetStateName(automation, status)
+	target, connectionID, accountID := "", "", ""
+	if binding != nil {
+		target = binding.Settings[stateOutPrefix+status]
+		connectionID, accountID = binding.ConnectionID, binding.AccountID
+	}
+	if target == "" && automation != nil {
+		target = targetStateName(automation, status)
+	}
+	if connectionID == "" && automation != nil {
+		connectionID = automation.ConnectionID
+	}
+	cred := s.accountCredential(ctx, task.Provider, accountID, s.providerCredential(ctx, task.Provider, connectionID))
+	target = s.resolveStateTarget(ctx, ad, cred, task, target, status)
 	if target == "" {
 		return
 	}
@@ -101,7 +118,7 @@ func (s *Server) enqueueStatusWriteback(ctx context.Context, task *domain.Task, 
 		ID:           "wb_" + ulid.Make().String(),
 		RunID:        "status:" + task.ID + ":" + status,
 		Provider:     task.Provider,
-		ConnectionID: automation.ConnectionID,
+		ConnectionID: connectionID,
 		Action:       "transition",
 		Work: domain.WorkRef{
 			Provider: task.Provider, Instance: task.Instance, Type: task.WorkType,

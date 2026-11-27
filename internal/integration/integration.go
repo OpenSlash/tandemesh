@@ -299,6 +299,7 @@ type WorkItem struct {
 	Assignee    string              `json:"assignee,omitempty"`
 	Status      string              `json:"status,omitempty"`
 	StatusGroup string              `json:"statusGroup,omitempty"`
+	StatusID    string              `json:"statusId,omitempty"`
 	Attachments []Attachment        `json:"attachments,omitempty"`
 	Fields      map[string][]string `json:"fields,omitempty"`
 	Updated     time.Time           `json:"updated"`

@@ -13,7 +13,8 @@ func (s *Server) applyPlatformState(ctx context.Context, task *domain.Task, snap
 	if task == nil || (snap.Status == "" && snap.StatusGroup == "") {
 		return
 	}
-	local := mapPlatformStatusWith(stateMap, snap.StatusGroup, snap.Status)
+	stateMap = s.withBindingStateMap(ctx, task, stateMap)
+	local := mapPlatformStatusWith(stateMap, snap.StatusGroup, snap.Status, snap.StatusID)
 	if local == task.Status && snap.Status == task.PlatformState && snap.StatusGroup == task.PlatformStateGroup {
 		return
 	}
@@ -37,9 +38,10 @@ func (s *Server) applyPlatformState(ctx context.Context, task *domain.Task, snap
 	}
 }
 
-// mapPlatformStatusWith applies a per-binding override before the default mapping.
-func mapPlatformStatusWith(stateMap map[string]string, group, state string) string {
-	for _, key := range []string{state, group, strings.ToLower(state), strings.ToLower(group)} {
+// mapPlatformStatusWith applies an override (by state id, then name, then
+// group) before the default group mapping.
+func mapPlatformStatusWith(stateMap map[string]string, group, state, stateID string) string {
+	for _, key := range []string{stateID, state, group, strings.ToLower(state), strings.ToLower(group)} {
 		if key == "" {
 			continue
 		}

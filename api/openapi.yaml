@@ -214,6 +214,29 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/MachineJob" }
         "404": { description: Job not found }
+  /api/v1/bindings/{id}/states:
+    get:
+      summary: List the platform states of a binding's project
+      description: Feeds the per-binding state mapping, stored in the binding's settings as state.in.<state>, state.out.<status> and writebackStatus.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: States
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        name: { type: string }
+                        group: { type: string }
+        "404": { description: Binding not found }
   /api/v1/agentd/machine-jobs/{machineId}:
     get:
       summary: Claim pending jobs for a host (daemon only)
