@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -163,6 +164,7 @@ func (s *Server) deleteBinding(w http.ResponseWriter, r *http.Request) {
 			_ = s.store.UpsertConnection(r.Context(), conn)
 		}
 	}
+	s.pruneUnboundScope(r.Context(), binding.WorkspaceID, binding.Provider, binding.ExternalID)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -194,6 +196,56 @@ func (s *Server) rejectBoundElsewhere(w http.ResponseWriter, r *http.Request, pr
 func connectionHasBinding(bindings []*domain.ResourceBinding, connectionID string) bool {
 	for _, b := range bindings {
 		if b.ConnectionID == connectionID {
+			return true
+		}
+	}
+	return false
+}
+
+// pruneUnboundScope cleans up after scope stops being bound in a workspace:
+// synced tasks under it that no remaining binding covers are removed, or
+// kept as unbound when they have execution history.
+func (s *Server) pruneUnboundScope(ctx context.Context, workspaceID, provider, scope string) {
+	var remaining []string
+	if all, err := s.store.ListAllBindings(ctx); err == nil {
+		for _, b := range all {
+			if b.WorkspaceID == workspaceID && b.Provider == provider {
+				remaining = append(remaining, b.ExternalID)
+			}
+		}
+		// Connections from before bindings sync their own instance.
+		if conns, err := s.store.ListConnections(ctx, workspaceID, provider); err == nil {
+			for _, c := range conns {
+				if c.Instance != "" && !connectionHasBinding(all, c.ID) {
+					remaining = append(remaining, c.Instance)
+				}
+			}
+		}
+	}
+	tasks, err := s.store.ListSyncedTaskScopes(ctx, workspaceID, provider)
+	if err != nil {
+		s.log.Warn("prune unbound tasks", "workspace", workspaceID, "err", err)
+		return
+	}
+	pruned := 0
+	for id, instance := range tasks {
+		if !domain.InstanceCovers(scope, instance) || coveredByAny(remaining, instance) {
+			continue
+		}
+		if _, err := s.store.PruneUnboundTask(ctx, id); err != nil {
+			s.log.Warn("prune unbound task", "task", id, "err", err)
+			continue
+		}
+		pruned++
+	}
+	if pruned > 0 {
+		s.log.Info("pruned unbound tasks", "workspace", workspaceID, "scope", scope, "tasks", pruned)
+	}
+}
+
+func coveredByAny(scopes []string, instance string) bool {
+	for _, scope := range scopes {
+		if domain.InstanceCovers(scope, instance) {
 			return true
 		}
 	}

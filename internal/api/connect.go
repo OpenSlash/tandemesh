@@ -432,9 +432,25 @@ func (s *Server) deleteConnectionByID(w http.ResponseWriter, r *http.Request) {
 			_, _ = s.store.DeleteAutomation(r.Context(), automation.ID)
 		}
 	}
+	// Its bindings go with it, and so do the tasks synced through them.
+	var scopes []*domain.ResourceBinding
+	if all, err := s.store.ListAllBindings(r.Context()); err == nil {
+		for _, b := range all {
+			if b.ConnectionID == conn.ID {
+				scopes = append(scopes, b)
+				_, _ = s.store.DeleteBinding(r.Context(), b.ID)
+			}
+		}
+	}
 	if _, err := s.store.DeleteConnection(r.Context(), conn.ID); err != nil {
 		writeErr(w, http.StatusInternalServerError, "E_DB", err.Error())
 		return
+	}
+	for _, b := range scopes {
+		s.pruneUnboundScope(r.Context(), b.WorkspaceID, b.Provider, b.ExternalID)
+	}
+	if conn.Instance != "" {
+		s.pruneUnboundScope(r.Context(), conn.WorkspaceID, conn.Provider, conn.Instance)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

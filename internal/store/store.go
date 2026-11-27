@@ -529,7 +529,9 @@ func (s *Store) ListTasks(ctx context.Context, filter TaskFilter) ([]*domain.Tas
 		(SELECT body FROM task_comments WHERE task_comments.task_id = tasks.id ORDER BY created_at_ms DESC LIMIT 1),
 		(SELECT author FROM task_comments WHERE task_comments.task_id = tasks.id ORDER BY created_at_ms DESC LIMIT 1)
 		FROM tasks`
-	var where []string
+	// Tasks kept only for their execution history after their project was
+	// unbound stay out of lists; they are still reachable by id.
+	where := []string{"platform_state != '" + domain.PlatformStateUnbound + "'"}
 	var args []any
 	if filter.Unassigned {
 		where = append(where, "(assignee_agent_id = '' AND assignee_group_id = '')")

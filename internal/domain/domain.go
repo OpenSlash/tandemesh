@@ -1009,3 +1009,7 @@ type SessionShare struct {
 func InstanceCovers(scope, instance string) bool {
 	return scope == instance || (scope != "" && strings.HasPrefix(instance, scope+"/"))
 }
+
+// PlatformStateUnbound marks a synced task whose project is no longer bound
+// to its workspace but which has execution history worth keeping.
+const PlatformStateUnbound = "unbound"

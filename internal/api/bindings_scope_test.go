@@ -68,3 +68,34 @@ func TestRemovingLastBindingStopsConnectionSync(t *testing.T) {
 		t.Fatalf("connection should no longer sync its own instance: %+v err=%v", conn, err)
 	}
 }
+
+func TestUnbindingPrunesItsTasks(t *testing.T) {
+	ts, st := newTestServerWithStore(t)
+	ctx := t.Context()
+	if err := st.UpsertConnection(ctx, &domain.Connection{ID: "conn_a", WorkspaceID: "ws_default", Provider: "plane", Instance: "acme/p1", Enabled: true}); err != nil {
+		t.Fatal(err)
+	}
+	for _, b := range []*domain.ResourceBinding{
+		{ID: "bind_p1", WorkspaceID: "ws_default", ConnectionID: "conn_a", Provider: "plane", ExternalID: "acme/p1", Enabled: true},
+		{ID: "bind_p2", WorkspaceID: "ws_default", ConnectionID: "conn_a", Provider: "plane", ExternalID: "acme/p2", Enabled: true},
+	} {
+		if err := st.UpsertBinding(ctx, b); err != nil {
+			t.Fatal(err)
+		}
+	}
+	p1, _ := st.EnsureTaskIn(ctx, "ws_default", domain.WorkRef{Provider: "plane", Instance: "acme/p1", Type: "issue", ID: "i1"}, domain.Snapshot{Title: "one"})
+	p2, _ := st.EnsureTaskIn(ctx, "ws_default", domain.WorkRef{Provider: "plane", Instance: "acme/p2", Type: "issue", ID: "i2"}, domain.Snapshot{Title: "two"})
+
+	req, _ := http.NewRequest(http.MethodDelete, ts.URL+"/api/v1/bindings/bind_p1", nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if got, _ := st.GetTask(ctx, p1.ID); got != nil {
+		t.Fatalf("task of the unbound project kept: %+v", got)
+	}
+	if got, _ := st.GetTask(ctx, p2.ID); got == nil {
+		t.Fatal("task of a still-bound project was removed")
+	}
+}
