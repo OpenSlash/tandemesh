@@ -33,8 +33,9 @@ tasks:
       - task: common:go:mod:tidy
       # The shell embeds the shared console from ../../web, not the Wails
       # template in ./frontend.
-      - task: stage:web
-      - task: common:generate:icons
+      - task: common:stage:web
+      # Icons are committed; regenerate them on purpose with
+      # `wails3 task common:generate:icons` (needs Xcode 26 for Assets.car).
     preconditions:
       - sh: '{{if eq .OBFUSCATED "true"}}command -v garble >/dev/null 2>&1{{else}}true{{end}}'
         msg: "garble is required for obfuscated builds. Install it with: go install mvdan.cc/garble@v0.16.0 (requires Go 1.24+). See https://github.com/burrowers/garble/releases for version/toolchain compatibility."
@@ -111,18 +112,6 @@ tasks:
     cmds:
       - wails3 tool lipo -output "{{.BIN_DIR}}/{{.APP_NAME}}" -input "{{.BIN_DIR}}/{{.APP_NAME}}-amd64" -input "{{.BIN_DIR}}/{{.APP_NAME}}-arm64"
       - rm -f "{{.BIN_DIR}}/{{.APP_NAME}}-amd64" "{{.BIN_DIR}}/{{.APP_NAME}}-arm64"
-
-  stage:web:
-    summary: Builds the shared console and stages it in webdist for embedding
-    run: once
-    dir: ../../web
-    cmds:
-      - pnpm install --frozen-lockfile
-      - pnpm run build
-      - find "{{.ROOT_DIR}}/webdist" -mindepth 1 -maxdepth 1 ! -name .keep -exec rm -rf {} +
-      - cp -R dist/ "{{.ROOT_DIR}}/webdist/"
-    env:
-      TANDEMESH_VERSION: '{{.VERSION}}'
 
   build:sidecars:
     summary: Builds tandemesh-plane and tandemesh-agentd for the app bundle

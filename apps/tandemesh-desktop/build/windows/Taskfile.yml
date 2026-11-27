@@ -35,7 +35,9 @@ tasks:
     internal: true
     deps:
       - task: common:go:mod:tidy
-      - task: common:generate:icons
+      - task: common:stage:web
+      # Icons are committed; regenerate them on purpose with
+      # `wails3 task common:generate:icons` (needs Xcode 26 for Assets.car).
     preconditions:
       - sh: '{{if eq .OBFUSCATED "true"}}command -v garble >/dev/null 2>&1{{else}}true{{end}}'
         msg: "garble is required for obfuscated builds. Install it with: go install mvdan.cc/garble@v0.16.0 (requires Go 1.24+). See https://github.com/burrowers/garble/releases for version/toolchain compatibility."
@@ -86,15 +88,28 @@ tasks:
       DOCKER_MOUNTS:
         sh: 'wails3 tool docker-mounts'
 
+  # Per-user installs need no UAC prompt, so silent self-updates stay silent.
   package:
     summary: Packages the application
     cmds:
       - task: '{{if eq (.FORMAT | default "nsis") "msix"}}create:msix:package{{else}}create:nsis:installer{{end}}'
         vars:
-          INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
+          INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "user"}}'
     vars:
       FORMAT: '{{.FORMAT | default "nsis"}}'
-      INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
+      INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "user"}}'
+
+  build:sidecars:
+    summary: Builds tandemesh-plane.exe and tandemesh-agentd.exe for the installer
+    dir: ../..
+    cmds:
+      - go build -trimpath -buildvcs=false -ldflags="-w -s" -o "{{.ROOT_DIR}}/{{.BIN_DIR}}/tandemesh-plane.exe" ./cmd/tandemesh-plane
+      - go build -trimpath -buildvcs=false -ldflags="-w -s" -o "{{.ROOT_DIR}}/{{.BIN_DIR}}/tandemesh-agentd.exe" ./cmd/tandemesh-agentd
+    env:
+      GOOS: windows
+      # The SQLite driver is pure Go, so the sidecars cross-compile anywhere.
+      CGO_ENABLED: 0
+      GOARCH: '{{.ARCH | default ARCH}}'
 
   generate:syso:
     summary: Generates Windows `.syso` file
@@ -109,6 +124,7 @@ tasks:
     dir: build/windows/nsis
     deps:
       - task: build
+      - task: build:sidecars
     preconditions:
       - sh: '[ "{{.INSTALL_SCOPE}}" = "user" ] || [ "{{.INSTALL_SCOPE}}" = "machine" ]'
         msg: "INSTALL_SCOPE must be 'user' or 'machine', got '{{.INSTALL_SCOPE}}'"
@@ -117,14 +133,36 @@ tasks:
       - wails3 generate webview2bootstrapper -dir "{{.ROOT_DIR}}/build/windows/nsis"
       - |
         {{if eq OS "windows"}}
-        makensis {{if eq .INSTALL_SCOPE "user"}}-DWAILS_INSTALL_SCOPE=user -DREQUEST_EXECUTION_LEVEL=user {{end}}-DARG_WAILS_{{.ARG_FLAG}}_BINARY="{{.ROOT_DIR}}\{{.BIN_DIR}}\{{.APP_NAME}}.exe" project.nsi
+        makensis {{if eq .INSTALL_SCOPE "user"}}-DWAILS_INSTALL_SCOPE=user -DREQUEST_EXECUTION_LEVEL=user {{end}}-DINFO_PRODUCTVERSION={{.FILE_VERSION}} -DARG_WAILS_{{.ARG_FLAG}}_BINARY="{{.ROOT_DIR}}\{{.BIN_DIR}}\{{.APP_NAME}}.exe" project.nsi
         {{else}}
-        makensis {{if eq .INSTALL_SCOPE "user"}}-DWAILS_INSTALL_SCOPE=user -DREQUEST_EXECUTION_LEVEL=user {{end}}-DARG_WAILS_{{.ARG_FLAG}}_BINARY="{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}.exe" project.nsi
+        makensis {{if eq .INSTALL_SCOPE "user"}}-DWAILS_INSTALL_SCOPE=user -DREQUEST_EXECUTION_LEVEL=user {{end}}-DINFO_PRODUCTVERSION={{.FILE_VERSION}} -DARG_WAILS_{{.ARG_FLAG}}_BINARY="{{.ROOT_DIR}}/{{.BIN_DIR}}/{{.APP_NAME}}.exe" project.nsi
         {{end}}
     vars:
       ARCH: '{{.ARCH | default ARCH}}'
       ARG_FLAG: '{{if eq .ARCH "amd64"}}AMD64{{else}}ARM64{{end}}'
-      INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
+      INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "user"}}'
+      # Windows version resources only take dotted numbers.
+      FILE_VERSION: '{{splitList "-" .VERSION | first}}'
+
+  update:manifest:
+    summary: Writes the signed update manifest for the installer
+    desc: |
+      Usage: TANDEMESH_UPDATE_KEY=<seed> wails3 task windows:update:manifest [NOTES="..."] [RELEASE_URL=...]
+      Run after windows:package. Upload the installer and the manifest to the
+      GitHub release for tag v<VERSION>.
+    vars:
+      UPDATE_ARCH: '{{.ARCH | default ARCH}}'
+      INSTALLER: 'Tandemesh-Setup-{{.UPDATE_ARCH}}.exe'
+      RELEASE_URL: '{{.RELEASE_URL | default (printf "https://github.com/OpenSlash/tandemesh/releases/download/v%s" .VERSION)}}'
+    preconditions:
+      - sh: test -f "{{.BIN_DIR}}/{{.INSTALLER}}"
+        msg: "Build the installer first: wails3 task windows:package"
+      - sh: test -n "$TANDEMESH_UPDATE_KEY"
+        msg: "TANDEMESH_UPDATE_KEY must hold the update signing key"
+    cmds:
+      - >-
+        go run ./tools/sign-update -file "{{.BIN_DIR}}/{{.INSTALLER}}" -version "{{.VERSION}}"
+        -url "{{.RELEASE_URL}}/{{.INSTALLER}}" -notes "{{.NOTES}}" > "{{.BIN_DIR}}/update-windows-{{.UPDATE_ARCH}}.json"
 
   create:msix:package:
     summary: Creates an MSIX package
@@ -180,8 +218,8 @@ tasks:
     deps:
       - task: create:nsis:installer
         vars:
-          INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
+          INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "user"}}'
     vars:
-      INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
+      INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "user"}}'
     cmds:
-      - wails3 tool sign --input "build/windows/nsis/{{.APP_NAME}}-installer.exe" {{if .SIGN_CERTIFICATE}}--certificate "{{.SIGN_CERTIFICATE}}"{{end}} {{if .SIGN_THUMBPRINT}}--thumbprint "{{.SIGN_THUMBPRINT}}"{{end}} {{if .TIMESTAMP_SERVER}}--timestamp "{{.TIMESTAMP_SERVER}}"{{end}}
+      - wails3 tool sign --input "{{.BIN_DIR}}/Tandemesh-Setup-{{.ARCH | default ARCH}}.exe" {{if .SIGN_CERTIFICATE}}--certificate "{{.SIGN_CERTIFICATE}}"{{end}} {{if .SIGN_THUMBPRINT}}--thumbprint "{{.SIGN_THUMBPRINT}}"{{end}} {{if .TIMESTAMP_SERVER}}--timestamp "{{.TIMESTAMP_SERVER}}"{{end}}

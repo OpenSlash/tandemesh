@@ -10,6 +10,21 @@ tasks:
     cmds:
       - go mod tidy
 
+  stage:web:
+    summary: Builds the shared console and stages it in webdist for embedding
+    run: once
+    dir: ../../web
+    cmds:
+      - pnpm install --frozen-lockfile
+      - pnpm run build
+      # Node rather than find/cp so the same step runs on Windows runners.
+      - >-
+        node -e "const fs=require('fs'),path=require('path'),dir=process.argv[1];
+        for (const f of fs.readdirSync(dir)) if (f !== '.keep') fs.rmSync(path.join(dir, f), {recursive: true});
+        fs.cpSync('dist', dir, {recursive: true})" "{{.ROOT_DIR}}/webdist"
+    env:
+      TANDEMESH_VERSION: '{{.VERSION}}'
+
   install:frontend:deps:
     summary: Install frontend dependencies
     run: once

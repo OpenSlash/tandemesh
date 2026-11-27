@@ -33,6 +33,10 @@ Unicode true
 ####
 ## Include the wails tools
 ####
+!define INFO_PROJECTNAME "tandemesh-desktop"
+!define INFO_COMPANYNAME "OpenSlash"
+!define INFO_PRODUCTNAME "Tandemesh"
+!define INFO_COPYRIGHT   "© OpenSlash"
 !include "wails_tools.nsh"
 
 # The version information for this two must consist of 4 parts
@@ -72,7 +76,8 @@ ManifestDPIAware true
 #!finalize 'signtool --file "%1"'
 
 Name "${INFO_PRODUCTNAME}"
-OutFile "..\..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the installer's file.
+# A fixed name keeps releases/latest/download/Tandemesh-Setup-<arch>.exe stable.
+OutFile "..\..\..\bin\Tandemesh-Setup-${ARCH}.exe"
 !if "${WAILS_INSTALL_SCOPE}" == "user"
     InstallDir "$LOCALAPPDATA\Programs\${INFO_PRODUCTNAME}"
 !else
