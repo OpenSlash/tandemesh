@@ -303,7 +303,7 @@ export default function TaskDetailPage() {
                 <span>·</span>
                 <span className="font-mono">{task.workId}</span>
                 <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10.5px] text-accent2">
-                  本地指派 · {task.assigneeGroupId
+                  {t('tasks.localAssignShort')}{task.assigneeGroupId
                     ? groups.find((g) => g.id === task.assigneeGroupId)?.name ?? compactId(task.assigneeGroupId, 8)
                     : task.assigneeAgentId
                       ? agents.find((a) => a.id === task.assigneeAgentId)?.name ?? compactId(task.assigneeAgentId, 8)

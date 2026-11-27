@@ -381,7 +381,7 @@ export default function ProvidersPage() {
           <p className="mt-0.5 text-[12px] text-muted">{t('providers.subtitle')}</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => setOauthOpen(true)}>
-          <KeyRound className="mr-1.5 h-3.5 w-3.5" /> OAuth Apps
+          <KeyRound className="mr-1.5 h-3.5 w-3.5" /> {t('oauthApps.title')}
         </Button>
       </div>
 
@@ -433,7 +433,7 @@ export default function ProvidersPage() {
                     </div>
                     {connections.filter((c) => c.provider === p.id).map((c) => (
                       <div key={c.id} className="mt-1 font-mono text-[10px] text-muted">
-                        {c.allBindings?.length ?? 0} projects 闂?{c.baseUrl || 'default'}
+                        {t('providers.projectCount', { count: c.allBindings?.length ?? 0 })} · {c.baseUrl || t('providers.defaultUrl')}
                       </div>
                     ))}
                     <div className="mt-2 flex flex-wrap items-center gap-1">
@@ -470,7 +470,7 @@ export default function ProvidersPage() {
                           setWebhookSecret('')
                         }}
                       >
-                        {connections.some((c) => c.provider === p.id) ? 'Add connection' : t('providers.connect')}
+                        {connections.some((c) => c.provider === p.id) ? t('providers.addConnection') : t('providers.connect')}
                       </button>
                       <button
                         className="rounded border border-line2 px-1.5 py-0.5 text-[10px] text-muted hover:text-fg"
@@ -735,7 +735,7 @@ export default function ProvidersPage() {
                     </Button>
                     {importRuntime && (
                       <span className="text-[10px] text-muted">
-                        {importRuntime.active}/{importRuntime.concurrency} active 闂?{importRuntime.queued} queued
+                        {t('providers.importRuntime', { active: importRuntime.active, concurrency: importRuntime.concurrency, queued: importRuntime.queued })}
                       </span>
                     )}
                     {imports.filter((batch) => batch.connectionId === connection.id).map((batch) => (
@@ -814,7 +814,7 @@ export default function ProvidersPage() {
 
       <Dialog open={!!connectFor} onOpenChange={(open) => !open && setConnectFor('')}>
         <DialogContent
-          title={t('providers.connect') + (connectFor ? ` 闂?${connectFor}` : '')}
+          title={t('providers.connect') + (connectFor ? ` · ${connectFor}` : '')}
           description={activeProvider?.kind === 'task' ? t('providers.connectHint') : t('providers.connectHintChat')}
         >
           <form
@@ -952,7 +952,7 @@ export default function ProvidersPage() {
                 className="mt-1"
                 value={connectionName}
                 onChange={(e) => setConnectionName(e.target.value)}
-                placeholder={activeProvider ? `${activeProvider.name} 闂?connection` : 'Connection name'}
+                placeholder={activeProvider ? t('providers.connectionNameFor', { name: activeProvider.name }) : t('providers.connectionName')}
               />
             </label>
             {activeProvider?.kind === 'task' && (
@@ -974,7 +974,7 @@ export default function ProvidersPage() {
                     className="mt-1 min-h-20 w-full rounded-md border border-line2 bg-panel px-2 py-1 font-mono text-[11px]"
                     value={commentTemplate}
                     onChange={(e) => setCommentTemplate(e.target.value)}
-                    placeholder="{{status}} 闂?{{branch}} 闂?{{url}}"
+                    placeholder="{{status}} · {{branch}} · {{url}}"
                   />
                 </label>
                 {!configFields.some((field) => field.key === 'webhookSecret') && (
@@ -1070,7 +1070,7 @@ export default function ProvidersPage() {
 
       <Dialog open={!!accountsFor} onOpenChange={(open) => !open && setAccountsFor(null)}>
         <DialogContent
-          title={`${t('providers.accounts')} 闂?${accountsFor?.name ?? ''}`}
+          title={`${t('providers.accounts')} · ${accountsFor?.name ?? ''}`}
           description={t('providers.accountsHint')}
         >
           <div className="flex flex-col gap-3">
@@ -1138,7 +1138,7 @@ export default function ProvidersPage() {
 
       <Dialog open={!!bindingsFor} onOpenChange={(open) => !open && setBindingsFor(null)}>
         <DialogContent
-          title={`${t('providers.bindings')} 闂?${bindingsFor?.name ?? ''}`}
+          title={`${t('providers.bindings')} · ${bindingsFor?.name ?? ''}`}
           description={t('providers.bindingsHint')}
         >
           <div className="flex flex-col gap-3">
@@ -1238,7 +1238,7 @@ export default function ProvidersPage() {
 
       <Dialog open={!!reauthFor} onOpenChange={(open) => !open && setReauthFor(null)}>
         <DialogContent
-          title={`${t('providers.reconnect')} 闂?${reauthFor?.name ?? ''}`}
+          title={`${t('providers.reconnect')} · ${reauthFor?.name ?? ''}`}
           description={t('providers.reconnectHint')}
         >
           <form
@@ -1273,7 +1273,7 @@ export default function ProvidersPage() {
 
       <Dialog open={!!editFor} onOpenChange={(open) => !open && setEditFor(null)}>
         <DialogContent
-          title={`${t('providers.edit')} 闂?${editFor?.provider ?? ''}`}
+          title={`${t('providers.edit')} · ${editFor?.provider ?? ''}`}
           description={t('providers.config')}
         >
           <form
@@ -1374,7 +1374,7 @@ function ConnectionSyncStatus({ connectionId }: { connectionId: string }) {
   return (
     <div className="mt-1 flex flex-wrap items-center gap-1 text-[10.5px] text-muted">
       <span>{t('providers.sync')}</span>
-      <span>{cursor.lastSyncedAt ? new Date(cursor.lastSyncedAt).toLocaleString() : 'Not synced'}</span>
+      <span>{cursor.lastSyncedAt ? new Date(cursor.lastSyncedAt).toLocaleString() : t('providers.notSynced')}</span>
       {cursor.lastError ? (
         <span className="text-err">Error: {cursor.lastError}</span>
       ) : (

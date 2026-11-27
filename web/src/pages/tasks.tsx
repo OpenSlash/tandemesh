@@ -442,11 +442,11 @@ export default function TasksPage() {
                   </td>
                   <td className="px-3 py-2 text-[11.5px] text-muted">
                     {task.activeAgentId ? (
-                      <span className="text-ok">执行中 · {actorName(task.activeAgentId)}</span>
+                      <span className="text-ok">{t('tasks.runningBy', { name: actorName(task.activeAgentId) })}</span>
                     ) : task.assigneeAgentId ? (
                       <span>Agent · {actorName(task.assigneeAgentId)}</span>
                     ) : task.assigneeGroupId ? (
-                      <span>小组 · {actorName(task.assigneeGroupId)}</span>
+                      <span>{t('tasks.groupBy', { name: actorName(task.assigneeGroupId) })}</span>
                     ) : (
                       <span className="text-muted/50">{t('tasks.unassigned')}</span>
                     )}
@@ -604,10 +604,10 @@ function TaskDrawer({ id, onClose }: { id: string; onClose: () => void }) {
               </span>
             </div>
             <p className="mt-1 text-[11px] text-muted">
-              {task?.provider} - {task?.workId} - 作者 {task?.author || '-'} - 平台负责人 {task?.assignee || '-'}
+              {task?.provider} - {task?.workId} - {t('tasks.author')} {task?.author || '-'} - {t('tasks.platformAssignee')} {task?.assignee || '-'}
             </p>
             <p className="mt-1 text-[11px] text-accent2">
-              本地指派：{task?.assigneeGroupId
+              {t('tasks.localAssign')}{task?.assigneeGroupId
                 ? (groupsData?.items ?? []).find((g) => g.id === task.assigneeGroupId)?.name ?? task.assigneeGroupId
                 : task?.assigneeAgentId
                   ? (agentsData?.items ?? []).find((a) => a.id === task.assigneeAgentId)?.name ?? task.assigneeAgentId
@@ -632,7 +632,7 @@ function TaskDrawer({ id, onClose }: { id: string; onClose: () => void }) {
           </select>
           <Button size="sm" variant="ghost" disabled={!agent && !group} onClick={() => assign.mutate()}>{t('task.assign')}</Button>
           {(task?.assigneeAgentId || task?.assigneeGroupId) && (
-            <Button size="sm" variant="ghost" onClick={() => unassign.mutate()}>取消指派</Button>
+            <Button size="sm" variant="ghost" onClick={() => unassign.mutate()}>{t('tasks.unassign')}</Button>
           )}
           <Button size="sm" variant="primary" disabled={(task?.activeRuns ?? 0) > 0 || summon.isPending || start.isPending} onClick={() => summon.mutate()}>
             {(task?.activeRuns ?? 0) > 0 ? t('tasks.summonRunning') : t('tasks.summonAgent')}
@@ -674,7 +674,7 @@ function TaskDrawer({ id, onClose }: { id: string; onClose: () => void }) {
               <div className="min-w-0 flex-1">
                 {block.kind === 'thought' ? (
                   <div className="text-[11px] italic text-muted">
-                  思考：<Markdown className="text-[11px] italic text-muted">{block.text}</Markdown>
+                  {t('tasks.thinking')}<Markdown className="text-[11px] italic text-muted">{block.text}</Markdown>
                 </div>
                 ) : block.kind === 'tool' ? (
                   <p className="truncate font-mono text-[10.5px] text-accent2">🔧 {block.text}</p>
@@ -688,7 +688,7 @@ function TaskDrawer({ id, onClose }: { id: string; onClose: () => void }) {
           ))}
         {!!(platformComments?.items ?? []).length && (
           <div className="mt-3 rounded-lg border border-line p-3">
-            <p className="text-[11px] text-muted">平台评论</p>
+            <p className="text-[11px] text-muted">{t('tasks.platformComments')}</p>
             {(platformComments?.items ?? []).map((comment) => (
               <div key={comment.id} className="mt-2 text-[11.5px]">
                 <p className="text-[10.5px] text-muted/70">{comment.author || comment.provider}</p>
