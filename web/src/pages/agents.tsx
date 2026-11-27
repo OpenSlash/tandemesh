@@ -271,39 +271,41 @@ export default function AgentsPage() {
                 <Bot className="h-3.5 w-3.5 text-accent2" />
                 <span className="text-[13px] font-medium">{a.name}</span>
               </div>
-              <button
-                className="mr-2 text-[10px] text-muted hover:text-fg"
-                onClick={() => {
-                  setEditFor(a)
-                  setEditSessionMode((a.sessionMode as 'off' | 'task' | 'agent') ?? 'off')
-                  setEditName(a.name)
-                  setEditWorkspaceIds(a.workspaceIds?.length ? a.workspaceIds : [a.workspaceId])
-                  setEditInstructions(a.instructions ?? '')
-                  setEditRole(a.role ?? '')
-                  setEditCaps((a.capabilities ?? []).join(','))
-                  setEditEnv('')
-                  setEditBackend(a.backend)
-                  setEditMachineId(a.machineId ?? '')
-                  setEditModel(
-                    a.model && MODEL_OPTIONS[a.backend]?.includes(a.model) ? a.model : a.model ? '__custom' : '',
-                  )
-                  setEditCustomModel(
-                    a.model && MODEL_OPTIONS[a.backend]?.includes(a.model) ? '' : a.model ?? '',
-                  )
-                  setEditSkills(a.skills ?? [])
-                  setEditAskTools(((a.tools?.approval as { ask?: string[] } | undefined)?.ask) ?? [])
-                  api.agentEnv(a.id).then((r) => setEditEnv(r.keys.map((k) => k + '=').join('\\n'))).catch(() => {})
-                }}
-              >
-                {t('common.edit')}
-              </button>
-              <button
-                className="text-muted hover:text-err"
-                onClick={() => remove.mutate(a.id)}
-                title={t('common.delete')}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  className="text-[10px] text-muted hover:text-fg"
+                  onClick={() => {
+                    setEditFor(a)
+                    setEditSessionMode((a.sessionMode as 'off' | 'task' | 'agent') ?? 'off')
+                    setEditName(a.name)
+                    setEditWorkspaceIds(a.workspaceIds?.length ? a.workspaceIds : [a.workspaceId])
+                    setEditInstructions(a.instructions ?? '')
+                    setEditRole(a.role ?? '')
+                    setEditCaps((a.capabilities ?? []).join(','))
+                    setEditEnv('')
+                    setEditBackend(a.backend)
+                    setEditMachineId(a.machineId ?? '')
+                    setEditModel(
+                      a.model && MODEL_OPTIONS[a.backend]?.includes(a.model) ? a.model : a.model ? '__custom' : '',
+                    )
+                    setEditCustomModel(
+                      a.model && MODEL_OPTIONS[a.backend]?.includes(a.model) ? '' : a.model ?? '',
+                    )
+                    setEditSkills(a.skills ?? [])
+                    setEditAskTools(((a.tools?.approval as { ask?: string[] } | undefined)?.ask) ?? [])
+                    api.agentEnv(a.id).then((r) => setEditEnv(r.keys.map((k) => k + '=').join('\\n'))).catch(() => {})
+                  }}
+                >
+                  {t('common.edit')}
+                </button>
+                <button
+                  className="text-muted hover:text-err"
+                  onClick={() => remove.mutate(a.id)}
+                  title={t('common.delete')}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
             {a.machineId && (
               <p className="mt-1 text-[10.5px] text-muted">
