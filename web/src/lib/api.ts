@@ -883,7 +883,7 @@ export interface Connection {
   agents?: { agentId: string; prompt?: string; model?: string; role?: string }[]
   createdAt: string
   updatedAt: string
-  bindings?: { id: string; externalId: string; name: string; kind: string; enabled: boolean }[]
+  bindings?: { id: string; externalId: string; name: string; kind: string; enabled: boolean; settings?: Record<string, string> }[]
   allBindings?: { id: string; workspaceId: string; externalId: string; name: string; kind: string; enabled: boolean }[]
 }
 
@@ -1422,6 +1422,14 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify(body),
     }),
+  patchBinding: (id: string, body: { settings?: Record<string, string>; enabled?: boolean; name?: string }) =>
+    request<{ binding: ResourceBinding }>(`/api/v1/bindings/${id}`, {
+      method: 'PATCH',
+      headers: JSON_HEADERS,
+      body: JSON.stringify(body),
+    }),
+  bindingStates: (id: string) =>
+    request<List<{ id: string; name: string; group?: string }>>(`/api/v1/bindings/${id}/states`),
   deleteBinding: (id: string) =>
     request<void>(`/api/v1/bindings/${id}`, { method: 'DELETE' }),
   accounts: (connectionId: string) =>

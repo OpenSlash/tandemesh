@@ -8,6 +8,7 @@ import { useWorkspace } from '../lib/workspace'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { WorkspaceAddProject } from '../components/workspace-add-project'
+import { BindingStateMapping } from '../components/binding-state-mapping'
 import { ExternalIdentitiesPanel } from '../components/external-identities-panel'
 
 export default function WorkspaceSettingsPage() {
@@ -19,6 +20,7 @@ export default function WorkspaceSettingsPage() {
   const workspace = workspaces.find((w) => w.id === id)
   const [name, setName] = useState(workspace?.name ?? '')
   const [addOpen, setAddOpen] = useState(false)
+  const [mappingFor, setMappingFor] = useState('')
   const { data: connectionsData } = useQuery({
     queryKey: ['connections', id],
     queryFn: () => api.connections(id),
@@ -123,10 +125,17 @@ export default function WorkspaceSettingsPage() {
                 </span>
               </div>
               {(connection.bindings ?? []).map((binding) => (
-                <div key={binding.id} className="mt-1 flex items-center gap-2 text-[11px] text-muted">
+                <div key={binding.id}>
+                <div className="mt-1 flex items-center gap-2 text-[11px] text-muted">
                   <span className="min-w-0 flex-1 truncate" title={binding.externalId}>
                     {binding.name || binding.externalId}
                   </span>
+                  <button
+                    className="text-[10.5px] text-accent2 hover:underline"
+                    onClick={() => setMappingFor((current) => (current === binding.id ? '' : binding.id))}
+                  >
+                    {t('stateMap.title')}
+                  </button>
                   <button
                     className="text-muted hover:text-err disabled:opacity-40"
                     title={t('workspaceSettings.removeBinding')}
@@ -135,6 +144,8 @@ export default function WorkspaceSettingsPage() {
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
+                </div>
+                {mappingFor === binding.id && <BindingStateMapping binding={binding} />}
                 </div>
               ))}
               {(connection.bindings?.length ?? 0) === 0 && (
