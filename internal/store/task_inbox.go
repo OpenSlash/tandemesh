@@ -64,3 +64,28 @@ func (s *Store) MarkTaskRead(ctx context.Context, taskID, userID string) error {
 		taskID, userID, ms(now), ms(now))
 	return err
 }
+
+// ListClosedTasks returns the id and workspace of every done or cancelled
+// task, in one workspace or all of them ("").
+func (s *Store) ListClosedTasks(ctx context.Context, workspaceID string) (map[string]string, error) {
+	q := `SELECT id, workspace_id FROM tasks WHERE status IN (?, ?) AND platform_state != ?`
+	args := []any{domain.TaskDone, domain.TaskCancelled, domain.PlatformStateUnbound}
+	if workspaceID != "" {
+		q += ` AND workspace_id = ?`
+		args = append(args, workspaceID)
+	}
+	rows, err := s.db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var id, ws string
+		if err := rows.Scan(&id, &ws); err != nil {
+			return nil, err
+		}
+		out[id] = ws
+	}
+	return out, rows.Err()
+}

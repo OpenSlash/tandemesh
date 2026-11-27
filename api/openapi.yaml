@@ -214,6 +214,33 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/MachineJob" }
         "404": { description: Job not found }
+  /api/v1/tasks/inbox:
+    post:
+      summary: Triage many tasks in My Work at once
+      description: Moves tasks between inbox, later and cleared and/or marks them read for the acting user. Pass ids, or closed=true to pick every done or cancelled task in a workspace that is in `from`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids: { type: array, items: { type: string } }
+                closed: { type: boolean }
+                workspace: { type: string, description: '"all" or a workspace id' }
+                from: { type: string, enum: [inbox, later, cleared] }
+                state: { type: string, enum: [inbox, later, cleared] }
+                read: { type: boolean }
+      responses:
+        "200":
+          description: Number of tasks updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated: { type: integer }
+        "400": { description: Neither state nor read given, or an unknown state }
   /api/v1/bindings/{id}/states:
     get:
       summary: List the platform states of a binding's project

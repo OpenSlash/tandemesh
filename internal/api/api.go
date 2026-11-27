@@ -153,6 +153,7 @@ func (s *Server) Router() http.Handler {
 		r.Patch("/tasks/{id}/fields", s.updateTaskFields)
 		r.Get("/tasks/{id}/field-options", s.taskFieldOptions)
 		r.Get("/tasks/{id}/field-metadata", s.taskFieldMetadata)
+		r.Post("/tasks/inbox", s.batchTaskInbox)
 		r.Patch("/tasks/{id}/inbox", s.setTaskInbox)
 		r.Post("/tasks/{id}/read", s.markTaskRead)
 		r.Get("/tasks/{id}/activity", s.taskActivity)
