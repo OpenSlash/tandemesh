@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Activity,
@@ -19,6 +19,8 @@ import {
   ChevronRight,
   ListTree,
   ChevronsUpDown,
+  Pin,
+  PinOff,
   Sparkles,
   Bell,
   FileText,
@@ -140,6 +142,70 @@ function WorkspaceMenu({ id }: { id: string }) {
           </Link>
         </div>
       )}
+    </div>
+  )
+}
+
+function SidebarSection({
+  id,
+  title,
+  defaultOpen = false,
+  children,
+}: {
+  id: string
+  title: string
+  defaultOpen?: boolean
+  children: ReactNode
+}) {
+  const { t } = useI18n()
+  const openKey = `tandemesh.sidebar.${id}.open`
+  const pinKey = `tandemesh.sidebar.${id}.pinned`
+  const [open, setOpen] = useState(() => {
+    const stored = window.localStorage.getItem(openKey)
+    return stored === null ? defaultOpen : stored === '1'
+  })
+  const [pinned, setPinned] = useState(() => window.localStorage.getItem(pinKey) === '1')
+  const visible = pinned || open
+
+  const toggleOpen = () => {
+    if (pinned) return
+    const next = !open
+    setOpen(next)
+    window.localStorage.setItem(openKey, next ? '1' : '0')
+  }
+  const togglePinned = () => {
+    const next = !pinned
+    setPinned(next)
+    window.localStorage.setItem(pinKey, next ? '1' : '0')
+    if (next) {
+      setOpen(true)
+      window.localStorage.setItem(openKey, '1')
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="group flex h-6 items-center gap-1 px-2">
+        <button
+          type="button"
+          onClick={toggleOpen}
+          disabled={pinned}
+          className="flex min-w-0 flex-1 items-center gap-1 text-left text-[10.5px] uppercase tracking-wider text-muted/70 hover:text-fg disabled:cursor-default"
+        >
+          {visible ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+          <span className="truncate">{title}</span>
+        </button>
+        <button
+          type="button"
+          onClick={togglePinned}
+          title={pinned ? t('shell.unpinSection') : t('shell.pinSection')}
+          aria-label={pinned ? t('shell.unpinSection') : t('shell.pinSection')}
+          className={cn('shrink-0 text-muted/50 hover:text-fg', pinned && 'text-fg')}
+        >
+          {pinned ? <Pin className="h-3 w-3" /> : <PinOff className="h-3 w-3" />}
+        </button>
+      </div>
+      {visible && <div className="flex flex-col gap-0.5">{children}</div>}
     </div>
   )
 }
@@ -294,9 +360,11 @@ export default function Layout() {
             </div>
             <GlobalItem to="/tasks?scope=all" label={t('nav.tasks')} icon={ListTodo} />
             <GlobalItem to="/sessions?scope=all" label={t('nav.recentSessions')} icon={MessageSquare} />
-            <GlobalItem to="/dashboard" label={t('nav.agentDashboard')} icon={LayoutDashboard} />
-            <GlobalItem to="/runs?scope=all" label={t('nav.runs')} icon={Activity} />
-            <GlobalItem to="/agents?scope=all" label={t('nav.agents')} icon={Bot} />
+            <SidebarSection id="globalMore" title={t('shell.more')}>
+              <GlobalItem to="/dashboard" label={t('nav.agentDashboard')} icon={LayoutDashboard} />
+              <GlobalItem to="/runs?scope=all" label={t('nav.runs')} icon={Activity} />
+              <GlobalItem to="/agents?scope=all" label={t('nav.agents')} icon={Bot} />
+            </SidebarSection>
           </div>
 
           <div className="mt-3 border-t border-line pt-2">
@@ -398,9 +466,11 @@ export default function Layout() {
 
         <div className="mt-auto border-t border-line pt-2">
           <div className="px-2">
-            {globalNav.filter((item) => item.to !== '/audit' || capabilities?.profile === 'public').map((item) => (
-              <NavItem key={item.to} {...item} />
-            ))}
+            <SidebarSection id="system" title={t('shell.system')}>
+              {globalNav.filter((item) => item.to !== '/audit' || capabilities?.profile === 'public').map((item) => (
+                <NavItem key={item.to} {...item} />
+              ))}
+            </SidebarSection>
           </div>
           <div className="flex items-center gap-2 px-4 py-3 text-[11px] text-muted">
             <Command className="h-3.5 w-3.5" />
