@@ -39,6 +39,7 @@ func main() {
 
 	webURL := os.Getenv("TANDEMESH_WEB_URL")
 	var server *desktopServer
+	updates := &updateController{}
 	var plane *localPlane
 	localToken := ""
 	if webURL == "" {
@@ -68,7 +69,7 @@ func main() {
 			planeURL = "http://127.0.0.1:8080"
 		}
 		var err error
-		server, webURL, err = startDesktopServer(planeURL, desktopWebFS(), localToken)
+		server, webURL, err = startDesktopServer(planeURL, desktopWebFS(), localToken, updates)
 		if err != nil {
 			fatal("start desktop server: %v", err)
 		}
@@ -85,6 +86,7 @@ func main() {
 		},
 		OnShutdown: shutdown,
 	})
+	updates.setApp(app)
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 	go func() {

@@ -34,6 +34,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { api } from '../lib/api'
+import { desktopApi } from '../lib/desktop'
 import { useWorkspace } from '../lib/workspace'
 import { useI18n } from '../lib/i18n'
 import CommandPalette from './command-palette'
@@ -383,6 +384,14 @@ export default function Layout() {
   })
   const unreadNotifications = (notifications?.notifications ?? []).filter((n) => !n.readAt).length
   const { data: capabilities } = useQuery({ queryKey: ['capabilities'], queryFn: api.capabilities })
+  const { data: desktopUpdate } = useQuery({
+    queryKey: ['desktop-update'],
+    queryFn: desktopApi.checkUpdate,
+    enabled: desktop,
+    retry: false,
+    staleTime: 60 * 60 * 1000,
+    refetchInterval: 6 * 60 * 60 * 1000,
+  })
 
   const globalNav: NavEntry[] = [
     { to: '/machines', label: t('nav.machines'), icon: Monitor },
@@ -584,6 +593,11 @@ export default function Layout() {
           <div className="flex items-center gap-2 px-4 py-3 text-[11px] text-muted">
             <Command className="h-3.5 w-3.5" />
             <span>{__APP_VERSION__}</span>
+            {desktopUpdate?.available && (
+              <Link to="/settings/about" className="ml-auto rounded bg-accent/15 px-1.5 py-0.5 text-[10px] text-accent2 hover:bg-accent/25">
+                {t('shell.updateAvailable', { version: desktopUpdate.available })}
+              </Link>
+            )}
           </div>
         </div>
       </aside>

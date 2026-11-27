@@ -26,6 +26,7 @@ import SettingsLayout from './pages/settings'
 import SettingsAppearancePage from './pages/settings-appearance'
 import SettingsAccountPage from './pages/settings-account'
 import SettingsMobilePage from './pages/settings-mobile'
+import SettingsAboutPage from './pages/settings-about'
 import ACPRegistryPage from './pages/acp-registry'
 import SkillsPage from './pages/skills'
 import MachinesPage from './pages/machines'
@@ -117,6 +118,7 @@ export default function App() {
             <Route path="appearance" element={<SettingsAppearancePage />} />
             <Route path="account" element={<SettingsAccountPage />} />
             <Route path="mobile" element={<SettingsMobilePage />} />
+            <Route path="about" element={<SettingsAboutPage />} />
             <Route path="acp" element={<Navigate to="/machines/registry" replace />} />
           </Route>
         </Routes>

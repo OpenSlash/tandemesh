@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
-import { ArrowLeft, Monitor, Palette, Settings2, Smartphone, UserRound } from 'lucide-react'
+import { ArrowLeft, Info, Monitor, Palette, Settings2, Smartphone, UserRound } from 'lucide-react'
 import { useI18n } from '../lib/i18n'
 import { cn } from '../lib/utils'
 import { DesktopTitleBar } from '../components/app-topbar'
@@ -11,6 +11,7 @@ const groups = [
       { to: '/settings/appearance', labelKey: 'settings.appearance', icon: Palette },
       { to: '/settings/account', labelKey: 'settings.account', icon: UserRound },
       { to: '/settings/mobile', labelKey: 'settings.mobile', icon: Smartphone },
+      { to: '/settings/about', labelKey: 'settings.about', icon: Info },
     ],
   },
 ] as const

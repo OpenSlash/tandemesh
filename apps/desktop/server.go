@@ -19,8 +19,9 @@ type desktopServer struct {
 
 // startDesktopServer serves the built web UI and proxies API traffic to the
 // local plane. It keeps the browser-facing origin same-origin, so the existing
-// relative /api, /auth and /ws URLs keep working.
-func startDesktopServer(planeURL string, webFS fs.FS, localToken string) (*desktopServer, string, error) {
+// relative /api, /auth and /ws URLs keep working. /desktop/ goes to the
+// shell itself (updates).
+func startDesktopServer(planeURL string, webFS fs.FS, localToken string, desktop http.Handler) (*desktopServer, string, error) {
 	target, err := url.Parse(planeURL)
 	if err != nil {
 		return nil, "", err
@@ -36,6 +37,9 @@ func startDesktopServer(planeURL string, webFS fs.FS, localToken string) (*deskt
 	files := http.FileServer(http.FS(webFS))
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case strings.HasPrefix(r.URL.Path, "/desktop/"):
+			desktop.ServeHTTP(w, r)
+			return
 		case strings.HasPrefix(r.URL.Path, "/api/"), r.URL.Path == "/auth/me", strings.HasPrefix(r.URL.Path, "/ws"):
 			proxy.ServeHTTP(w, r)
 			return
