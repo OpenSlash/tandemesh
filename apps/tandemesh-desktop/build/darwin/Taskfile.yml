@@ -42,7 +42,7 @@ tasks:
       - wails3 tool prepare-macos-output --dir "{{.BIN_DIR}}"
       - '{{if eq .OBFUSCATED "true"}}garble {{.GARBLE_ARGS}} build{{else}}go build{{end}} {{.BUILD_FLAGS}} -o "{{.OUTPUT}}"'
     vars:
-      BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s"{{end}}'
+      BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -X main.version={{.VERSION}}"{{end}}'
       DEFAULT_OUTPUT: '{{.BIN_DIR}}/{{.APP_NAME}}'
       OUTPUT: '{{ .OUTPUT | default .DEFAULT_OUTPUT }}'
     env:
@@ -210,7 +210,14 @@ tasks:
       # The shell looks for its sidecars next to its own executable.
       - cp "{{.BIN_DIR}}/tandemesh-plane" "{{.BIN_DIR}}/tandemesh-agentd" "{{.BIN_DIR}}/{{.BUNDLE_NAME}}.app/Contents/MacOS"
       - cp build/darwin/Info.plist "{{.BIN_DIR}}/{{.BUNDLE_NAME}}.app/Contents"
+      - cmd: |
+          plutil -replace CFBundleShortVersionString -string "{{.PLIST_VERSION}}" "{{.BIN_DIR}}/{{.BUNDLE_NAME}}.app/Contents/Info.plist"
+          plutil -replace CFBundleVersion -string "{{.PLIST_VERSION}}" "{{.BIN_DIR}}/{{.BUNDLE_NAME}}.app/Contents/Info.plist"
+        platforms: [darwin]
       - task: '{{if eq OS "darwin"}}codesign:adhoc{{else}}codesign:skip{{end}}'
+    vars:
+      # Finder only accepts dotted numbers here, so drop the describe suffix.
+      PLIST_VERSION: '{{splitList "-" .VERSION | first}}'
 
   codesign:adhoc:
     summary: Ad-hoc signs the app bundle (macOS only)
@@ -261,6 +268,33 @@ tasks:
         cmd: codesign --force --options runtime --timestamp --sign "{{.SIGN_IDENTITY}}" "{{.APP}}/Contents/MacOS/{{.ITEM}}"
       - codesign --force --options runtime --timestamp --sign "{{.SIGN_IDENTITY}}" "{{.APP}}"
       - codesign --verify --deep --strict --verbose=2 "{{.APP}}"
+
+  update:archive:
+    summary: Zips the signed app and writes the update manifest the app polls
+    desc: |
+      Usage: wails3 task darwin:update:archive [NOTES="..."] [RELEASE_URL=...]
+      Run after darwin:sign (or darwin:release). Upload both files to the
+      GitHub release for tag v<VERSION>; the app reads
+      releases/latest/download/update-darwin-<arch>.json.
+    vars:
+      APP: '{{.BIN_DIR}}/{{.BUNDLE_NAME}}.app'
+      UPDATE_ARCH: '{{.ARCH | default ARCH}}'
+      ZIP_NAME: '{{.BUNDLE_NAME}}-{{.VERSION}}-darwin-{{.UPDATE_ARCH}}.zip'
+      RELEASE_URL: '{{.RELEASE_URL | default (printf "https://github.com/OpenSlash/tandemesh/releases/download/v%s" .VERSION)}}'
+      MANIFEST: '{{.BIN_DIR}}/update-darwin-{{.UPDATE_ARCH}}.json'
+    preconditions:
+      - sh: test -d "{{.APP}}"
+        msg: "Build and sign the app first: wails3 task darwin:sign SIGN_IDENTITY=..."
+    cmds:
+      - rm -f "{{.BIN_DIR}}/{{.ZIP_NAME}}"
+      # ditto keeps the bundle's symlinks and signature intact; zip does not.
+      - ditto -c -k --keepParent "{{.APP}}" "{{.BIN_DIR}}/{{.ZIP_NAME}}"
+      - >-
+        jq -n --arg version "{{.VERSION}}" --arg url "{{.RELEASE_URL}}/{{.ZIP_NAME}}"
+        --arg sha256 "$(shasum -a 256 "{{.BIN_DIR}}/{{.ZIP_NAME}}" | cut -d' ' -f1)"
+        --arg notes "{{.NOTES}}"
+        '{version: $version, url: $url, sha256: $sha256, notes: $notes}' > "{{.MANIFEST}}"
+      - cat "{{.MANIFEST}}"
 
   release:
     summary: Signs, packages into a .dmg, notarizes and staples

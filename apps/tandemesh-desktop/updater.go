@@ -10,17 +10,27 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-var version = "0.1.0"
+// version is set at build time with -ldflags -X. A plain `go build` reports
+// "dev" and never checks for updates on its own.
+var version = "dev"
+
+// Releases are published on GitHub. The latest/download path always resolves
+// to the newest non-prerelease, so prereleases can be tested without reaching
+// everyone, and plain file downloads avoid the API's rate limit.
+const releaseDownloadBase = "https://github.com/OpenSlash/tandemesh/releases/latest/download/"
+
+const updateInterval = 6 * time.Hour
 
 type updateManifest struct {
 	Version string `json:"version"`
@@ -29,8 +39,16 @@ type updateManifest struct {
 	Notes   string `json:"notes"`
 }
 
+// updateManifestURL returns where to look for updates, or "" when this build
+// cannot update itself. TANDEMESH_UPDATE_URL points at a mirror or a test feed.
 func updateManifestURL() string {
-	return strings.TrimSpace(os.Getenv("TANDEMESH_UPDATE_URL"))
+	if url := strings.TrimSpace(os.Getenv("TANDEMESH_UPDATE_URL")); url != "" {
+		return url
+	}
+	if version == "dev" || !selfUpdateSupported {
+		return ""
+	}
+	return releaseDownloadBase + "update-" + runtime.GOOS + "-" + runtime.GOARCH + ".json"
 }
 
 func compareVersions(a, b string) int {
@@ -54,27 +72,26 @@ func compareVersions(a, b string) int {
 	return 0
 }
 
-func fetchUpdate(ctx context.Context) (*updateManifest, error) {
-	url := updateManifestURL()
-	if url == "" {
-		return nil, nil
-	}
+func fetchUpdate(ctx context.Context, url string) (*updateManifest, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
-	client := &http.Client{Timeout: 20 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		// No release carries a manifest for this platform yet.
+		return nil, nil
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("update manifest: %s", resp.Status)
 	}
 	var manifest updateManifest
-	if err := json.NewDecoder(resp.Body).Decode(&manifest); err != nil {
-		return nil, err
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&manifest); err != nil {
+		return nil, fmt.Errorf("decode update manifest: %w", err)
 	}
 	if manifest.Version == "" || manifest.URL == "" || manifest.SHA256 == "" {
 		return nil, fmt.Errorf("update manifest is incomplete")
@@ -85,6 +102,8 @@ func fetchUpdate(ctx context.Context) (*updateManifest, error) {
 	return &manifest, nil
 }
 
+// downloadUpdate saves the package into a fresh temporary directory and
+// rejects it unless its SHA-256 matches the manifest.
 func downloadUpdate(ctx context.Context, manifest *updateManifest) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, manifest.URL, nil)
 	if err != nil {
@@ -98,7 +117,15 @@ func downloadUpdate(ctx context.Context, manifest *updateManifest) (string, erro
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("download: %s", resp.Status)
 	}
-	target := filepath.Join(os.TempDir(), "Tandemesh-Setup-"+manifest.Version+".exe")
+	dir, err := os.MkdirTemp("", "tandemesh-update-")
+	if err != nil {
+		return "", err
+	}
+	name := path.Base(req.URL.Path)
+	if name == "" || name == "." || name == "/" {
+		name = "update"
+	}
+	target := filepath.Join(dir, name)
 	file, err := os.Create(target)
 	if err != nil {
 		return "", err
@@ -106,56 +133,65 @@ func downloadUpdate(ctx context.Context, manifest *updateManifest) (string, erro
 	hash := sha256.New()
 	if _, err := io.Copy(io.MultiWriter(file, hash), resp.Body); err != nil {
 		file.Close()
-		return "", err
+		return "", fmt.Errorf("download: %w", err)
 	}
 	if err := file.Close(); err != nil {
 		return "", err
 	}
-	sum := hex.EncodeToString(hash.Sum(nil))
-	if !strings.EqualFold(sum, manifest.SHA256) {
-		_ = os.Remove(target)
+	if sum := hex.EncodeToString(hash.Sum(nil)); !strings.EqualFold(sum, manifest.SHA256) {
+		_ = os.RemoveAll(dir)
 		return "", fmt.Errorf("checksum mismatch")
 	}
 	return target, nil
 }
 
-func installUpdate(installer string) error {
-	if runtime.GOOS != "windows" {
-		return fmt.Errorf("installer updates are only wired for Windows")
-	}
-	cmd := exec.Command("cmd.exe", "/c", "ping 127.0.0.1 -n 3 >nul & \""+installer+"\" /S /UPDATE")
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	return nil
-}
+var updateChecking atomic.Bool
 
-func checkForUpdates(app *application.App) {
-	if updateManifestURL() == "" {
+// checkForUpdates asks the user to update when a newer release exists. A
+// manual check also reports "up to date" and errors; a background check
+// stays quiet about both.
+func checkForUpdates(app *application.App, manual bool) {
+	if !updateChecking.CompareAndSwap(false, true) {
+		return
+	}
+	defer updateChecking.Store(false)
+	url := updateManifestURL()
+	if url == "" {
+		if manual {
+			app.Dialog.Info().SetTitle("Tandemesh " + version).SetMessage("This build does not update itself.").Show()
+		}
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	manifest, err := fetchUpdate(ctx)
+	manifest, err := fetchUpdate(ctx, url)
 	if err != nil {
 		log.Printf("update check: %v", err)
+		if manual {
+			app.Dialog.Error().SetTitle("Update check failed").SetMessage(err.Error()).Show()
+		}
 		return
 	}
 	if manifest == nil {
+		if manual {
+			app.Dialog.Info().SetTitle("Tandemesh " + version).SetMessage("You are on the latest version.").Show()
+		}
 		return
 	}
-	question := app.Dialog.Question().
-		SetTitle("Tandemesh " + manifest.Version).
-		SetMessage("A new version is available.\n\n" + manifest.Notes)
+	message := "Version " + manifest.Version + " is available. You have " + version + "."
+	if notes := strings.TrimSpace(manifest.Notes); notes != "" {
+		message += "\n\n" + notes
+	}
+	question := app.Dialog.Question().SetTitle("Update Tandemesh").SetMessage(message)
 	question.AddButton("Update and restart").OnClick(func() {
 		go func() {
-			installer, err := downloadUpdate(context.Background(), manifest)
-			if err != nil {
-				app.Dialog.Error().SetTitle("Update failed").SetMessage(err.Error()).Show()
-				return
+			pkg, err := downloadUpdate(context.Background(), manifest)
+			if err == nil {
+				err = installUpdate(pkg)
 			}
-			if err := installUpdate(installer); err != nil {
-				app.Dialog.Error().SetTitle("Install failed").SetMessage(err.Error()).Show()
+			if err != nil {
+				log.Printf("update: %v", err)
+				app.Dialog.Error().SetTitle("Update failed").SetMessage(err.Error()).Show()
 				return
 			}
 			app.Quit()
@@ -163,5 +199,13 @@ func checkForUpdates(app *application.App) {
 	})
 	question.AddButton("Later")
 	question.Show()
+}
 
+// runUpdateChecks checks shortly after launch and then every updateInterval.
+func runUpdateChecks(app *application.App) {
+	time.Sleep(10 * time.Second)
+	for {
+		checkForUpdates(app, false)
+		time.Sleep(updateInterval)
+	}
 }

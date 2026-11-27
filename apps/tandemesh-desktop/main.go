@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -119,10 +118,7 @@ func main() {
 		URL:              webURL,
 	})
 	installTray(app, window)
-	go func() {
-		time.Sleep(10 * time.Second)
-		checkForUpdates(app)
-	}()
+	go runUpdateChecks(app)
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)

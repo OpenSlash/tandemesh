@@ -43,8 +43,9 @@ func installTray(app *application.App, window application.Window) {
 
 	menu := app.NewMenu()
 	menu.Add("Show Tandemesh").OnClick(func(*application.Context) { show() })
+	menu.Add("Tandemesh " + version).SetEnabled(false)
 	menu.Add("Check for updates").OnClick(func(*application.Context) {
-		checkForUpdates(app)
+		go checkForUpdates(app, true)
 	})
 	menu.AddCheckbox("Start at login", isAutostartEnabled()).OnClick(func(ctx *application.Context) {
 		enabled := ctx.ClickedMenuItem().Checked()
