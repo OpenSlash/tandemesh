@@ -25,18 +25,16 @@ fi
 open "$old"
 `
 
-// installUpdate unpacks a zipped .app, checks that it is signed by the same
-// team as the running app and hands the swap to a detached shell that
-// outlives this process.
+// installUpdate unpacks a zipped .app, checks its code signature and hands
+// the swap to a detached shell that outlives this process. The manifest
+// signature already vouches for the package; when the running app carries a
+// Developer ID, the update must also come from the same team.
 func installUpdate(archive string) error {
 	current, err := currentBundle()
 	if err != nil {
 		return err
 	}
-	team, err := signingTeam(current)
-	if err != nil {
-		return err
-	}
+	team := signingTeam(current)
 	if err := checkWritable(filepath.Dir(current)); err != nil {
 		return fmt.Errorf("cannot replace %s: %w", current, err)
 	}
@@ -59,16 +57,16 @@ func installUpdate(archive string) error {
 	return cmd.Process.Release()
 }
 
-// signingTeam reads the Developer ID team that signed bundle. Builds without
-// one (ad-hoc or unsigned) have nothing to pin an update to, so they refuse.
-func signingTeam(bundle string) (string, error) {
+// signingTeam reads the Developer ID team that signed bundle, or "" for an
+// ad-hoc or unsigned build.
+func signingTeam(bundle string) string {
 	out, _ := exec.Command("codesign", "-dv", bundle).CombinedOutput()
 	for _, line := range strings.Split(string(out), "\n") {
 		if team, ok := strings.CutPrefix(line, "TeamIdentifier="); ok && team != "not set" {
-			return team, nil
+			return team
 		}
 	}
-	return "", errors.New("this copy is not signed with a Developer ID; download the new version manually")
+	return ""
 }
 
 // currentBundle returns the .app this executable runs from.
@@ -96,11 +94,14 @@ func checkWritable(dir string) error {
 	return os.Remove(probe.Name())
 }
 
-// verifyBundle rejects bundles not signed by team, so a tampered feed or
-// mirror cannot install someone else's code.
+// verifyBundle checks that the bundle's signature is intact and, when team
+// is set, that it was signed by that team.
 func verifyBundle(bundle, team string) error {
-	requirement := `=anchor apple generic and certificate leaf[subject.OU] = "` + team + `"`
-	out, err := exec.Command("codesign", "--verify", "--deep", "--strict", "-R", requirement, bundle).CombinedOutput()
+	args := []string{"--verify", "--deep", "--strict"}
+	if team != "" {
+		args = append(args, "-R", `=anchor apple generic and certificate leaf[subject.OU] = "`+team+`"`)
+	}
+	out, err := exec.Command("codesign", append(args, bundle)...).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("update signature: %s", strings.TrimSpace(string(out)))
 	}

@@ -4,10 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"changeme/updatesig"
 )
 
 func TestCompareVersions(t *testing.T) {
@@ -48,17 +51,41 @@ func TestUpdateManifestURL(t *testing.T) {
 
 func TestFetchUpdate(t *testing.T) {
 	withVersion(t, "0.2.0")
-	mux := http.NewServeMux()
-	mux.HandleFunc("/newer", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"version":"0.3.0","url":"http://x/a.zip","sha256":"ab"}`))
-	})
-	mux.HandleFunc("/same", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"version":"0.2.0","url":"http://x/a.zip","sha256":"ab"}`))
-	})
-	mux.HandleFunc("/incomplete", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"version":"0.3.0"}`))
-	})
-	srv := httptest.NewServer(mux)
+	pub, priv, err := updatesig.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldKey := updatePublicKey
+	updatePublicKey = pub
+	t.Cleanup(func() { updatePublicKey = oldKey })
+
+	signed := func(v string) []byte {
+		m := updatesig.Manifest{Version: v, URL: "http://x/a.zip", SHA256: "ab"}
+		if err := updatesig.Sign(&m, priv); err != nil {
+			t.Fatal(err)
+		}
+		b, _ := json.Marshal(m)
+		return b
+	}
+	tampered := updatesig.Manifest{}
+	_ = json.Unmarshal(signed("0.3.0"), &tampered)
+	tampered.URL = "http://evil/a.zip"
+	tamperedJSON, _ := json.Marshal(tampered)
+
+	feeds := map[string][]byte{
+		"/newer":    signed("0.3.0"),
+		"/same":     signed("0.2.0"),
+		"/unsigned": []byte(`{"version":"0.3.0","url":"http://x/a.zip","sha256":"ab"}`),
+		"/tampered": tamperedJSON,
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, ok := feeds[r.URL.Path]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write(body)
+	}))
 	defer srv.Close()
 	ctx := context.Background()
 
@@ -71,8 +98,10 @@ func TestFetchUpdate(t *testing.T) {
 	if m, err := fetchUpdate(ctx, srv.URL+"/missing"); err != nil || m != nil {
 		t.Fatalf("no release yet should be quiet: %+v %v", m, err)
 	}
-	if _, err := fetchUpdate(ctx, srv.URL+"/incomplete"); err == nil {
-		t.Fatal("incomplete manifest accepted")
+	for _, path := range []string{"/unsigned", "/tampered"} {
+		if _, err := fetchUpdate(ctx, srv.URL+path); err == nil {
+			t.Errorf("%s manifest accepted", path)
+		}
 	}
 }
 

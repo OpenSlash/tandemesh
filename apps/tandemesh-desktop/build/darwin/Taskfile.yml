@@ -272,10 +272,10 @@ tasks:
       - codesign --verify --deep --strict --verbose=2 "{{.APP}}"
 
   update:archive:
-    summary: Zips the signed app and writes the update manifest the app polls
+    summary: Zips the app and writes the signed update manifest the app polls
     desc: |
-      Usage: wails3 task darwin:update:archive [NOTES="..."] [RELEASE_URL=...]
-      Run after darwin:sign (or darwin:release). Upload both files to the
+      Usage: TANDEMESH_UPDATE_KEY=<seed> wails3 task darwin:update:archive [NOTES="..."] [RELEASE_URL=...]
+      Run after darwin:package (or darwin:sign). Upload both files to the
       GitHub release for tag v<VERSION>; the app reads
       releases/latest/download/update-darwin-<arch>.json.
     vars:
@@ -286,16 +286,16 @@ tasks:
       MANIFEST: '{{.BIN_DIR}}/update-darwin-{{.UPDATE_ARCH}}.json'
     preconditions:
       - sh: test -d "{{.APP}}"
-        msg: "Build and sign the app first: wails3 task darwin:sign SIGN_IDENTITY=..."
+        msg: "Build the app first: wails3 task darwin:package"
+      - sh: test -n "$TANDEMESH_UPDATE_KEY"
+        msg: "TANDEMESH_UPDATE_KEY must hold the update signing key"
     cmds:
       - rm -f "{{.BIN_DIR}}/{{.ZIP_NAME}}"
       # ditto keeps the bundle's symlinks and signature intact; zip does not.
       - ditto -c -k --keepParent "{{.APP}}" "{{.BIN_DIR}}/{{.ZIP_NAME}}"
       - >-
-        jq -n --arg version "{{.VERSION}}" --arg url "{{.RELEASE_URL}}/{{.ZIP_NAME}}"
-        --arg sha256 "$(shasum -a 256 "{{.BIN_DIR}}/{{.ZIP_NAME}}" | cut -d' ' -f1)"
-        --arg notes "{{.NOTES}}"
-        '{version: $version, url: $url, sha256: $sha256, notes: $notes}' > "{{.MANIFEST}}"
+        go run ./tools/sign-update -file "{{.BIN_DIR}}/{{.ZIP_NAME}}" -version "{{.VERSION}}"
+        -url "{{.RELEASE_URL}}/{{.ZIP_NAME}}" -notes "{{.NOTES}}" > "{{.MANIFEST}}"
       - cat "{{.MANIFEST}}"
 
   release:

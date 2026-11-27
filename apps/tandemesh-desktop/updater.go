@@ -19,11 +19,17 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+
+	"changeme/updatesig"
 )
 
 // version is set at build time with -ldflags -X. A plain `go build` reports
 // "dev" and never checks for updates on its own.
 var version = "dev"
+
+// updatePublicKey verifies release manifests. The matching private key lives
+// only in the release pipeline's TANDEMESH_UPDATE_KEY secret.
+var updatePublicKey = "VVIEPM9Lw1JOnvNcOkeRRUNMWefUDBQKaCrkg3UVzYU="
 
 // Releases are published on GitHub. The latest/download path always resolves
 // to the newest non-prerelease, so prereleases can be tested without reaching
@@ -32,12 +38,7 @@ const releaseDownloadBase = "https://github.com/OpenSlash/tandemesh/releases/lat
 
 const updateInterval = 6 * time.Hour
 
-type updateManifest struct {
-	Version string `json:"version"`
-	URL     string `json:"url"`
-	SHA256  string `json:"sha256"`
-	Notes   string `json:"notes"`
-}
+type updateManifest = updatesig.Manifest
 
 // updateManifestURL returns where to look for updates, or "" when this build
 // cannot update itself. TANDEMESH_UPDATE_URL points at a mirror or a test feed.
@@ -93,8 +94,8 @@ func fetchUpdate(ctx context.Context, url string) (*updateManifest, error) {
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&manifest); err != nil {
 		return nil, fmt.Errorf("decode update manifest: %w", err)
 	}
-	if manifest.Version == "" || manifest.URL == "" || manifest.SHA256 == "" {
-		return nil, fmt.Errorf("update manifest is incomplete")
+	if err := updatesig.Verify(manifest, updatePublicKey); err != nil {
+		return nil, err
 	}
 	if compareVersions(manifest.Version, version) <= 0 {
 		return nil, nil
