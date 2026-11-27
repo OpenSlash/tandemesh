@@ -210,6 +210,101 @@ function SidebarSection({
   )
 }
 
+function PinnableNavList({
+  id,
+  items,
+  defaultPinned,
+  onNavigate,
+  upward = false,
+}: {
+  id: string
+  items: NavEntry[]
+  defaultPinned: string[]
+  onNavigate?: () => void
+  upward?: boolean
+}) {
+  const { t } = useI18n()
+  const storageKey = `tandemesh.sidebar.pinned.${id}`
+  const [pinned, setPinned] = useState<string[]>(() => {
+    try {
+      const stored = window.localStorage.getItem(storageKey)
+      if (stored) return JSON.parse(stored) as string[]
+    } catch {
+      // ignore malformed storage
+    }
+    return defaultPinned
+  })
+  const [open, setOpen] = useState(false)
+  const visible = items.filter((item) => pinned.includes(item.to))
+  const hidden = items.filter((item) => !pinned.includes(item.to))
+
+  const togglePinned = (to: string) => {
+    const next = pinned.includes(to) ? pinned.filter((entry) => entry !== to) : [...pinned, to]
+    setPinned(next)
+    window.localStorage.setItem(storageKey, JSON.stringify(next))
+  }
+
+  if (items.length === 0) return null
+
+  return (
+    <div className="relative flex flex-col gap-0.5">
+      {visible.map((item) => (
+        <NavItem key={item.to} {...item} onClick={onNavigate} />
+      ))}
+      {hidden.length > 0 && (
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            className="flex h-7 w-full items-center gap-2 rounded-md px-2 text-[12.5px] text-muted hover:bg-panel2/50 hover:text-fg"
+          >
+            <MoreHorizontal className="h-3.5 w-3.5 shrink-0" />
+            <span>{t('shell.more')}</span>
+            <span className="ml-auto text-[10px] text-muted/60">{hidden.length}</span>
+          </button>
+          {open && (
+            <div
+              className={cn(
+                'absolute left-0 z-40 w-[230px] rounded-lg border border-line bg-panel p-1.5 shadow-lg',
+                upward ? 'bottom-full mb-1' : 'top-full mt-1',
+              )}
+            >
+              {items.map((item) => {
+                const Icon = item.icon
+                const isPinned = pinned.includes(item.to)
+                return (
+                  <div key={item.to} className="flex items-center gap-1 rounded-md px-1 hover:bg-panel2/70">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpen(false)
+                        onNavigate?.()
+                      }}
+                      className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left text-[12px] text-fg/85"
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0 text-muted" />
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                    <button
+                      type="button"
+                      title={isPinned ? t('shell.unpinItem') : t('shell.pinItem')}
+                      aria-label={isPinned ? t('shell.unpinItem') : t('shell.pinItem')}
+                      onClick={() => togglePinned(item.to)}
+                      className={cn('shrink-0 p-1 text-muted/50 hover:text-fg', isPinned && 'text-fg')}
+                    >
+                      {isPinned ? <Pin className="h-3 w-3" /> : <PinOff className="h-3 w-3" />}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Layout() {
   const location = useLocation()
   const popout = new URLSearchParams(location.search).get('popout') === '1'
@@ -360,11 +455,15 @@ export default function Layout() {
             </div>
             <GlobalItem to="/tasks?scope=all" label={t('nav.tasks')} icon={ListTodo} />
             <GlobalItem to="/sessions?scope=all" label={t('nav.recentSessions')} icon={MessageSquare} />
-            <SidebarSection id="globalMore" title={t('shell.more')}>
-              <GlobalItem to="/dashboard" label={t('nav.agentDashboard')} icon={LayoutDashboard} />
-              <GlobalItem to="/runs?scope=all" label={t('nav.runs')} icon={Activity} />
-              <GlobalItem to="/agents?scope=all" label={t('nav.agents')} icon={Bot} />
-            </SidebarSection>
+            <PinnableNavList
+              id="globalMore"
+              defaultPinned={['/dashboard']}
+              items={[
+                { to: '/dashboard', label: t('nav.agentDashboard'), icon: LayoutDashboard },
+                { to: '/runs?scope=all', label: t('nav.runs'), icon: Activity },
+                { to: '/agents?scope=all', label: t('nav.agents'), icon: Bot },
+              ]}
+            />
           </div>
 
           <div className="mt-3 border-t border-line pt-2">
@@ -466,11 +565,12 @@ export default function Layout() {
 
         <div className="mt-auto border-t border-line pt-2">
           <div className="px-2">
-            <SidebarSection id="system" title={t('shell.system')}>
-              {globalNav.filter((item) => item.to !== '/audit' || capabilities?.profile === 'public').map((item) => (
-                <NavItem key={item.to} {...item} />
-              ))}
-            </SidebarSection>
+            <PinnableNavList
+              id="system"
+              upward
+              defaultPinned={['/machines', '/skills', '/settings']}
+              items={globalNav.filter((item) => item.to !== '/audit' || capabilities?.profile === 'public')}
+            />
           </div>
           <div className="flex items-center gap-2 px-4 py-3 text-[11px] text-muted">
             <Command className="h-3.5 w-3.5" />
@@ -532,16 +632,23 @@ function WorkspaceNav({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useI18n()
   return (
     <div className="mt-1 flex flex-col gap-0.5 px-2">
-      <NavItem to="/tasks" label={t('nav.tasks')} icon={ListTodo} onClick={onNavigate} />
-      <NavItem to="/sessions" label={t('nav.sessions')} icon={MessageSquare} onClick={onNavigate} />
-      <NavItem to="/iterations" label={t('nav.iterations')} icon={CalendarClock} onClick={onNavigate} />
-      <NavItem to="/groups" label={t('nav.groups')} icon={UsersRound} onClick={onNavigate} />
-      <NavItem to="/agents" label={t('nav.agents')} icon={Bot} onClick={onNavigate} />
-      <NavItem to="/automations" label={t('nav.automations')} icon={Activity} onClick={onNavigate} />
-      <NavItem to="/workflows" label={t('nav.workflows')} icon={Workflow} onClick={onNavigate} />
-      <NavItem to="/usage" label={t('nav.usage')} icon={Activity} onClick={onNavigate} />
-      <NavItem to="/runs" label={t('nav.runs')} icon={Activity} onClick={onNavigate} />
-      <NavItem to="/documents" label={t('nav.documents')} icon={FileText} onClick={onNavigate} />
+      <PinnableNavList
+        id="workspace"
+        defaultPinned={['/tasks', '/sessions', '/agents']}
+        onNavigate={onNavigate}
+        items={[
+          { to: '/tasks', label: t('nav.tasks'), icon: ListTodo },
+          { to: '/sessions', label: t('nav.sessions'), icon: MessageSquare },
+          { to: '/iterations', label: t('nav.iterations'), icon: CalendarClock },
+          { to: '/groups', label: t('nav.groups'), icon: UsersRound },
+          { to: '/agents', label: t('nav.agents'), icon: Bot },
+          { to: '/automations', label: t('nav.automations'), icon: Activity },
+          { to: '/workflows', label: t('nav.workflows'), icon: Workflow },
+          { to: '/usage', label: t('nav.usage'), icon: Activity },
+          { to: '/runs', label: t('nav.runs'), icon: Activity },
+          { to: '/documents', label: t('nav.documents'), icon: FileText },
+        ]}
+      />
     </div>
   )
 }
