@@ -11,17 +11,18 @@ import (
 	"github.com/OpenSlash/tandemesh/internal/integration"
 )
 
-// RegisterWebhook creates a workspace webhook scoped to the configured project.
+// RegisterWebhook creates a workspace webhook, scoped to the configured
+// project when the instance names one.
 func (a *Adapter) RegisterWebhook(ctx context.Context, cred integration.Credential, instance, url, secret string) (string, error) {
 	slug, project, err := splitInstance(instance)
 	if err != nil {
 		return "", err
 	}
-	body, _ := json.Marshal(map[string]any{
-		"url":       url,
-		"is_active": true,
-		"project":   project,
-	})
+	payload := map[string]any{"url": url, "is_active": true}
+	if project != "" {
+		payload["project"] = project
+	}
+	body, _ := json.Marshal(payload)
 	endpoint := a.apiAt(cred, "/workspaces/"+slug+"/webhooks/")
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {

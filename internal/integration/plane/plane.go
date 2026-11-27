@@ -49,7 +49,7 @@ func New() *integration.Integration {
 			ConfigFields: []integration.ConfigField{
 				{Key: "token", LabelKey: "providers.token", Type: "password", Required: true, Secret: true},
 				{Key: "baseUrl", LabelKey: "providers.baseUrl", Type: "url", Required: true, Placeholder: "https://plane.example.com"},
-				{Key: "instance", LabelKey: "providers.workspaceProject", Type: "text", Required: true, Placeholder: "workspace/project-uuid"},
+				{Key: "instance", LabelKey: "providers.workspaceProject", Type: "text", Required: true, Placeholder: "workspace or workspace/project-uuid"},
 				{Key: "webhookSecret", LabelKey: "providers.webhookSecret", Type: "password", Secret: true},
 			},
 		},
@@ -81,13 +81,27 @@ func (a *Adapter) apiAt(cred integration.Credential, path string) string {
 	return base + "/api/v1" + path
 }
 
-// splitInstance accepts "workspace/project" (project may be a UUID or identifier).
+// splitInstance accepts "workspace" (every project in the workspace) or
+// "workspace/project", where project may be a UUID or identifier.
 func splitInstance(instance string) (string, string, error) {
 	parts := strings.SplitN(strings.Trim(instance, "/"), "/", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return "", "", fmt.Errorf("plane: instance must be workspace/project")
+	if parts[0] == "" || (len(parts) == 2 && parts[1] == "") {
+		return "", "", fmt.Errorf("plane: instance must be workspace or workspace/project")
+	}
+	if len(parts) == 1 {
+		return parts[0], "", nil
 	}
 	return parts[0], parts[1], nil
+}
+
+// splitProjectInstance is splitInstance for calls that act on one work item,
+// whose instance always names its project.
+func splitProjectInstance(instance string) (string, string, error) {
+	slug, project, err := splitInstance(instance)
+	if err == nil && project == "" {
+		err = fmt.Errorf("plane: instance %q has no project", instance)
+	}
+	return slug, project, err
 }
 
 func (a *Adapter) do(ctx context.Context, method, url string, cred integration.Credential, body any) ([]byte, int, error) {

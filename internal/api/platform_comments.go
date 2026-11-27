@@ -68,7 +68,7 @@ func (s *Server) addPlatformComment(w http.ResponseWriter, r *http.Request) {
 	connectionID := ""
 	if conns, err := s.store.ListConnections(r.Context(), task.WorkspaceID, task.Provider); err == nil {
 		for _, conn := range conns {
-			if conn.Instance == task.Instance {
+			if domain.InstanceCovers(conn.Instance, task.Instance) {
 				connectionID = conn.ID
 				break
 			}

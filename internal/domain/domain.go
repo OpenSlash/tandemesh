@@ -7,6 +7,7 @@ package domain
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 )
 
@@ -1000,4 +1001,11 @@ type SessionShare struct {
 	CreatedBy string     `json:"createdBy,omitempty"`
 	CreatedAt time.Time  `json:"createdAt"`
 	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+}
+
+// InstanceCovers reports whether a connection or binding scope covers a work
+// item's instance: the same instance, or a parent scope such as a Plane
+// workspace "acme" covering "acme/<project>".
+func InstanceCovers(scope, instance string) bool {
+	return scope == instance || (scope != "" && strings.HasPrefix(instance, scope+"/"))
 }

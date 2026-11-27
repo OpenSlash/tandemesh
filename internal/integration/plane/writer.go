@@ -14,7 +14,7 @@ import (
 
 // Comment implements integration.WorkWriter.
 func (a *Adapter) Comment(ctx context.Context, work domain.WorkRef, cred integration.Credential, markdown string) (string, error) {
-	slug, project, err := splitInstance(work.Instance)
+	slug, project, err := splitProjectInstance(work.Instance)
 	if err != nil {
 		return "", err
 	}
@@ -58,7 +58,7 @@ func (a *Adapter) Comment(ctx context.Context, work domain.WorkRef, cred integra
 
 // Transition implements integration.WorkWriter by patching the work item state.
 func (a *Adapter) Transition(ctx context.Context, work domain.WorkRef, cred integration.Credential, to string) error {
-	slug, project, err := splitInstance(work.Instance)
+	slug, project, err := splitProjectInstance(work.Instance)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (a *Adapter) Attach(context.Context, domain.WorkRef, integration.Credential
 
 // Assign implements integration.AssigneeWriter.
 func (a *Adapter) Assign(ctx context.Context, work domain.WorkRef, cred integration.Credential, assignee string) error {
-	slug, project, err := splitInstance(work.Instance)
+	slug, project, err := splitProjectInstance(work.Instance)
 	if err != nil {
 		return err
 	}

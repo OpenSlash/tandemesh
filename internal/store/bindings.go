@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/OpenSlash/tandemesh/internal/domain"
@@ -170,14 +171,27 @@ func (s *Store) SetBindingSyncState(ctx context.Context, id string, at time.Time
 }
 
 // FindBinding returns the enabled binding for a provider external resource.
+// FindBinding returns the enabled binding for a work item's instance, falling
+// back to a parent scope (a Plane workspace binding "acme" covers
+// "acme/<project>"); see domain.InstanceCovers.
 func (s *Store) FindBinding(ctx context.Context, provider, externalID string) (*domain.ResourceBinding, error) {
-	row := s.db.QueryRowContext(ctx, bindingColumns+` FROM resource_bindings
-		WHERE provider = ? AND external_id = ? AND enabled = 1 LIMIT 1`, provider, externalID)
-	binding, err := scanBinding(row)
-	if err == sql.ErrNoRows {
-		return nil, nil
+	for scope := externalID; scope != ""; {
+		row := s.db.QueryRowContext(ctx, bindingColumns+` FROM resource_bindings
+			WHERE provider = ? AND external_id = ? AND enabled = 1 LIMIT 1`, provider, scope)
+		binding, err := scanBinding(row)
+		if err == nil {
+			return binding, nil
+		}
+		if err != sql.ErrNoRows {
+			return nil, err
+		}
+		i := strings.LastIndex(scope, "/")
+		if i < 0 {
+			break
+		}
+		scope = scope[:i]
 	}
-	return binding, err
+	return nil, nil
 }
 
 // ListAllBindings returns every enabled binding across workspaces.

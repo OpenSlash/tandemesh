@@ -25,7 +25,7 @@ type commentPage struct {
 }
 
 func (a *Adapter) ListComments(ctx context.Context, cred integration.Credential, ref domain.WorkRef) ([]integration.Comment, error) {
-	slug, project, err := splitInstance(ref.Instance)
+	slug, project, err := splitProjectInstance(ref.Instance)
 	if err != nil {
 		return nil, err
 	}

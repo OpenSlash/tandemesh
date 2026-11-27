@@ -12,7 +12,9 @@ import (
 )
 
 // ListAssigned implements integration.Reader. Plane has no assignee filter on
-// the legacy list endpoint, so Orca reads the project's work items.
+// the legacy list endpoint, so Orca reads the project's work items. A
+// workspace-only instance reads every project in the workspace, so projects
+// created later are picked up without a new binding.
 func (a *Adapter) ListAssigned(ctx context.Context, cred integration.Credential, opts integration.ListOptions) ([]integration.WorkItem, error) {
 	slug, project, err := splitInstance(opts.Instance)
 	if err != nil {
@@ -25,6 +27,28 @@ func (a *Adapter) ListAssigned(ctx context.Context, cred integration.Credential,
 	if limit > 1000 {
 		limit = 1000
 	}
+	if project != "" {
+		return a.listProjectItems(ctx, cred, slug, project, limit)
+	}
+	projects, err := a.ListProjects(ctx, cred, slug)
+	if err != nil {
+		return nil, err
+	}
+	var out []integration.WorkItem
+	for _, p := range projects {
+		if len(out) >= limit {
+			break
+		}
+		items, err := a.listProjectItems(ctx, cred, slug, p.ID, limit-len(out))
+		if err != nil {
+			return nil, fmt.Errorf("plane: project %s: %w", p.Name, err)
+		}
+		out = append(out, items...)
+	}
+	return out, nil
+}
+
+func (a *Adapter) listProjectItems(ctx context.Context, cred integration.Credential, slug, project string, limit int) ([]integration.WorkItem, error) {
 	var rows []issue
 	cursor := ""
 	for pages := 0; pages < 10 && len(rows) < limit; pages++ {

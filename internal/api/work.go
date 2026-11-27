@@ -80,14 +80,14 @@ func (s *Server) syncWork(w http.ResponseWriter, r *http.Request) {
 				if c.Provider != req.Provider {
 					continue
 				}
-				if c.Instance == req.Instance {
+				if domain.InstanceCovers(c.Instance, req.Instance) {
 					connectionID = c.ID
 					break
 				}
 				if connectionID == "" {
 					bindings, _ := s.store.ListBindings(r.Context(), workspaceID, c.ID)
 					for _, binding := range bindings {
-						if binding.ExternalID == req.Instance {
+						if domain.InstanceCovers(binding.ExternalID, req.Instance) {
 							connectionID = c.ID
 							break
 						}

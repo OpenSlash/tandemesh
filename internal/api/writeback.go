@@ -35,7 +35,7 @@ func (s *Server) enqueueWritebacks(ctx context.Context, run *domain.Run) {
 			if candidate.Schedule != "" || candidate.Provider != run.Work.Provider || !candidate.Enabled {
 				continue
 			}
-			if candidate.Instance == "" || candidate.Instance == run.Work.Instance {
+			if candidate.Instance == "" || domain.InstanceCovers(candidate.Instance, run.Work.Instance) {
 				b = candidate
 				break
 			}

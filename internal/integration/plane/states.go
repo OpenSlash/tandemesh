@@ -9,11 +9,34 @@ import (
 	"github.com/OpenSlash/tandemesh/internal/integration"
 )
 
-// ListStates returns the project's workflow states.
+// ListStates returns the project's workflow states. For a workspace-only
+// instance it merges every project's states by name, since status mappings
+// and transitions match states by name.
 func (a *Adapter) ListStates(ctx context.Context, cred integration.Credential, instance string) ([]integration.State, error) {
 	slug, project, err := splitInstance(instance)
 	if err != nil {
 		return nil, err
+	}
+	if project == "" {
+		projects, err := a.ListProjects(ctx, cred, slug)
+		if err != nil {
+			return nil, err
+		}
+		seen := map[string]bool{}
+		var out []integration.State
+		for _, p := range projects {
+			states, err := a.ListStates(ctx, cred, slug+"/"+p.ID)
+			if err != nil {
+				return nil, err
+			}
+			for _, state := range states {
+				if !seen[state.Name] {
+					seen[state.Name] = true
+					out = append(out, state)
+				}
+			}
+		}
+		return out, nil
 	}
 	path := fmt.Sprintf("/workspaces/%s/projects/%s/states/", url.PathEscape(slug), url.PathEscape(project))
 	raw, _, err := a.do(ctx, "GET", a.apiAt(cred, path), cred, nil)
